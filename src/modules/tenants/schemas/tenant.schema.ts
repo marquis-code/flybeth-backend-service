@@ -92,8 +92,6 @@ export class Tenant {
 export const TenantSchema = SchemaFactory.createForClass(Tenant);
 
 // Indexes for performance
-TenantSchema.index({ slug: 1 }, { unique: true });
 TenantSchema.index({ status: 1 });
-TenantSchema.index({ domain: 1 }, { unique: true, sparse: true });
 TenantSchema.index({ createdAt: -1 });
 TenantSchema.index({ name: 'text', slug: 'text', domain: 'text' });

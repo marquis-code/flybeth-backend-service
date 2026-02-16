@@ -29,7 +29,6 @@ export class Airport {
 }
 
 export const AirportSchema = SchemaFactory.createForClass(Airport);
-AirportSchema.index({ code: 1 }, { unique: true });
 AirportSchema.index({ name: 'text', city: 'text', code: 'text', country: 'text' });
 
 // Airline schema
@@ -54,5 +53,4 @@ export class Airline {
 }
 
 export const AirlineSchema = SchemaFactory.createForClass(Airline);
-AirlineSchema.index({ code: 1 }, { unique: true });
 AirlineSchema.index({ name: 'text', code: 'text' });

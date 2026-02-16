@@ -1,11 +1,41 @@
-import { AirlineAdapter, FlightSearchQuery, FlightSearchResult } from '../interfaces/airline-adapter.interface';
-export declare class AmadeusProvider implements AirlineAdapter {
+import { OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AmadeusBaseProvider } from './amadeus-base.provider';
+import { AirlineAdapter, FlightSearchQuery, FlightSearchResult, AmadeusFlightSearchParams, AmadeusFlightOfferPriceRequest, AmadeusFlightOrderRequest } from '../interfaces/airline-adapter.interface';
+export declare class AmadeusProvider extends AmadeusBaseProvider implements AirlineAdapter, OnModuleInit {
     readonly providerName = "Amadeus";
-    private readonly logger;
+    constructor(configService: ConfigService);
+    onModuleInit(): Promise<void>;
     searchFlights(query: FlightSearchQuery): Promise<FlightSearchResult[]>;
-    bookFlight(flightId: string, passengers: any[]): Promise<{
+    bookFlight(_flightId: string, _passengers: any[]): Promise<{
         pnr: string;
         ticketNumbers: string[];
     }>;
-    cancelBooking(pnr: string): Promise<boolean>;
+    cancelBooking(_pnr: string): Promise<boolean>;
+    searchFlightOffers(params: AmadeusFlightSearchParams): Promise<any>;
+    searchFlightOffersPost(body: any): Promise<any>;
+    priceFlightOffer(request: AmadeusFlightOfferPriceRequest): Promise<any>;
+    createFlightOrder(request: AmadeusFlightOrderRequest): Promise<any>;
+    getFlightOrder(orderId: string): Promise<any>;
+    deleteFlightOrder(orderId: string): Promise<any>;
+    getSeatmapByOrder(flightOrderId: string): Promise<any>;
+    getSeatmapByOffer(body: any): Promise<any>;
+    brandedFaresUpsell(body: any): Promise<any>;
+    flightPriceAnalysis(params: Record<string, any>): Promise<any>;
+    flightChoicePrediction(body: any): Promise<any>;
+    flightInspirationSearch(params: Record<string, any>): Promise<any>;
+    flightCheapestDate(params: Record<string, any>): Promise<any>;
+    flightAvailabilities(body: any): Promise<any>;
+    travelRecommendations(params: Record<string, any>): Promise<any>;
+    onDemandFlightStatus(params: Record<string, any>): Promise<any>;
+    flightDelayPrediction(params: Record<string, any>): Promise<any>;
+    airportOnTimePerformance(params: Record<string, any>): Promise<any>;
+    airportCitySearch(params: Record<string, any>): Promise<any>;
+    airportCityById(locationId: string): Promise<any>;
+    nearestAirports(params: Record<string, any>): Promise<any>;
+    airportRoutes(params: Record<string, any>): Promise<any>;
+    flightCheckinLinks(params: Record<string, any>): Promise<any>;
+    airlineCodeLookup(params: Record<string, any>): Promise<any>;
+    airlineRoutes(params: Record<string, any>): Promise<any>;
+    private mapOfferToResult;
 }

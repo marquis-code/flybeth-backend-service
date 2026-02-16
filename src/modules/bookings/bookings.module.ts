@@ -9,6 +9,7 @@ import { TenantsModule } from '../tenants/tenants.module';
 import { StaysModule } from '../stays/stays.module';
 import { CarsModule } from '../cars/cars.module';
 import { CruisesModule } from '../cruises/cruises.module';
+import { PackagesModule } from '../packages/packages.module';
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { CruisesModule } from '../cruises/cruises.module';
         StaysModule,
         CarsModule,
         CruisesModule,
+        PackagesModule,
     ],
     controllers: [BookingsController],
     providers: [BookingsService],

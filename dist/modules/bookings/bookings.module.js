@@ -17,6 +17,7 @@ const tenants_module_1 = require("../tenants/tenants.module");
 const stays_module_1 = require("../stays/stays.module");
 const cars_module_1 = require("../cars/cars.module");
 const cruises_module_1 = require("../cruises/cruises.module");
+const packages_module_1 = require("../packages/packages.module");
 let BookingsModule = class BookingsModule {
 };
 exports.BookingsModule = BookingsModule;
@@ -29,6 +30,7 @@ exports.BookingsModule = BookingsModule = __decorate([
             stays_module_1.StaysModule,
             cars_module_1.CarsModule,
             cruises_module_1.CruisesModule,
+            packages_module_1.PackagesModule,
         ],
         controllers: [bookings_controller_1.BookingsController],
         providers: [bookings_service_1.BookingsService],

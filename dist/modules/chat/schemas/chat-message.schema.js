@@ -40,7 +40,7 @@ __decorate([
     __metadata("design:type", String)
 ], ChatMessage.prototype, "type", void 0);
 __decorate([
-    (0, mongoose_1.Prop)(),
+    (0, mongoose_1.Prop)({ type: Object }),
     __metadata("design:type", Object)
 ], ChatMessage.prototype, "metadata", void 0);
 exports.ChatMessage = ChatMessage = __decorate([

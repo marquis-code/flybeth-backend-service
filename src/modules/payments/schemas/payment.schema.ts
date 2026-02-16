@@ -77,7 +77,6 @@ export class Payment {
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
 
 PaymentSchema.index({ booking: 1 });
-PaymentSchema.index({ providerTransactionId: 1 }, { unique: true, sparse: true });
 PaymentSchema.index({ user: 1, status: 1 });
 PaymentSchema.index({ tenant: 1, createdAt: -1 });
 PaymentSchema.index({ provider: 1, status: 1 });

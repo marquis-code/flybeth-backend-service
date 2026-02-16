@@ -31,7 +31,7 @@ __decorate([
     __metadata("design:type", String)
 ], Car.prototype, "category", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true }),
+    (0, mongoose_1.Prop)({ type: Object, required: true }),
     __metadata("design:type", Object)
 ], Car.prototype, "capacity", void 0);
 __decorate([
@@ -39,7 +39,7 @@ __decorate([
     __metadata("design:type", Object)
 ], Car.prototype, "specifications", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true }),
+    (0, mongoose_1.Prop)({ type: Object, required: true }),
     __metadata("design:type", Object)
 ], Car.prototype, "pricing", void 0);
 __decorate([

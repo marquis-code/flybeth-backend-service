@@ -18,7 +18,7 @@ export class Car {
     @Prop({ required: true })
     category: string; // e.g., "Economy", "SUV", "Luxury", "Standard"
 
-    @Prop({ required: true })
+    @Prop({ type: Object, required: true })
     capacity: {
         passengers: number;
         luggage: number;
@@ -32,7 +32,7 @@ export class Car {
         doors?: number;
     };
 
-    @Prop({ required: true })
+    @Prop({ type: Object, required: true })
     pricing: {
         baseRate: number; // Daily for rental, per trip/per km for ride
         currency: string;

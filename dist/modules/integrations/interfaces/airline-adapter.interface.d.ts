@@ -19,6 +19,75 @@ export interface FlightSearchResult {
     currency: string;
     seatsAvailable: number;
 }
+export interface AmadeusFlightSearchParams {
+    originLocationCode: string;
+    destinationLocationCode: string;
+    departureDate: string;
+    returnDate?: string;
+    adults: number;
+    children?: number;
+    infants?: number;
+    travelClass?: string;
+    includedAirlineCodes?: string;
+    excludedAirlineCodes?: string;
+    nonStop?: boolean;
+    currencyCode?: string;
+    maxPrice?: number;
+    max?: number;
+}
+export interface AmadeusFlightOfferPriceRequest {
+    data: {
+        type: 'flight-offers-pricing';
+        flightOffers: any[];
+    };
+}
+export interface AmadeusFlightOrderRequest {
+    data: {
+        type: 'flight-order';
+        flightOffers: any[];
+        travelers: AmadeusTraveler[];
+        remarks?: {
+            general?: Array<{
+                subType: string;
+                text: string;
+            }>;
+        };
+        ticketingAgreement?: {
+            option: string;
+            delay?: string;
+        };
+        contacts?: any[];
+    };
+}
+export interface AmadeusTraveler {
+    id: string;
+    dateOfBirth: string;
+    name: {
+        firstName: string;
+        lastName: string;
+    };
+    gender: 'MALE' | 'FEMALE';
+    contact?: {
+        emailAddress: string;
+        phones?: Array<{
+            deviceType: string;
+            countryCallingCode: string;
+            number: string;
+        }>;
+    };
+    documents?: Array<{
+        documentType: string;
+        birthPlace?: string;
+        issuanceLocation?: string;
+        issuanceDate?: string;
+        number: string;
+        expiryDate: string;
+        issuanceCountry: string;
+        validityCountry: string;
+        nationality: string;
+        holder: boolean;
+    }>;
+}
 export interface AirlineAdapter {
     providerName: string;
     searchFlights(query: FlightSearchQuery): Promise<FlightSearchResult[]>;
@@ -27,4 +96,7 @@ export interface AirlineAdapter {
         ticketNumbers: string[];
     }>;
     cancelBooking(pnr: string): Promise<boolean>;
+    searchFlightOffers?(params: AmadeusFlightSearchParams): Promise<any>;
+    priceFlightOffer?(request: AmadeusFlightOfferPriceRequest): Promise<any>;
+    createFlightOrder?(request: AmadeusFlightOrderRequest): Promise<any>;
 }

@@ -46,7 +46,6 @@ exports.Airport = Airport = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true, collection: 'airports' })
 ], Airport);
 exports.AirportSchema = mongoose_1.SchemaFactory.createForClass(Airport);
-exports.AirportSchema.index({ code: 1 }, { unique: true });
 exports.AirportSchema.index({ name: 'text', city: 'text', code: 'text', country: 'text' });
 let Airline = class Airline {
 };
@@ -75,6 +74,5 @@ exports.Airline = Airline = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true, collection: 'airlines' })
 ], Airline);
 exports.AirlineSchema = mongoose_1.SchemaFactory.createForClass(Airline);
-exports.AirlineSchema.index({ code: 1 }, { unique: true });
 exports.AirlineSchema.index({ name: 'text', code: 'text' });
 //# sourceMappingURL=airport.schema.js.map

@@ -26,7 +26,7 @@ export class ChatMessage {
     @Prop({ type: String, enum: ['text', 'image', 'file'], default: 'text' })
     type: string;
 
-    @Prop()
+    @Prop({ type: Object })
     metadata?: Record<string, any>;
 }
 

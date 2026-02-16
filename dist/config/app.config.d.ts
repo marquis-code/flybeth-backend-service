@@ -6,6 +6,11 @@ declare const _default: (() => {
         ttl: number;
         limit: number;
     };
+    amadeus: {
+        clientId: string;
+        clientSecret: string;
+        baseUrl: string;
+    };
 }) & import("@nestjs/config").ConfigFactoryKeyHost<{
     nodeEnv: string;
     port: number;
@@ -13,6 +18,11 @@ declare const _default: (() => {
     throttle: {
         ttl: number;
         limit: number;
+    };
+    amadeus: {
+        clientId: string;
+        clientSecret: string;
+        baseUrl: string;
     };
 }>;
 export default _default;

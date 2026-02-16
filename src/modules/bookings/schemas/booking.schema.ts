@@ -211,7 +211,6 @@ export class Booking {
 export const BookingSchema = SchemaFactory.createForClass(Booking);
 
 // Comprehensive indexes for booking queries
-BookingSchema.index({ pnr: 1 }, { unique: true });
 BookingSchema.index({ user: 1, status: 1 });
 BookingSchema.index({ tenant: 1, status: 1 });
 BookingSchema.index({ status: 1, expiresAt: 1 });

@@ -1,0 +1,37 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var AmadeusInsightsProvider_1;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AmadeusInsightsProvider = void 0;
+const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
+const amadeus_base_provider_1 = require("./amadeus-base.provider");
+let AmadeusInsightsProvider = AmadeusInsightsProvider_1 = class AmadeusInsightsProvider extends amadeus_base_provider_1.AmadeusBaseProvider {
+    constructor(configService) {
+        super(configService, AmadeusInsightsProvider_1.name);
+    }
+    async onModuleInit() { await this.warmUpToken(); }
+    async mostTraveledDestinations(params) {
+        return this.amadeusGet('/v1/travel/analytics/air-traffic/traveled', params);
+    }
+    async mostBookedDestinations(params) {
+        return this.amadeusGet('/v1/travel/analytics/air-traffic/booked', params);
+    }
+    async busiestTravelingPeriod(params) {
+        return this.amadeusGet('/v1/travel/analytics/air-traffic/busiest-period', params);
+    }
+};
+exports.AmadeusInsightsProvider = AmadeusInsightsProvider;
+exports.AmadeusInsightsProvider = AmadeusInsightsProvider = AmadeusInsightsProvider_1 = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [config_1.ConfigService])
+], AmadeusInsightsProvider);
+//# sourceMappingURL=amadeus-insights.provider.js.map

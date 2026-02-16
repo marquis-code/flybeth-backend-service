@@ -296,7 +296,6 @@ exports.Booking = Booking = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true, collection: 'bookings' })
 ], Booking);
 exports.BookingSchema = mongoose_1.SchemaFactory.createForClass(Booking);
-exports.BookingSchema.index({ pnr: 1 }, { unique: true });
 exports.BookingSchema.index({ user: 1, status: 1 });
 exports.BookingSchema.index({ tenant: 1, status: 1 });
 exports.BookingSchema.index({ status: 1, expiresAt: 1 });

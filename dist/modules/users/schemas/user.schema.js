@@ -132,7 +132,6 @@ exports.User = User = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true, collection: 'users' })
 ], User);
 exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
-exports.UserSchema.index({ email: 1 }, { unique: true });
 exports.UserSchema.index({ tenant: 1, role: 1 });
 exports.UserSchema.index({ isActive: 1 });
 exports.UserSchema.index({ role: 1 });

@@ -132,9 +132,7 @@ exports.Tenant = Tenant = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true, collection: 'tenants' })
 ], Tenant);
 exports.TenantSchema = mongoose_1.SchemaFactory.createForClass(Tenant);
-exports.TenantSchema.index({ slug: 1 }, { unique: true });
 exports.TenantSchema.index({ status: 1 });
-exports.TenantSchema.index({ domain: 1 }, { unique: true, sparse: true });
 exports.TenantSchema.index({ createdAt: -1 });
 exports.TenantSchema.index({ name: 'text', slug: 'text', domain: 'text' });
 //# sourceMappingURL=tenant.schema.js.map

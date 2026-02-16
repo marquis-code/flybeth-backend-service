@@ -46,6 +46,16 @@ async function bootstrap() {
       - **Dual payment** processing (Stripe + Paystack)
       - **Real-time** seat availability
       - **Admin analytics** and reporting
+      - **Global Travel Integration** (Amadeus Search, Price, Booking)
+      
+      ### Amadeus API Modules
+      This platform integrates the following Amadeus modules:
+      - **Flights**: Live search, pricing, and orders (31 endpoints)
+      - **Hotels**: Search, offers, and bookings (10 endpoints)
+      - **Experiences**: Tours, activities, and city search (4 endpoints)
+      - **Transfers**: Cars and transfers search/booking (3 endpoints)
+      - **Insights**: Market trends and traffic analytics (3 endpoints)
+      - **Itinerary**: Travel predictions and planning (1 endpoint)
       
       ### Authentication
       All protected endpoints require a Bearer JWT token.
@@ -58,7 +68,13 @@ async function bootstrap() {
         .addBearerAuth()
         .addTag('Auth', 'Authentication & Authorization')
         .addTag('Users', 'User Management')
-        .addTag('Flights', 'Flight Search & Management')
+        .addTag('Flights', 'Local & Amadeus Flight Operations')
+        .addTag('Amadeus — Flight Booking', 'Real-time flights via Amadeus GDS')
+        .addTag('Amadeus — Destination Experiences', 'Tours, activities, and city search')
+        .addTag('Amadeus — Cars & Transfers', 'Transfer offers and bookings')
+        .addTag('Amadeus — Market Insights', 'Travel analytics and traffic metrics')
+        .addTag('Amadeus — Hotels', 'Hotel search, offers, and orders')
+        .addTag('Amadeus — Itinerary Management', 'Travel predictions and purpose')
         .addTag('Bookings', 'Booking Management')
         .addTag('Payments', 'Payment Processing')
         .addTag('Tenants', 'Tenant Management')
@@ -71,6 +87,9 @@ async function bootstrap() {
         .addTag('Analytics', 'Business Analytics')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, swaggerConfig);
+    const fs = require('fs');
+    const path = require('path');
+    fs.writeFileSync(path.join(__dirname, '..', 'swagger-spec.json'), JSON.stringify(document, null, 2));
     swagger_1.SwaggerModule.setup('docs', app, document, {
         customSiteTitle: 'Flight Booking API - Swagger',
         customCss: `

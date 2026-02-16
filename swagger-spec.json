@@ -1,0 +1,5748 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Register a new user",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Login with email and password",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refreshToken",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Refresh access token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Request password reset",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Reset password with token",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/verify-otp": {
+      "post": {
+        "operationId": "AuthController_verifyOtp",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Verify email with OTP",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Logout current user",
+        "tags": [
+          "Authentication"
+        ]
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "operationId": "UsersController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current authenticated user profile",
+        "tags": [
+          "Users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update current user profile",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "UsersController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenant",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "super_admin",
+                "tenant_admin",
+                "agent",
+                "customer"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all users (Admin only)",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "UsersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user by ID",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}/role": {
+      "patch": {
+        "operationId": "UsersController_updateRole",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRoleDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update user role",
+        "tags": [
+          "Users"
+        ]
+      }
+    },
+    "/api/v1/tenants": {
+      "post": {
+        "operationId": "TenantsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new tenant (Super Admin only)",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "get": {
+        "operationId": "TenantsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all tenants with pagination",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/v1/tenants/{id}": {
+      "get": {
+        "operationId": "TenantsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tenant by ID",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "patch": {
+        "operationId": "TenantsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update tenant details",
+        "tags": [
+          "Tenants"
+        ]
+      },
+      "delete": {
+        "operationId": "TenantsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete tenant (Super Admin only)",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/v1/tenants/slug/{slug}": {
+      "get": {
+        "operationId": "TenantsController_findBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tenant by slug",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/v1/tenants/{id}/status": {
+      "patch": {
+        "operationId": "TenantsController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update tenant status (activate/suspend)",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/v1/tenants/{id}/stats": {
+      "get": {
+        "operationId": "TenantsController_getStats",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get tenant statistics",
+        "tags": [
+          "Tenants"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/search": {
+      "get": {
+        "operationId": "FlightsController_amadeusSearch",
+        "parameters": [
+          {
+            "name": "originLocationCode",
+            "required": true,
+            "in": "query",
+            "description": "Origin IATA airport/city code",
+            "schema": {
+              "example": "SYD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destinationLocationCode",
+            "required": true,
+            "in": "query",
+            "description": "Destination IATA airport/city code",
+            "schema": {
+              "example": "BKK",
+              "type": "string"
+            }
+          },
+          {
+            "name": "departureDate",
+            "required": true,
+            "in": "query",
+            "description": "Departure date (YYYY-MM-DD)",
+            "schema": {
+              "example": "2025-08-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnDate",
+            "required": false,
+            "in": "query",
+            "description": "Return date for round-trip (YYYY-MM-DD)",
+            "schema": {
+              "example": "2025-08-15",
+              "type": "string"
+            }
+          },
+          {
+            "name": "adults",
+            "required": true,
+            "in": "query",
+            "description": "Number of adult travelers",
+            "schema": {
+              "minimum": 1,
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "children",
+            "required": false,
+            "in": "query",
+            "description": "Number of child travelers",
+            "schema": {
+              "example": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "infants",
+            "required": false,
+            "in": "query",
+            "description": "Number of infant travelers",
+            "schema": {
+              "example": 0,
+              "type": "number"
+            }
+          },
+          {
+            "name": "travelClass",
+            "required": false,
+            "in": "query",
+            "description": "Travel class",
+            "schema": {
+              "enum": [
+                "ECONOMY",
+                "PREMIUM_ECONOMY",
+                "BUSINESS",
+                "FIRST"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "includedAirlineCodes",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated airline IATA codes to include",
+            "schema": {
+              "example": "TG",
+              "type": "string"
+            }
+          },
+          {
+            "name": "excludedAirlineCodes",
+            "required": false,
+            "in": "query",
+            "description": "Comma-separated airline IATA codes to exclude",
+            "schema": {
+              "example": "AA,TP",
+              "type": "string"
+            }
+          },
+          {
+            "name": "nonStop",
+            "required": false,
+            "in": "query",
+            "description": "Only non-stop flights",
+            "schema": {
+              "example": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "currencyCode",
+            "required": false,
+            "in": "query",
+            "description": "Currency code for pricing",
+            "schema": {
+              "example": "USD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum price filter",
+            "schema": {
+              "example": 1500,
+              "type": "number"
+            }
+          },
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "description": "Max number of offers to return",
+            "schema": {
+              "default": 10,
+              "example": 5,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search flights via Amadeus (GET)",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      },
+      "post": {
+        "operationId": "FlightsController_amadeusSearchPost",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Search flights via Amadeus (POST — advanced)",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/price": {
+      "post": {
+        "operationId": "FlightsController_amadeusPrice",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmadeusPriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Price a flight offer",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/order": {
+      "post": {
+        "operationId": "FlightsController_amadeusOrder",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AmadeusOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a flight order (booking)",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/order/{orderId}": {
+      "get": {
+        "operationId": "FlightsController_amadeusGetOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a flight order by ID",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      },
+      "delete": {
+        "operationId": "FlightsController_amadeusDeleteOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel/delete a flight order",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/seatmap": {
+      "get": {
+        "operationId": "FlightsController_amadeusSeatmapByOrder",
+        "parameters": [
+          {
+            "name": "flightOrderId",
+            "required": true,
+            "in": "query",
+            "description": "Amadeus flight order ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get seatmap by flight order ID",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      },
+      "post": {
+        "operationId": "FlightsController_amadeusSeatmapByOffer",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Get seatmap by flight offer (POST)",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/upsell": {
+      "post": {
+        "operationId": "FlightsController_amadeusUpsell",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Branded fares upsell",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/price-analysis": {
+      "get": {
+        "operationId": "FlightsController_amadeusPriceAnalysis",
+        "parameters": [
+          {
+            "name": "originIataCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MAD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destinationIataCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "CDG",
+              "type": "string"
+            }
+          },
+          {
+            "name": "departureDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-08-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "currencyCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "EUR",
+              "type": "string"
+            }
+          },
+          {
+            "name": "oneWay",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight price analysis (itinerary price metrics)",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/prediction": {
+      "post": {
+        "operationId": "FlightsController_amadeusPrediction",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Flight choice prediction",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/inspiration": {
+      "get": {
+        "operationId": "FlightsController_amadeusInspiration",
+        "parameters": [
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "duration",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "oneWay",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "departureDate",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "origin",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "BOS"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight inspiration search — cheapest destinations",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/cheapest-dates": {
+      "get": {
+        "operationId": "FlightsController_amadeusCheapestDates",
+        "parameters": [
+          {
+            "name": "departureDate",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "destination",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "LON"
+            }
+          },
+          {
+            "name": "origin",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MAD"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight cheapest date search",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/availabilities": {
+      "post": {
+        "operationId": "FlightsController_amadeusAvailabilities",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Flight availabilities search",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/recommendations": {
+      "get": {
+        "operationId": "FlightsController_amadeusRecommendations",
+        "parameters": [
+          {
+            "name": "travelerCountryCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "FR"
+            }
+          },
+          {
+            "name": "cityCodes",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "PAR"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Travel recommendations",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/status": {
+      "get": {
+        "operationId": "FlightsController_amadeusFlightStatus",
+        "parameters": [
+          {
+            "name": "scheduledDepartureDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-08-01"
+            }
+          },
+          {
+            "name": "flightNumber",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "986"
+            }
+          },
+          {
+            "name": "carrierCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "BA"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "On demand flight status",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/delay-prediction": {
+      "get": {
+        "operationId": "FlightsController_amadeusDelayPrediction",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight delay prediction",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airport-ontime": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirportOnTime",
+        "parameters": [
+          {
+            "name": "date",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-08-01"
+            }
+          },
+          {
+            "name": "airportCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "JFK"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airport on-time performance",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airports": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirportSearch",
+        "parameters": [
+          {
+            "name": "countryCode",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MUC"
+            }
+          },
+          {
+            "name": "subType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "CITY,AIRPORT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airport & city search by keyword",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airports/nearest": {
+      "get": {
+        "operationId": "FlightsController_amadeusNearestAirports",
+        "parameters": [
+          {
+            "name": "longitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 2.55,
+              "type": "number"
+            }
+          },
+          {
+            "name": "latitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 49,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Nearest relevant airports",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airports/routes": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirportRoutes",
+        "parameters": [
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "departureAirportCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MAD"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airport direct destinations / routes",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airports/{locationId}": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirportById",
+        "parameters": [
+          {
+            "name": "locationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airport & city search by ID",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airlines/checkin-links": {
+      "get": {
+        "operationId": "FlightsController_amadeusCheckinLinks",
+        "parameters": [
+          {
+            "name": "airlineCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "IB"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight check-in links",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airlines/lookup": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirlineLookup",
+        "parameters": [
+          {
+            "name": "airlineCodes",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "BA,AIC"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airline code lookup",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/amadeus/airlines/routes": {
+      "get": {
+        "operationId": "FlightsController_amadeusAirlineRoutes",
+        "parameters": [
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "airlineCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "AF"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Airline routes / destinations",
+        "tags": [
+          "Flights",
+          "Amadeus — Flight Booking"
+        ]
+      }
+    },
+    "/api/v1/flights/search": {
+      "post": {
+        "operationId": "FlightsController_search",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchFlightsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Search flights from local database",
+        "tags": [
+          "Flights"
+        ]
+      }
+    },
+    "/api/v1/flights/popular": {
+      "get": {
+        "operationId": "FlightsController_getPopular",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get popular/featured flights",
+        "tags": [
+          "Flights"
+        ]
+      }
+    },
+    "/api/v1/flights/deals": {
+      "get": {
+        "operationId": "FlightsController_getDeals",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get flight deals (cheapest)",
+        "tags": [
+          "Flights"
+        ]
+      }
+    },
+    "/api/v1/flights/{id}": {
+      "get": {
+        "operationId": "FlightsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get flight by ID",
+        "tags": [
+          "Flights"
+        ]
+      },
+      "patch": {
+        "operationId": "FlightsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFlightDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update flight details",
+        "tags": [
+          "Flights"
+        ]
+      },
+      "delete": {
+        "operationId": "FlightsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a flight",
+        "tags": [
+          "Flights"
+        ]
+      }
+    },
+    "/api/v1/flights": {
+      "post": {
+        "operationId": "FlightsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFlightDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new flight (Admin/Agent)",
+        "tags": [
+          "Flights"
+        ]
+      }
+    },
+    "/api/v1/amadeus/experiences/activities": {
+      "get": {
+        "operationId": "AmadeusExperiencesController_getActivities",
+        "parameters": [
+          {
+            "name": "latitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 41.397158,
+              "type": "number"
+            }
+          },
+          {
+            "name": "longitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 2.160873,
+              "type": "number"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Tours & Activities by location",
+        "tags": [
+          "Amadeus — Destination Experiences"
+        ]
+      }
+    },
+    "/api/v1/amadeus/experiences/activities/by-square": {
+      "get": {
+        "operationId": "AmadeusExperiencesController_getActivitiesBySquare",
+        "parameters": [
+          {
+            "name": "north",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 41.397158,
+              "type": "number"
+            }
+          },
+          {
+            "name": "west",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 2.160873,
+              "type": "number"
+            }
+          },
+          {
+            "name": "south",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 41.394582,
+              "type": "number"
+            }
+          },
+          {
+            "name": "east",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 2.177181,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Tours & Activities within a geographic square",
+        "tags": [
+          "Amadeus — Destination Experiences"
+        ]
+      }
+    },
+    "/api/v1/amadeus/experiences/activities/{activityId}": {
+      "get": {
+        "operationId": "AmadeusExperiencesController_getActivityById",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a specific tour or activity by ID",
+        "tags": [
+          "Amadeus — Destination Experiences"
+        ]
+      }
+    },
+    "/api/v1/amadeus/experiences/cities": {
+      "get": {
+        "operationId": "AmadeusExperiencesController_citySearch",
+        "parameters": [
+          {
+            "name": "countryCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "FR",
+              "type": "string"
+            }
+          },
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "PARIS",
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "include",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "AIRPORTS",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "City search",
+        "tags": [
+          "Amadeus — Destination Experiences"
+        ]
+      }
+    },
+    "/api/v1/amadeus/transfers/search": {
+      "post": {
+        "operationId": "AmadeusTransfersController_search",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Search transfer offers",
+        "tags": [
+          "Amadeus — Cars & Transfers"
+        ]
+      }
+    },
+    "/api/v1/amadeus/transfers/book": {
+      "post": {
+        "operationId": "AmadeusTransfersController_book",
+        "parameters": [
+          {
+            "name": "offerId",
+            "required": true,
+            "in": "query",
+            "description": "Transfer offer ID from search",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Book a transfer",
+        "tags": [
+          "Amadeus — Cars & Transfers"
+        ]
+      }
+    },
+    "/api/v1/amadeus/transfers/cancel": {
+      "post": {
+        "operationId": "AmadeusTransfersController_cancel",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "query",
+            "description": "Transfer order ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "confirmNbr",
+            "required": true,
+            "in": "query",
+            "description": "Transfer confirmation number",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a transfer booking",
+        "tags": [
+          "Amadeus — Cars & Transfers"
+        ]
+      }
+    },
+    "/api/v1/amadeus/insights/most-traveled": {
+      "get": {
+        "operationId": "AmadeusInsightsController_mostTraveled",
+        "parameters": [
+          {
+            "name": "originCityCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MAD",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "description": "YYYY-MM format",
+            "schema": {
+              "example": "2023-11",
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "analytics.travelers.score",
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight most traveled destinations",
+        "tags": [
+          "Amadeus — Market Insights"
+        ]
+      }
+    },
+    "/api/v1/amadeus/insights/most-booked": {
+      "get": {
+        "operationId": "AmadeusInsightsController_mostBooked",
+        "parameters": [
+          {
+            "name": "originCityCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "NCE",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2023-11",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight most booked destinations",
+        "tags": [
+          "Amadeus — Market Insights"
+        ]
+      }
+    },
+    "/api/v1/amadeus/insights/busiest-period": {
+      "get": {
+        "operationId": "AmadeusInsightsController_busiestPeriod",
+        "parameters": [
+          {
+            "name": "cityCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "PAR",
+              "type": "string"
+            }
+          },
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "description": "YYYY format",
+            "schema": {
+              "example": "2023",
+              "type": "string"
+            }
+          },
+          {
+            "name": "direction",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "ARRIVING",
+                "DEPARTING"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Flight busiest traveling period",
+        "tags": [
+          "Amadeus — Market Insights"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/by-city": {
+      "get": {
+        "operationId": "AmadeusHotelsController_hotelsByCity",
+        "parameters": [
+          {
+            "name": "cityCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "DEL",
+              "type": "string"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "radiusUnit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "KM",
+                "MILE"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "amenities",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ratings",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hotelSource",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "BEDBANK",
+                "DIRECTCHAIN",
+                "ALL"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List hotels by city code",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/by-geocode": {
+      "get": {
+        "operationId": "AmadeusHotelsController_hotelsByGeocode",
+        "parameters": [
+          {
+            "name": "latitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 41.397158,
+              "type": "number"
+            }
+          },
+          {
+            "name": "longitude",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": 2.160873,
+              "type": "number"
+            }
+          },
+          {
+            "name": "radius",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "radiusUnit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "KM",
+                "MILE"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List hotels by geographic coordinates",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/by-hotels": {
+      "get": {
+        "operationId": "AmadeusHotelsController_hotelsByIds",
+        "parameters": [
+          {
+            "name": "hotelIds",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "MCLONGHM",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List hotels by hotel IDs",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/offers": {
+      "get": {
+        "operationId": "AmadeusHotelsController_searchOffers",
+        "parameters": [
+          {
+            "name": "hotelIds",
+            "required": true,
+            "in": "query",
+            "description": "Comma-separated Amadeus hotel IDs",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "adults",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "checkInDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "checkOutDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "roomQuantity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "priceRange",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bestRateOnly",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search hotel offers",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/offers/{offerId}": {
+      "get": {
+        "operationId": "AmadeusHotelsController_getOffer",
+        "parameters": [
+          {
+            "name": "offerId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get specific hotel offer details",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/booking/v1": {
+      "post": {
+        "operationId": "AmadeusHotelsController_bookV1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create hotel booking (v1)",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/booking/v2": {
+      "post": {
+        "operationId": "AmadeusHotelsController_bookV2",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create hotel booking (v2 — hotel orders)",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/ratings": {
+      "get": {
+        "operationId": "AmadeusHotelsController_ratings",
+        "parameters": [
+          {
+            "name": "hotelIds",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "ELONMFS,ADNYCCTB",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Hotel sentiments / ratings",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/hotels/autocomplete": {
+      "get": {
+        "operationId": "AmadeusHotelsController_autocomplete",
+        "parameters": [
+          {
+            "name": "keyword",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "PARI",
+              "type": "string"
+            }
+          },
+          {
+            "name": "subType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "HOTEL_LEISURE",
+                "HOTEL_GDS"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "countryCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "max",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Hotel name autocomplete",
+        "tags": [
+          "Amadeus — Hotels"
+        ]
+      }
+    },
+    "/api/v1/amadeus/itinerary/trip-purpose": {
+      "get": {
+        "operationId": "AmadeusItineraryController_tripPurpose",
+        "parameters": [
+          {
+            "name": "originLocationCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "LON",
+              "type": "string"
+            }
+          },
+          {
+            "name": "destinationLocationCode",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "AMS",
+              "type": "string"
+            }
+          },
+          {
+            "name": "departureDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-08-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "returnDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "example": "2025-08-05",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Predict trip purpose (business vs leisure)",
+        "tags": [
+          "Amadeus — Itinerary Management"
+        ]
+      }
+    },
+    "/api/v1/bookings": {
+      "post": {
+        "operationId": "BookingsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a new booking",
+        "tags": [
+          "Bookings"
+        ]
+      },
+      "get": {
+        "operationId": "BookingsController_findMyBookings",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "confirmed",
+                "ticketed",
+                "cancelled",
+                "refunded",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current user bookings",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/all": {
+      "get": {
+        "operationId": "BookingsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "confirmed",
+                "ticketed",
+                "cancelled",
+                "refunded",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all bookings (Super Admin)",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/stats": {
+      "get": {
+        "operationId": "BookingsController_getStats",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get booking statistics",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/reference/{pnr}": {
+      "get": {
+        "operationId": "BookingsController_findByPNR",
+        "parameters": [
+          {
+            "name": "pnr",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get booking by PNR reference",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/tenant/{tenantId}": {
+      "get": {
+        "operationId": "BookingsController_findTenantBookings",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "confirmed",
+                "ticketed",
+                "cancelled",
+                "refunded",
+                "expired"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get bookings for a tenant",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}": {
+      "get": {
+        "operationId": "BookingsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get booking by ID",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/bookings/{id}/cancel": {
+      "patch": {
+        "operationId": "BookingsController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelBookingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Cancel a booking",
+        "tags": [
+          "Bookings"
+        ]
+      }
+    },
+    "/api/v1/stays": {
+      "post": {
+        "operationId": "StaysController_createStay",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stays"
+        ]
+      },
+      "get": {
+        "operationId": "StaysController_searchStays",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stays"
+        ]
+      }
+    },
+    "/api/v1/stays/{id}": {
+      "get": {
+        "operationId": "StaysController_getStay",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stays"
+        ]
+      }
+    },
+    "/api/v1/stays/{id}/rooms": {
+      "post": {
+        "operationId": "StaysController_addRoom",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stays"
+        ]
+      },
+      "get": {
+        "operationId": "StaysController_getRooms",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Stays"
+        ]
+      }
+    },
+    "/api/v1/cars/search": {
+      "get": {
+        "operationId": "CarsController_search",
+        "parameters": [
+          {
+            "name": "type",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "rental",
+                "ride"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickUpLocation",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dropOffLocation",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickUpDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dropOffDate",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pickUpTime",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "dropOffTime",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "passengers",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search for rental cars or rides",
+        "tags": [
+          "Cars"
+        ]
+      }
+    },
+    "/api/v1/cars/{id}": {
+      "get": {
+        "operationId": "CarsController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get car details by ID",
+        "tags": [
+          "Cars"
+        ]
+      }
+    },
+    "/api/v1/cars": {
+      "post": {
+        "operationId": "CarsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCarDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add a new car to inventory",
+        "tags": [
+          "Cars"
+        ]
+      },
+      "get": {
+        "operationId": "CarsController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List all cars",
+        "tags": [
+          "Cars"
+        ]
+      }
+    },
+    "/api/v1/cruises/search": {
+      "get": {
+        "operationId": "CruisesController_search",
+        "parameters": [
+          {
+            "name": "destination",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "departureMonth",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "minNights",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxNights",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "cruiseLine",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search for cruises",
+        "tags": [
+          "Cruises"
+        ]
+      }
+    },
+    "/api/v1/cruises/{id}": {
+      "get": {
+        "operationId": "CruisesController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get cruise details by ID",
+        "tags": [
+          "Cruises"
+        ]
+      }
+    },
+    "/api/v1/cruises": {
+      "post": {
+        "operationId": "CruisesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCruiseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Add a new cruise to inventory",
+        "tags": [
+          "Cruises"
+        ]
+      }
+    },
+    "/api/v1/packages": {
+      "post": {
+        "operationId": "PackagesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Packages"
+        ]
+      },
+      "get": {
+        "operationId": "PackagesController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Packages"
+        ]
+      }
+    },
+    "/api/v1/packages/{id}": {
+      "get": {
+        "operationId": "PackagesController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Packages"
+        ]
+      }
+    },
+    "/api/v1/payments/initialize": {
+      "post": {
+        "operationId": "PaymentsController_initialize",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitializePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Initialize a payment for a booking",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/webhook/stripe": {
+      "post": {
+        "operationId": "PaymentsController_handleStripeWebhook",
+        "parameters": [
+          {
+            "name": "stripe-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Stripe webhook endpoint",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/webhook/paystack": {
+      "post": {
+        "operationId": "PaymentsController_handlePaystackWebhook",
+        "parameters": [
+          {
+            "name": "x-paystack-signature",
+            "required": true,
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Paystack webhook endpoint",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/{id}": {
+      "get": {
+        "operationId": "PaymentsController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payment by ID",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/booking/{bookingId}": {
+      "get": {
+        "operationId": "PaymentsController_findByBooking",
+        "parameters": [
+          {
+            "name": "bookingId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payments for a booking",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/payments/{id}/refund": {
+      "post": {
+        "operationId": "PaymentsController_refund",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundPaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refund a payment",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/api/v1/passengers": {
+      "post": {
+        "operationId": "PassengersController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePassengerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a saved traveler profile",
+        "tags": [
+          "Passengers"
+        ]
+      },
+      "get": {
+        "operationId": "PassengersController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get all saved travelers for current user",
+        "tags": [
+          "Passengers"
+        ]
+      }
+    },
+    "/api/v1/passengers/{id}": {
+      "get": {
+        "operationId": "PassengersController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get traveler by ID",
+        "tags": [
+          "Passengers"
+        ]
+      },
+      "patch": {
+        "operationId": "PassengersController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePassengerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update traveler profile",
+        "tags": [
+          "Passengers"
+        ]
+      },
+      "delete": {
+        "operationId": "PassengersController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete traveler profile",
+        "tags": [
+          "Passengers"
+        ]
+      }
+    },
+    "/api/v1/airports/search": {
+      "get": {
+        "operationId": "AirportsController_searchAirports",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search airports by name, city, or code",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/airports": {
+      "get": {
+        "operationId": "AirportsController_getAllAirports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get all airports",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/airports/{code}": {
+      "get": {
+        "operationId": "AirportsController_getAirport",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get airport by IATA code",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/airlines/search": {
+      "get": {
+        "operationId": "AirportsController_searchAirlines",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Search airlines by name or code",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/airlines": {
+      "get": {
+        "operationId": "AirportsController_getAllAirlines",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get all airlines",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/airlines/{code}": {
+      "get": {
+        "operationId": "AirportsController_getAirline",
+        "parameters": [
+          {
+            "name": "code",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get airline by IATA code",
+        "tags": [
+          "Airports & Airlines"
+        ]
+      }
+    },
+    "/api/v1/currency/rates": {
+      "get": {
+        "operationId": "CurrencyController_getRates",
+        "parameters": [
+          {
+            "name": "base",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get exchange rates for a base currency",
+        "tags": [
+          "Currency"
+        ]
+      }
+    },
+    "/api/v1/currency/convert": {
+      "get": {
+        "operationId": "CurrencyController_convert",
+        "parameters": [
+          {
+            "name": "amount",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Convert amount between currencies",
+        "tags": [
+          "Currency"
+        ]
+      }
+    },
+    "/api/v1/currency/supported": {
+      "get": {
+        "operationId": "CurrencyController_getSupportedCurrencies",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get list of supported currencies",
+        "tags": [
+          "Currency"
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "operationId": "NotificationsController_findAll",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get user notifications",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "operationId": "NotificationsController_getUnreadCount",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get unread notification count",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "patch": {
+        "operationId": "NotificationsController_markAsRead",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark notification as read",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "patch": {
+        "operationId": "NotificationsController_markAllAsRead",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark all notifications as read",
+        "tags": [
+          "Notifications"
+        ]
+      }
+    },
+    "/api/v1/upload/image": {
+      "post": {
+        "operationId": "UploadController_uploadImage",
+        "parameters": [
+          {
+            "name": "folder",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload an image",
+        "tags": [
+          "Upload"
+        ]
+      }
+    },
+    "/api/v1/upload/document": {
+      "post": {
+        "operationId": "UploadController_uploadDocument",
+        "parameters": [
+          {
+            "name": "folder",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Upload a document (PDF, DOC)",
+        "tags": [
+          "Upload"
+        ]
+      }
+    },
+    "/api/v1/upload/{publicId}": {
+      "delete": {
+        "operationId": "UploadController_deleteFile",
+        "parameters": [
+          {
+            "name": "publicId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Delete a file by public ID",
+        "tags": [
+          "Upload"
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard": {
+      "get": {
+        "operationId": "AdminController_getDashboard",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get admin dashboard overview",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/revenue": {
+      "get": {
+        "operationId": "AdminController_getRevenue",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get revenue reports",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/tenants": {
+      "get": {
+        "operationId": "AdminController_getTenants",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all tenants",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "operationId": "AdminController_getUsers",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all users",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/bookings": {
+      "get": {
+        "operationId": "AdminController_getBookings",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List all bookings",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/system-health": {
+      "get": {
+        "operationId": "AdminController_getSystemHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get system health status",
+        "tags": [
+          "Admin"
+        ]
+      }
+    },
+    "/api/v1/analytics/bookings": {
+      "get": {
+        "operationId": "AnalyticsController_getBookingAnalytics",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get booking analytics",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/revenue": {
+      "get": {
+        "operationId": "AnalyticsController_getRevenueAnalytics",
+        "parameters": [
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get revenue analytics",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/popular-routes": {
+      "get": {
+        "operationId": "AnalyticsController_getPopularRoutes",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get popular flight routes",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/tracking/event": {
+      "post": {
+        "operationId": "TrackingController_trackEvent",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tracking"
+        ]
+      }
+    },
+    "/api/v1/tracking/webhook/flight-status": {
+      "post": {
+        "operationId": "TrackingController_flightStatusWebhook",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tracking"
+        ]
+      }
+    },
+    "/api/v1/tracking/history": {
+      "get": {
+        "operationId": "TrackingController_getMyHistory",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tracking"
+        ]
+      }
+    },
+    "/api/v1/tracking/flight/{pnr}": {
+      "get": {
+        "operationId": "TrackingController_getFlightHistory",
+        "parameters": [
+          {
+            "name": "pnr",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Tracking"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "✈️ Flight Booking API",
+    "description": "\n      ## Multi-Tenant Flight Booking Platform API\n      \n      A scalable flight booking backend with:\n      - **Multi-tenancy** (B2B & B2C)\n      - **Multi-currency** support (14 currencies)\n      - **Dual payment** processing (Stripe + Paystack)\n      - **Real-time** seat availability\n      - **Admin analytics** and reporting\n      - **Global Travel Integration** (Amadeus Search, Price, Booking)\n      \n      ### Amadeus API Modules\n      This platform integrates the following Amadeus modules:\n      - **Flights**: Live search, pricing, and orders (31 endpoints)\n      - **Hotels**: Search, offers, and bookings (10 endpoints)\n      - **Experiences**: Tours, activities, and city search (4 endpoints)\n      - **Transfers**: Cars and transfers search/booking (3 endpoints)\n      - **Insights**: Market trends and traffic analytics (3 endpoints)\n      - **Itinerary**: Travel predictions and planning (1 endpoint)\n      \n      ### Authentication\n      All protected endpoints require a Bearer JWT token.\n      Use `/auth/login` to obtain tokens.\n      \n      ### Rate Limiting\n      API requests are rate-limited to 100 requests per minute per IP.\n      ",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Auth",
+      "description": "Authentication & Authorization"
+    },
+    {
+      "name": "Users",
+      "description": "User Management"
+    },
+    {
+      "name": "Flights",
+      "description": "Local & Amadeus Flight Operations"
+    },
+    {
+      "name": "Amadeus — Flight Booking",
+      "description": "Real-time flights via Amadeus GDS"
+    },
+    {
+      "name": "Amadeus — Destination Experiences",
+      "description": "Tours, activities, and city search"
+    },
+    {
+      "name": "Amadeus — Cars & Transfers",
+      "description": "Transfer offers and bookings"
+    },
+    {
+      "name": "Amadeus — Market Insights",
+      "description": "Travel analytics and traffic metrics"
+    },
+    {
+      "name": "Amadeus — Hotels",
+      "description": "Hotel search, offers, and orders"
+    },
+    {
+      "name": "Amadeus — Itinerary Management",
+      "description": "Travel predictions and purpose"
+    },
+    {
+      "name": "Bookings",
+      "description": "Booking Management"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment Processing"
+    },
+    {
+      "name": "Tenants",
+      "description": "Tenant Management"
+    },
+    {
+      "name": "Passengers",
+      "description": "Traveler Profiles"
+    },
+    {
+      "name": "Airports & Airlines",
+      "description": "Airport & Airline Data"
+    },
+    {
+      "name": "Currency",
+      "description": "Exchange Rates & Conversion"
+    },
+    {
+      "name": "Notifications",
+      "description": "User Notifications"
+    },
+    {
+      "name": "Upload",
+      "description": "File Management"
+    },
+    {
+      "name": "Admin",
+      "description": "Admin Dashboard"
+    },
+    {
+      "name": "Analytics",
+      "description": "Business Analytics"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "StrongP@ss1"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+1234567890"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Tenant ID for B2B registration"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "super_admin",
+              "tenant_admin",
+              "agent",
+              "customer"
+            ],
+            "default": "customer"
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "password": {
+            "type": "string",
+            "example": "StrongP@ss1"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "newPassword": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "VerifyOtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "otp": {
+            "type": "string",
+            "example": "123456"
+          }
+        },
+        "required": [
+          "email",
+          "otp"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "avatar": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "emailNotifications": {
+            "type": "boolean"
+          },
+          "pushNotifications": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateUserRoleDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "super_admin",
+              "tenant_admin",
+              "agent",
+              "customer"
+            ]
+          }
+        }
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Skyline Travel Agency"
+          },
+          "slug": {
+            "type": "string",
+            "example": "skyline-travel"
+          },
+          "domain": {
+            "type": "string",
+            "example": "skylinetravel.com"
+          },
+          "contactEmail": {
+            "type": "string",
+            "example": "admin@skylinetravel.com"
+          },
+          "contactPhone": {
+            "type": "string",
+            "example": "+1234567890"
+          },
+          "address": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "defaultCurrency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "supportedCurrencies": {
+            "example": [
+              "USD",
+              "EUR",
+              "GBP"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "markupPercentage": {
+            "type": "number",
+            "example": 5
+          },
+          "commissionPercentage": {
+            "type": "number",
+            "example": 2
+          }
+        },
+        "required": [
+          "name",
+          "slug",
+          "contactEmail"
+        ]
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "contactEmail": {
+            "type": "string"
+          },
+          "contactPhone": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          },
+          "defaultCurrency": {
+            "type": "string"
+          },
+          "supportedCurrencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "markupPercentage": {
+            "type": "number"
+          },
+          "commissionPercentage": {
+            "type": "number"
+          },
+          "allowB2C": {
+            "type": "boolean"
+          },
+          "allowB2B": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateTenantStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "suspended",
+              "pending"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AmadeusPriceDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Wrapper containing the flight offer(s) to price",
+            "example": {
+              "type": "flight-offers-pricing",
+              "flightOffers": [
+                {}
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AmadeusOrderDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "description": "Wrapper containing the priced flight offer(s), travelers, and optional remarks/contacts"
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SearchFlightsDto": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "example": "JFK",
+            "description": "Origin airport IATA code"
+          },
+          "destination": {
+            "type": "string",
+            "example": "LHR",
+            "description": "Destination airport IATA code"
+          },
+          "departureDate": {
+            "type": "string",
+            "example": "2025-06-15"
+          },
+          "returnDate": {
+            "type": "string",
+            "example": "2025-06-22"
+          },
+          "adults": {
+            "type": "number",
+            "default": 1
+          },
+          "children": {
+            "type": "number",
+            "default": 0
+          },
+          "infantsOnLap": {
+            "type": "number",
+            "default": 0
+          },
+          "infantsInSeat": {
+            "type": "number",
+            "default": 0
+          },
+          "class": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "premium_economy",
+              "business",
+              "first"
+            ]
+          },
+          "minPrice": {
+            "type": "number",
+            "description": "Minimum price filter"
+          },
+          "maxPrice": {
+            "type": "number",
+            "description": "Maximum price filter"
+          },
+          "airline": {
+            "type": "string",
+            "description": "Filter by airline"
+          },
+          "maxStops": {
+            "type": "number",
+            "description": "Maximum stops (0 for direct)"
+          },
+          "sortBy": {
+            "type": "string",
+            "enum": [
+              "price",
+              "duration",
+              "departure",
+              "arrival"
+            ],
+            "default": "price"
+          },
+          "sortOrder": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency for price display",
+            "default": "USD"
+          },
+          "page": {
+            "type": "number",
+            "default": 1
+          },
+          "limit": {
+            "type": "number",
+            "default": 20
+          }
+        },
+        "required": [
+          "origin",
+          "destination",
+          "departureDate"
+        ]
+      },
+      "AirportDetailDto": {
+        "type": "object",
+        "properties": {
+          "airport": {
+            "type": "string",
+            "example": "JFK"
+          },
+          "city": {
+            "type": "string",
+            "example": "New York"
+          },
+          "country": {
+            "type": "string",
+            "example": "United States"
+          },
+          "terminal": {
+            "type": "string",
+            "example": "T4"
+          },
+          "gate": {
+            "type": "string",
+            "example": "G12"
+          },
+          "time": {
+            "type": "string",
+            "example": "2025-06-15T08:00:00Z"
+          }
+        },
+        "required": [
+          "airport",
+          "city",
+          "country",
+          "time"
+        ]
+      },
+      "FlightClassDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "economy",
+              "premium_economy",
+              "business",
+              "first"
+            ]
+          },
+          "basePrice": {
+            "type": "number",
+            "example": 350
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD"
+          },
+          "seatsAvailable": {
+            "type": "number",
+            "example": 150
+          },
+          "seatsTotal": {
+            "type": "number",
+            "example": 200
+          },
+          "baggage": {
+            "type": "string",
+            "example": "23kg checked + 7kg carry-on"
+          },
+          "amenities": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "type",
+          "basePrice",
+          "currency",
+          "seatsAvailable"
+        ]
+      },
+      "CreateFlightDto": {
+        "type": "object",
+        "properties": {
+          "airline": {
+            "type": "string",
+            "example": "Emirates"
+          },
+          "flightNumber": {
+            "type": "string",
+            "example": "EK401"
+          },
+          "aircraft": {
+            "type": "string",
+            "example": "Boeing 777-300ER"
+          },
+          "departure": {
+            "$ref": "#/components/schemas/AirportDetailDto"
+          },
+          "arrival": {
+            "$ref": "#/components/schemas/AirportDetailDto"
+          },
+          "duration": {
+            "type": "number",
+            "example": 480,
+            "description": "Duration in minutes"
+          },
+          "stops": {
+            "type": "number",
+            "default": 0
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FlightClassDto"
+            }
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "operatingDays": {
+            "example": [
+              "MON",
+              "WED",
+              "FRI"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "airline",
+          "flightNumber",
+          "departure",
+          "arrival",
+          "duration",
+          "classes"
+        ]
+      },
+      "UpdateFlightDto": {
+        "type": "object",
+        "properties": {
+          "aircraft": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "delayed",
+              "cancelled",
+              "completed"
+            ]
+          },
+          "classes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "isFeatured": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BookingFlightDto": {
+        "type": "object",
+        "properties": {
+          "flightId": {
+            "type": "string",
+            "description": "Flight ID"
+          },
+          "class": {
+            "type": "string",
+            "example": "economy"
+          },
+          "passengerIds": {
+            "description": "Array of passenger IDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "flightId",
+          "class",
+          "passengerIds"
+        ]
+      },
+      "OccupancyDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "BookingStayDto": {
+        "type": "object",
+        "properties": {
+          "hotelId": {
+            "type": "string",
+            "description": "Stay/Hotel ID"
+          },
+          "roomId": {
+            "type": "string",
+            "description": "Room ID"
+          },
+          "checkIn": {
+            "type": "string"
+          },
+          "checkOut": {
+            "type": "string"
+          },
+          "occupancy": {
+            "$ref": "#/components/schemas/OccupancyDto"
+          }
+        },
+        "required": [
+          "hotelId",
+          "roomId",
+          "checkIn",
+          "checkOut",
+          "occupancy"
+        ]
+      },
+      "BookingCarDto": {
+        "type": "object",
+        "properties": {
+          "carId": {
+            "type": "string"
+          },
+          "pickUpDate": {
+            "type": "string"
+          },
+          "dropOffDate": {
+            "type": "string"
+          },
+          "pickUpLocation": {
+            "type": "string"
+          },
+          "dropOffLocation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "carId",
+          "pickUpDate",
+          "dropOffDate"
+        ]
+      },
+      "BookingCruiseDto": {
+        "type": "object",
+        "properties": {
+          "cruiseId": {
+            "type": "string"
+          },
+          "cabinType": {
+            "type": "string"
+          },
+          "departureDate": {
+            "type": "string"
+          },
+          "passengerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "cruiseId",
+          "cabinType",
+          "departureDate",
+          "passengerIds"
+        ]
+      },
+      "BookingContactDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+1234567890"
+          },
+          "name": {
+            "type": "string",
+            "example": "John Doe"
+          }
+        },
+        "required": [
+          "email",
+          "phone"
+        ]
+      },
+      "CreateBookingDto": {
+        "type": "object",
+        "properties": {
+          "flights": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingFlightDto"
+            }
+          },
+          "stays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingStayDto"
+            }
+          },
+          "cars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingCarDto"
+            }
+          },
+          "cruises": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BookingCruiseDto"
+            }
+          },
+          "contactDetails": {
+            "$ref": "#/components/schemas/BookingContactDto"
+          },
+          "tenantId": {
+            "type": "string",
+            "description": "Tenant ID for B2B booking"
+          },
+          "packageId": {
+            "type": "string",
+            "description": "Package ID if booking a bundle"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency for pricing",
+            "default": "USD"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "isRoundTrip": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "required": [
+          "contactDetails"
+        ]
+      },
+      "CancelBookingDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "example": "Change of plans"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreateCarDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateCruiseDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "InitializePaymentDto": {
+        "type": "object",
+        "properties": {
+          "bookingId": {
+            "type": "string",
+            "description": "Booking ID to pay for"
+          },
+          "currency": {
+            "type": "string",
+            "example": "USD",
+            "description": "Payment currency"
+          },
+          "callbackUrl": {
+            "type": "string",
+            "description": "Success callback URL"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Force specific provider",
+            "enum": [
+              "stripe",
+              "paystack"
+            ]
+          }
+        },
+        "required": [
+          "bookingId",
+          "currency"
+        ]
+      },
+      "RefundPaymentDto": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "number",
+            "description": "Partial refund amount (defaults to full)"
+          },
+          "reason": {
+            "type": "string",
+            "example": "Customer requested cancellation"
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "CreatePassengerDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1990-05-15"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "other"
+            ]
+          },
+          "nationality": {
+            "type": "string",
+            "example": "US"
+          },
+          "passportNumber": {
+            "type": "string",
+            "example": "A12345678"
+          },
+          "passportExpiry": {
+            "type": "string",
+            "example": "2030-05-15"
+          },
+          "passportCountry": {
+            "type": "string",
+            "example": "US"
+          },
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+1234567890"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "adult",
+              "child",
+              "infant"
+            ],
+            "default": "adult"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      },
+      "UpdatePassengerDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "John"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe"
+          },
+          "dateOfBirth": {
+            "type": "string",
+            "example": "1990-05-15"
+          },
+          "gender": {
+            "type": "string",
+            "enum": [
+              "male",
+              "female",
+              "other"
+            ]
+          },
+          "nationality": {
+            "type": "string",
+            "example": "US"
+          },
+          "passportNumber": {
+            "type": "string",
+            "example": "A12345678"
+          },
+          "passportExpiry": {
+            "type": "string",
+            "example": "2030-05-15"
+          },
+          "passportCountry": {
+            "type": "string",
+            "example": "US"
+          },
+          "email": {
+            "type": "string",
+            "example": "john@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "example": "+1234567890"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "adult",
+              "child",
+              "infant"
+            ],
+            "default": "adult"
+          }
+        },
+        "required": [
+          "firstName",
+          "lastName"
+        ]
+      }
+    }
+  }
+}
