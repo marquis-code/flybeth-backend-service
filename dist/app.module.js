@@ -47,6 +47,7 @@ const integrations_module_1 = require("./modules/integrations/integrations.modul
 const packages_module_1 = require("./modules/packages/packages.module");
 const cars_module_1 = require("./modules/cars/cars.module");
 const cruises_module_1 = require("./modules/cruises/cruises.module");
+const voice_agent_module_1 = require("./modules/voice-agent/voice-agent.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -98,6 +99,7 @@ exports.AppModule = AppModule = __decorate([
             packages_module_1.PackagesModule,
             cars_module_1.CarsModule,
             cruises_module_1.CruisesModule,
+            voice_agent_module_1.VoiceAgentModule,
             scheduler_module_1.SchedulerModule,
             seed_module_1.SeedModule,
         ],

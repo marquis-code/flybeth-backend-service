@@ -43,6 +43,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { PackagesModule } from './modules/packages/packages.module';
 import { CarsModule } from './modules/cars/cars.module';
 import { CruisesModule } from './modules/cruises/cruises.module';
+import { VoiceAgentModule } from './modules/voice-agent/voice-agent.module';
 
 @Module({
     imports: [
@@ -100,6 +101,7 @@ import { CruisesModule } from './modules/cruises/cruises.module';
         PackagesModule,
         CarsModule,
         CruisesModule,
+        VoiceAgentModule,
 
         // Infrastructure
         SchedulerModule,

@@ -4691,6 +4691,235 @@
           "Tracking"
         ]
       }
+    },
+    "/api/v1/voice-agent/session": {
+      "post": {
+        "operationId": "VoiceAgentController_startSession",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Start a new voice session",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
+    },
+    "/api/v1/voice-agent/session/{id}": {
+      "get": {
+        "operationId": "VoiceAgentController_getSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get session status",
+        "tags": [
+          "Voice Agent"
+        ]
+      },
+      "delete": {
+        "operationId": "VoiceAgentController_endSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "End a session",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
+    },
+    "/api/v1/voice-agent/session/{id}/text": {
+      "post": {
+        "operationId": "VoiceAgentController_processText",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Process text input for a session",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
+    },
+    "/api/v1/voice-agent/session/{id}/audio": {
+      "post": {
+        "operationId": "VoiceAgentController_processAudio",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Process audio input for a session",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
+    },
+    "/api/v1/voice-agent/session/{id}/resume": {
+      "post": {
+        "operationId": "VoiceAgentController_resumeSession",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Resume a paused session",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
+    },
+    "/api/v1/voice-agent/streaming-token": {
+      "get": {
+        "operationId": "VoiceAgentController_getStreamingToken",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get AssemblyAI streaming token",
+        "tags": [
+          "Voice Agent"
+        ]
+      }
     }
   },
   "info": {
@@ -5742,6 +5971,45 @@
           "firstName",
           "lastName"
         ]
+      },
+      "StartSessionDto": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "type": "object",
+            "description": "Device or client metadata"
+          },
+          "language": {
+            "type": "string",
+            "description": "Preferred language code (e.g., en, es, fr)"
+          }
+        }
+      },
+      "ProcessTextDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "User text input",
+            "example": "I want to fly from Lagos to London on March 15"
+          },
+          "context": {
+            "type": "object",
+            "description": "Additional context"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "ResumeSessionDto": {
+        "type": "object",
+        "properties": {
+          "draftId": {
+            "type": "string",
+            "description": "Draft ID to resume from"
+          }
+        }
       }
     }
   }

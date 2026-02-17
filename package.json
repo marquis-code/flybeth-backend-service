@@ -26,6 +26,7 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/throttler": "^6.3.0",
     "@nestjs/websockets": "^10.4.22",
+    "@types/ws": "^8.18.1",
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cache-manager": "^5.7.6",
@@ -46,7 +47,8 @@
     "socket.io": "^4.8.3",
     "streamifier": "^0.1.1",
     "stripe": "^17.5.0",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",

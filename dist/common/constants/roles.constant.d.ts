@@ -47,12 +47,65 @@ export declare enum NotificationType {
     CANCELLATION = "cancellation",
     REFUND_PROCESSED = "refund_processed",
     SYSTEM = "system",
-    PROMOTION = "promotion"
+    PROMOTION = "promotion",
+    BOOKING_REMINDER = "booking_reminder",
+    DRAFT_ABANDONED = "draft_abandoned",
+    FLIGHT_DISRUPTION = "flight_disruption",
+    CHECKIN_REMINDER = "checkin_reminder",
+    AI_RECOMMENDATION = "ai_recommendation",
+    VOICE_SESSION = "voice_session"
 }
 export declare enum NotificationChannel {
     EMAIL = "email",
     PUSH = "push",
-    IN_APP = "in_app"
+    IN_APP = "in_app",
+    SOCKET = "socket"
+}
+export declare enum VoiceSessionStatus {
+    ACTIVE = "active",
+    PAUSED = "paused",
+    COMPLETED = "completed",
+    ABANDONED = "abandoned"
+}
+export declare enum BookingDraftStep {
+    SEARCH = "search",
+    SELECT_FLIGHT = "select_flight",
+    SELECT_STAY = "select_stay",
+    SELECT_CAR = "select_car",
+    SELECT_CRUISE = "select_cruise",
+    PASSENGER_DETAILS = "passenger_details",
+    CONTACT_INFO = "contact_info",
+    REVIEW = "review",
+    PAYMENT = "payment",
+    CONFIRMED = "confirmed"
+}
+export declare enum BookingDraftStatus {
+    IN_PROGRESS = "in_progress",
+    COMPLETED = "completed",
+    ABANDONED = "abandoned",
+    EXPIRED = "expired"
+}
+export declare enum ConversationRole {
+    USER = "user",
+    ASSISTANT = "assistant",
+    SYSTEM = "system"
+}
+export declare enum VoiceAgentIntent {
+    SEARCH_FLIGHT = "search_flight",
+    SEARCH_STAY = "search_stay",
+    SEARCH_CAR = "search_car",
+    SEARCH_CRUISE = "search_cruise",
+    SEARCH_PACKAGE = "search_package",
+    SELECT_OPTION = "select_option",
+    ADD_PASSENGER = "add_passenger",
+    SET_CONTACT = "set_contact",
+    CONFIRM_BOOKING = "confirm_booking",
+    CHECK_STATUS = "check_status",
+    CANCEL_BOOKING = "cancel_booking",
+    GET_HELP = "get_help",
+    GET_RECOMMENDATIONS = "get_recommendations",
+    GENERAL_QUERY = "general_query",
+    UNKNOWN = "unknown"
 }
 export declare const PAYSTACK_CURRENCIES: string[];
 export declare const SUPPORTED_CURRENCIES: string[];
