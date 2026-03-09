@@ -1,5 +1,7 @@
 // src/modules/integrations/flights-integration.service.ts
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import {
   AirlineAdapter,
   FlightSearchQuery,
@@ -18,6 +20,7 @@ export class FlightsIntegrationService {
     private amadeusProvider: AmadeusProvider,
     private duffelProvider: DuffelProvider,
     private providerConfigService: ProviderConfigService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.registerAdapter(amadeusProvider);
     this.registerAdapter(duffelProvider);
@@ -205,5 +208,64 @@ export class FlightsIntegrationService {
       return amadeus.getNearestAirports(latitude, longitude);
     }
     return [];
+  }
+
+  /**
+   * Get live deals for a specific origin
+   * This fetches real-time offers for 6-8 popular destinations
+   */
+  async getLiveDeals(originCode: string): Promise<FlightSearchResult[]> {
+    const cacheKey = `flights:live-deals:${originCode}`;
+    const cached = await this.cacheManager.get<FlightSearchResult[]>(cacheKey);
+    if (cached) return cached;
+
+    // Popular destinations from Nigeria (or generally if origin is different)
+    const destinations = [
+      "LHR",
+      "DXB",
+      "NYC",
+      "YUL",
+      "ACC",
+      "NBO",
+      "FRA",
+      "AMS",
+    ].filter((d) => d !== originCode);
+
+    const formatDate = (date: Date) => date.toISOString().split("T")[0];
+    const addDays = (date: Date, days: number) => {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    };
+
+    const departureDate = formatDate(addDays(new Date(), 30));
+    const returnDate = formatDate(addDays(new Date(), 37));
+
+    this.logger.log(`Fetching live deals for origin ${originCode}`);
+
+    const dealPromises = destinations.slice(0, 6).map((dest) =>
+      this.search({
+        origin: originCode,
+        destination: dest,
+        departureDate,
+        returnDate,
+        adults: 1,
+        class: "ECONOMY",
+      })
+        .then((res) => {
+          // Return the cheapest result for this destination
+          return res.results[0] || null;
+        })
+        .catch(() => null),
+    );
+
+    const results = (await Promise.all(dealPromises)).filter(
+      Boolean,
+    ) as FlightSearchResult[];
+
+    // Cache for 1 hour
+    await this.cacheManager.set(cacheKey, results, 3600000);
+
+    return results;
   }
 }

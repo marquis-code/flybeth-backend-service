@@ -16,6 +16,7 @@ import { TransfersIntegrationService } from "./transfers-integration.service";
 import { ExperiencesIntegrationService } from "./experiences-integration.service";
 import { AmadeusMarketInsightsService } from "./amadeus-market-insights.service";
 import { ProviderConfigService } from "./provider-config.service";
+import { CarsIntegrationService } from "./cars-integration.service";
 
 // Providers
 import { AmadeusHelperService } from "./providers/amadeus-helper.service";
@@ -29,6 +30,8 @@ import { HotelbedsHelperService } from "./providers/hotelbeds-helper.service";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
+import { SabreHelperService } from "./providers/sabre-helper.service";
+import { SabreCarsProvider } from "./providers/sabre-cars.provider";
 
 // Controller
 import { ProviderConfigController } from "./provider-config.controller";
@@ -52,6 +55,7 @@ import { MarketInsightsController } from "./market-insights.controller";
     // Helper
     AmadeusHelperService,
     HotelbedsHelperService,
+    SabreHelperService,
 
     // Flight providers
     AmadeusProvider,
@@ -70,11 +74,15 @@ import { MarketInsightsController } from "./market-insights.controller";
     AmadeusExperiencesProvider,
     HotelbedsExperiencesProvider,
 
+    // Car providers
+    SabreCarsProvider,
+
     // Integration services
     FlightsIntegrationService,
     StaysIntegrationService,
     TransfersIntegrationService,
     ExperiencesIntegrationService,
+    CarsIntegrationService,
     AmadeusMarketInsightsService,
   ],
   exports: [
@@ -82,8 +90,9 @@ import { MarketInsightsController } from "./market-insights.controller";
     StaysIntegrationService,
     TransfersIntegrationService,
     ExperiencesIntegrationService,
+    CarsIntegrationService,
     AmadeusMarketInsightsService,
     ProviderConfigService,
   ],
 })
-export class IntegrationsModule {}
+export class IntegrationsModule { }

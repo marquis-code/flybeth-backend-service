@@ -27,9 +27,10 @@ export class SearchCarsDto {
   @IsDateString()
   pickUpDate: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
-  dropOffDate: string;
+  dropOffDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -7,7 +7,7 @@ import { Role, Permission } from "../../common/constants/roles.constant";
 import { UsersService } from "../users/users.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { v4 as uuidv4 } from "uuid";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 
 @Injectable()
 export class StaffService {
@@ -17,7 +17,7 @@ export class StaffService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private usersService: UsersService,
     private notificationsService: NotificationsService,
-  ) {}
+  ) { }
 
   async createStaff(adminId: string, staffData: any) {
     const existing = await this.usersService.findByEmail(staffData.email);

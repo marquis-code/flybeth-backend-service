@@ -32,7 +32,7 @@ export class FlightsController {
   constructor(
     private readonly flightsService: FlightsService,
     private readonly flightsIntegrationService: FlightsIntegrationService,
-  ) {}
+  ) { }
 
   // ─── Live Provider Search ─────────────────────────────────────
   @Public()
@@ -54,6 +54,15 @@ export class FlightsController {
       class: searchDto.cabinClass,
       maxConnections: searchDto.maxStops,
     });
+  }
+
+  @Public()
+  @Get("deals/live")
+  @ApiOperation({
+    summary: "Get live flight deals based on origin (real-time data)",
+  })
+  getLiveDeals(@Query("origin") origin: string = "LOS") {
+    return this.flightsIntegrationService.getLiveDeals(origin);
   }
 
   @Public()

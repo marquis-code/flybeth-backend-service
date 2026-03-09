@@ -106,6 +106,65 @@ export class DuffelProvider implements AirlineAdapter {
   }
 
   /**
+   * Price a flight offer through the correct provider
+   * In Duffel, this is simply GET /air/offers/:id which returns up-to-date pricing
+   */
+  async priceOffer(offer: any): Promise<any> {
+    const offerId = typeof offer === "string" ? offer : offer.id || offer.offerId;
+    this.logger.log(`Pricing Duffel offer: ${offerId}`);
+
+    try {
+      const updatedOffer = await this.getOfferDetails(offerId);
+      if (!updatedOffer) throw new Error("Offer not found");
+
+      return {
+        data: {
+          flightOffers: [updatedOffer.rawOffer || updatedOffer],
+        },
+      };
+    } catch (error) {
+      this.logger.error(`Duffel price offer error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get seatmap through the correct provider
+   */
+  async getSeatmap(flightOffer: any): Promise<any> {
+    const offerId =
+      typeof flightOffer === "string"
+        ? flightOffer
+        : flightOffer.id || flightOffer.offerId;
+    this.logger.log(`Fetching seatmap for Duffel offer: ${offerId}`);
+
+    try {
+      const response = await fetch(
+        `${this.baseUrl}/air/seat_maps?offer_id=${offerId}`,
+        {
+          method: "GET",
+          headers: this.getHeaders(),
+          signal: AbortSignal.timeout(30000),
+        },
+      );
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(
+          `Duffel seatmap failed: ${response.status} ${errorBody}`,
+        );
+        throw new Error(`Duffel seatmap failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      this.logger.error(`Duffel seatmap error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get up-to-date details for a specific offer
    */
   async getOfferDetails(offerId: string): Promise<FlightSearchResult | null> {

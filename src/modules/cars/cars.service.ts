@@ -4,21 +4,28 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Car, CarDocument } from "./schemas/car.schema";
 import { SearchCarsDto, CreateCarDto } from "./dto/car.dto";
+import { CarsIntegrationService } from "../integrations/cars-integration.service";
+import { CarSearchQuery } from "../integrations/interfaces/car-adapter.interface";
 
 @Injectable()
 export class CarsService {
   private readonly logger = new Logger(CarsService.name);
 
-  constructor(@InjectModel(Car.name) private carModel: Model<CarDocument>) {}
+  constructor(
+    @InjectModel(Car.name) private carModel: Model<CarDocument>,
+    private carsIntegrationService: CarsIntegrationService,
+  ) { }
 
-  async search(searchDto: SearchCarsDto): Promise<CarDocument[]> {
+  async search(searchDto: SearchCarsDto): Promise<any> {
     const query: any = {
-      type: searchDto.type,
       isAvailable: true,
     };
 
+    if (searchDto.type) {
+      query.type = searchDto.type;
+    }
+
     if (searchDto.pickUpLocation) {
-      // Simple regex match for location (city or code)
       query.availableLocations = {
         $in: [new RegExp(searchDto.pickUpLocation, "i")],
       };
@@ -32,7 +39,33 @@ export class CarsService {
       query["capacity.passengers"] = { $gte: searchDto.passengers };
     }
 
-    return this.carModel.find(query).exec();
+    // Fetch from database
+    const dbCars = await this.carModel.find(query).exec();
+
+    // Fetch from live integrations (Sabre)
+    let liveCars = [];
+    if (searchDto.pickUpLocation && searchDto.pickUpDate) {
+      try {
+        const liveQuery: CarSearchQuery = {
+          pickUpLocation: searchDto.pickUpLocation,
+          returnLocation: searchDto.returnLocation || searchDto.pickUpLocation,
+          pickUpDate: searchDto.pickUpDate,
+          pickUpTime: searchDto.pickUpTime || "10:00",
+          returnDate: searchDto.returnDate || searchDto.pickUpDate,
+          returnTime: searchDto.returnTime || "10:00",
+          currencyCode: searchDto.currency || "USD",
+        };
+        const integrationResults = await this.carsIntegrationService.search(liveQuery);
+        liveCars = integrationResults.results;
+      } catch (error) {
+        this.logger.error(`Integration search failed: ${error.message}`);
+      }
+    }
+
+    return {
+      dbResults: dbCars,
+      liveResults: liveCars,
+    };
   }
 
   async findById(id: string): Promise<CarDocument> {
