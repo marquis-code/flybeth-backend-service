@@ -5,7 +5,7 @@ import { Model } from "mongoose";
 import { Car, CarDocument } from "./schemas/car.schema";
 import { SearchCarsDto, CreateCarDto } from "./dto/car.dto";
 import { CarsIntegrationService } from "../integrations/cars-integration.service";
-import { CarSearchQuery } from "../integrations/interfaces/car-adapter.interface";
+import { CarSearchQuery, CarSearchResult } from "../integrations/interfaces/car-adapter.interface";
 
 @Injectable()
 export class CarsService {
@@ -43,16 +43,16 @@ export class CarsService {
     const dbCars = await this.carModel.find(query).exec();
 
     // Fetch from live integrations (Sabre)
-    let liveCars = [];
+    let liveCars: CarSearchResult[] = [];
     if (searchDto.pickUpLocation && searchDto.pickUpDate) {
       try {
         const liveQuery: CarSearchQuery = {
           pickUpLocation: searchDto.pickUpLocation,
-          returnLocation: searchDto.returnLocation || searchDto.pickUpLocation,
+          returnLocation: searchDto.dropOffLocation || searchDto.pickUpLocation,
           pickUpDate: searchDto.pickUpDate,
           pickUpTime: searchDto.pickUpTime || "10:00",
-          returnDate: searchDto.returnDate || searchDto.pickUpDate,
-          returnTime: searchDto.returnTime || "10:00",
+          returnDate: searchDto.dropOffDate || searchDto.pickUpDate,
+          returnTime: searchDto.dropOffTime || "10:00",
           currencyCode: searchDto.currency || "USD",
         };
         const integrationResults = await this.carsIntegrationService.search(liveQuery);

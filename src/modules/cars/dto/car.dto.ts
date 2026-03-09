@@ -49,6 +49,11 @@ export class SearchCarsDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   passengers?: number;
