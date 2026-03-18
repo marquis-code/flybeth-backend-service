@@ -73,4 +73,15 @@ export class TransfersIntegrationService {
     if (!adapter) throw new Error(`Unknown provider: ${provider}`);
     return adapter.createTransferOrder(offerId, passengerDetails);
   }
+
+  async cancelOrder(orderId: string, confirmNbr: string, provider: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter) throw new Error(`Unknown provider: ${provider}`);
+
+    if (adapter.cancelTransferOrder) {
+      return adapter.cancelTransferOrder(orderId, confirmNbr);
+    } else {
+      throw new Error(`Cancellation not supported for provider: ${provider}`);
+    }
+  }
 }

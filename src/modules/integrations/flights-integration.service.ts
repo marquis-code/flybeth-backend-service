@@ -211,6 +211,17 @@ export class FlightsIntegrationService {
   }
 
   /**
+   * Predict the trip purpose using Amadeus Itinerary Management API
+   */
+  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
+    const amadeus = this.adapters.get("amadeus") as AmadeusProvider;
+    if (amadeus && amadeus.predictTripPurpose) {
+      return amadeus.predictTripPurpose(origin, destination, departureDate, returnDate);
+    }
+    return null;
+  }
+
+  /**
    * Get live deals for a specific origin
    * This fetches real-time offers for 6-8 popular destinations
    */

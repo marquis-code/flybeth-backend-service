@@ -75,4 +75,5 @@ export interface AirlineAdapter {
   ): Promise<{ success: boolean; refundAmount?: number }>;
   searchLocations?(keyword: string, countryCode?: string): Promise<any[]>;
   getNearestAirports?(latitude: number, longitude: number): Promise<any[]>;
+  predictTripPurpose?(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any>;
 }

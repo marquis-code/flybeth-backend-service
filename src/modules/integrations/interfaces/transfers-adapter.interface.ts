@@ -43,6 +43,10 @@ export interface TransfersAdapter {
     offerId: string,
     passengerDetails: any,
   ): Promise<TransferOrderingResult>;
+  cancelTransferOrder?(
+    orderId: string,
+    confirmNbr: string,
+  ): Promise<{ status: string; confirmNbr: string }>;
 }
 
 export interface TransferOrderingResult {

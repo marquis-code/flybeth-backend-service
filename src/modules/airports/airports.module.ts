@@ -1,8 +1,9 @@
 // src/modules/airports/airports.module.ts
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { AirportsController } from "./airports.controller";
 import { AirportsService } from "./airports.service";
+import { IntegrationsModule } from "../integrations/integrations.module";
 import {
   Airport,
   AirportSchema,
@@ -16,9 +17,10 @@ import {
       { name: Airport.name, schema: AirportSchema },
       { name: Airline.name, schema: AirlineSchema },
     ]),
+    forwardRef(() => IntegrationsModule),
   ],
   controllers: [AirportsController],
   providers: [AirportsService],
   exports: [AirportsService],
 })
-export class AirportsModule {}
+export class AirportsModule { }

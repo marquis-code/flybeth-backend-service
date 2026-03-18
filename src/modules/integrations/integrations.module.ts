@@ -93,6 +93,7 @@ import { MarketInsightsController } from "./market-insights.controller";
     CarsIntegrationService,
     AmadeusMarketInsightsService,
     ProviderConfigService,
+    AmadeusHelperService,
   ],
 })
 export class IntegrationsModule { }

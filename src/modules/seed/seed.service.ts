@@ -12,6 +12,9 @@ import {
   BankAccount,
   BankAccountDocument,
 } from "../payments/schemas/bank-account.schema";
+import { User, UserDocument } from "../users/schemas/user.schema";
+import { Role } from "../../common/constants/roles.constant";
+import { hashPassword } from "../../common/utils/crypto.util";
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -22,12 +25,14 @@ export class SeedService implements OnModuleInit {
     @InjectModel(Airline.name) private airlineModel: Model<AirlineDocument>,
     @InjectModel(BankAccount.name)
     private bankAccountModel: Model<BankAccountDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
   async onModuleInit() {
     await this.seedAirports();
     await this.seedAirlines();
     await this.seedBankAccounts();
+    await this.seedAgentUser();
   }
 
   private async seedAirports() {
@@ -396,5 +401,35 @@ export class SeedService implements OnModuleInit {
 
     await this.bankAccountModel.insertMany(accounts);
     this.logger.log(`Seeded ${accounts.length} bank accounts`);
+  }
+
+  private async seedAgentUser() {
+    const existingAgent = await this.userModel
+      .findOne({ email: "agent@flybeth.com" })
+      .exec();
+    if (existingAgent) return;
+
+    const hashedPassword = await hashPassword("Agent@2026!");
+
+    const agent = new this.userModel({
+      email: "agent@flybeth.com",
+      password: hashedPassword,
+      firstName: "Flybeth",
+      lastName: "Agent",
+      phone: "+2348000000000",
+      role: Role.AGENT,
+      isVerified: true,
+      isActive: true,
+      firstLogin: false,
+      preferences: {
+        currency: "NGN",
+        language: "en",
+        emailNotifications: true,
+        pushNotifications: true,
+      },
+    });
+
+    await agent.save();
+    this.logger.log("Seeded default agent user: agent@flybeth.com");
   }
 }

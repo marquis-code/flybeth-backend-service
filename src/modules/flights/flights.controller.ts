@@ -158,6 +158,26 @@ export class FlightsController {
     return { success: true, data };
   }
 
+  @Public()
+  @Get("predict-purpose")
+  @ApiOperation({
+    summary: "Predict if a flight is for business or leisure",
+  })
+  async predictTripPurpose(
+    @Query("origin") origin: string,
+    @Query("destination") destination: string,
+    @Query("departureDate") departureDate: string,
+    @Query("returnDate") returnDate: string,
+  ) {
+    const data = await this.flightsIntegrationService.predictTripPurpose(
+      origin,
+      destination,
+      departureDate,
+      returnDate
+    );
+    return { success: true, data };
+  }
+
   // ─── Internal DB Search ───────────────────────────────────────
   @Public()
   @Post("search")

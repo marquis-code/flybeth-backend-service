@@ -16,6 +16,7 @@ import {
   ResetPasswordDto,
   VerifyOtpDto,
   RefreshTokenDto,
+  ResendOtpDto,
 } from "./dto/auth.dto";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -72,6 +73,14 @@ export class AuthController {
   @ApiOperation({ summary: "Verify email with OTP" })
   verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOtp(verifyOtpDto);
+  }
+
+  @Public()
+  @Post("resend-otp")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Resend verification OTP" })
+  resendOtp(@Body() resendOtpDto: ResendOtpDto) {
+    return this.authService.resendOtp(resendOtpDto);
   }
 
   @Post("logout")

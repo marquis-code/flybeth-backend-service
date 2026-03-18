@@ -7,13 +7,24 @@ import { Public } from "../../common/decorators/public.decorator";
 @ApiTags("Airports & Airlines")
 @Controller()
 export class AirportsController {
-  constructor(private readonly airportsService: AirportsService) {}
+  constructor(private readonly airportsService: AirportsService) { }
 
   @Public()
   @Get("airports/search")
   @ApiOperation({ summary: "Search airports by name, city, or code" })
   searchAirports(@Query("q") query: string, @Query("limit") limit?: number) {
     return this.airportsService.searchAirports(query, limit);
+  }
+
+  @Public()
+  @Get("cities/search")
+  @ApiOperation({ summary: "Search cities by keyword" })
+  searchCities(
+    @Query("q") keyword: string,
+    @Query("limit") limit?: number,
+    @Query("countryCode") countryCode?: string,
+  ) {
+    return this.airportsService.searchCities(keyword, limit, countryCode);
   }
 
   @Public()

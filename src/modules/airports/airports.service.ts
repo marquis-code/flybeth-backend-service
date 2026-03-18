@@ -4,6 +4,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
+import { AmadeusHelperService } from "../integrations/providers/amadeus-helper.service";
 import {
   Airport,
   AirportDocument,
@@ -17,7 +18,8 @@ export class AirportsService {
     @InjectModel(Airport.name) private airportModel: Model<AirportDocument>,
     @InjectModel(Airline.name) private airlineModel: Model<AirlineDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+    private amadeusHelper: AmadeusHelperService,
+  ) { }
 
   async searchAirports(query: string, limit: number = 10) {
     const cacheKey = `airports:search:${query}:${limit}`;
@@ -133,5 +135,15 @@ export class AirportsService {
       .exec();
     await this.cacheManager.set(cacheKey, airlines, 86400000);
     return airlines as unknown as AirlineDocument[];
+  }
+
+  async searchCities(keyword: string, limit: number = 10, countryCode?: string) {
+    const cacheKey = `cities:search:${keyword}:${limit}:${countryCode}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
+    const results = await this.amadeusHelper.searchCities(keyword, limit, countryCode);
+    await this.cacheManager.set(cacheKey, results, 86400000); // 24h cache
+    return results;
   }
 }

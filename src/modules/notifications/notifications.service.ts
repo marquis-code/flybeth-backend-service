@@ -55,9 +55,14 @@ export class NotificationsService {
     return notification.save();
   }
 
-  async sendEmail(to: string, subject: string, html: string): Promise<void> {
+  async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    variables?: Record<string, any>,
+  ): Promise<void> {
     try {
-      await this.resendService.sendEmail({ to, subject, html });
+      await this.resendService.sendEmail({ to, subject, html, variables });
     } catch (error) {
       this.logger.error(`Resend email delegation failed: ${error.message}`);
     }
@@ -71,70 +76,142 @@ export class NotificationsService {
     currency: string;
     flightDetails: string;
   }): Promise<void> {
-    const html = `
-      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #FF3D00 0%, #D32F2F 100%); padding: 40px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.025em;">Booking Confirmed! ✈️</h1>
+    const title = "Booking Confirmed! ✈️";
+    const content = `
+      <p>Hi ${params.firstName},</p>
+      <p>Pack your bags! Your flight booking is confirmed and all set.</p>
+      
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; margin: 30px 0;">
+        <h3 style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 8px 0;">Booking Reference</h3>
+        <p style="color: #0D1DAD; font-size: 28px; font-weight: 900; margin: 0 0 20px 0;">${params.pnr}</p>
+        
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+          <p style="margin: 0 0 8px 0; color: #475569;"><strong style="color: #0D1DAD;">Flight:</strong> ${params.flightDetails}</p>
+          <p style="margin: 0; color: #475569;"><strong style="color: #0D1DAD;">Total Paid:</strong> ${params.currency} ${params.totalAmount.toLocaleString()}</p>
         </div>
-        <div style="padding: 40px 30px;">
-          <p style="font-size: 16px; color: #1e293b; line-height: 1.6;">Hi ${params.firstName},</p>
-          <p style="font-size: 16px; color: #475569; line-height: 1.6;">Pack your bags! Your flight booking is confirmed and all set.</p>
-          
-          <div style="background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 25px; margin: 30px 0;">
-            <h3 style="color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px 0;">Booking Reference</h3>
-            <p style="color: #0f172a; font-size: 24px; font-weight: 700; margin: 0 0 20px 0;">${params.pnr}</p>
-            
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
-              <p style="margin: 0 0 8px 0; color: #475569;"><strong style="color: #0f172a;">Flight:</strong> ${params.flightDetails}</p>
-              <p style="margin: 0; color: #475569;"><strong style="color: #0f172a;">Total Paid:</strong> ${params.currency} ${params.totalAmount.toLocaleString()}</p>
-            </div>
-          </div>
-          
-          <div style="text-align: center; margin-top: 40px;">
-            <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" style="background-color: #FF3D00; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">View My Booking</a>
-          </div>
-        </div>
+      </div>
+      
+      <div class="action-area">
+        <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" class="btn">View My Booking</a>
       </div>
     `;
 
     await this.sendEmail(
       params.email,
       `Your booking is confirmed: ${params.pnr}`,
-      html,
+      this.resendService.brandWrapper(title, content),
     );
   }
 
   async sendWelcomeEmail(email: string, firstName: string): Promise<void> {
-    const html = `
-      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 60px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -0.025em;">Welcome to Flybeth! 🌍</h1>
+    const title = "Welcome aboard, explorer! 🌍";
+    const content = `
+      <p>Hi ${firstName},</p>
+      <p>We're thrilled to have you join our community of global travelers. With Flybeth, we make every journey feel premium and effortless.</p>
+      
+      <div style="margin: 40px 0;">
+        <div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid #FF3D00; background: #fffaf0; border-radius: 0 12px 12px 0;">
+          <p style="margin: 0; color: #FF3D00; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Exclusive Deals</p>
+          <p style="margin: 4px 0 0 0; color: #475569; font-size: 14px;">Access special rates not found anywhere else.</p>
         </div>
-        <div style="padding: 40px 30px;">
-          <p style="font-size: 18px; color: #1e293b; font-weight: 600;">Welcome aboard, ${firstName}!</p>
-          <p style="font-size: 16px; color: #475569; line-height: 1.6;">We're thrilled to have you join our community of global travelers. With Flybeth, we make every journey feel premium and effortless.</p>
-          
-          <div style="margin: 40px 0;">
-            <div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid #FF3D00; background: #fffaf0;">
-              <p style="margin: 0; color: #9a3412; font-weight: 600;">Exclusive Deals</p>
-              <p style="margin: 4px 0 0 0; color: #c2410c; font-size: 14px;">Access special rates not found anywhere else.</p>
-            </div>
-            <div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid #3b82f6; background: #eff6ff;">
-              <p style="margin: 0; color: #1d4ed8; font-weight: 600;">Seamless Booking</p>
-              <p style="margin: 4px 0 0 0; color: #1e40af; font-size: 14px;">Manage all your trips from one simple dashboard.</p>
-            </div>
-          </div>
+        <div style="margin-bottom: 20px; padding: 15px; border-left: 4px solid #0D1DAD; background: #eff6ff; border-radius: 0 12px 12px 0;">
+          <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Seamless Booking</p>
+          <p style="margin: 4px 0 0 0; color: #475569; font-size: 14px;">Manage all your trips from one simple dashboard.</p>
+        </div>
+      </div>
 
-          <div style="text-align: center; margin-top: 40px;">
-            <a href="${this.configService.get("CLIENT_URL")}/search" style="background-color: #FF3D00; color: white; padding: 18px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Start Your Next Adventure</a>
-          </div>
-        </div>
+      <div class="action-area">
+        <a href="${this.configService.get("CLIENT_URL")}/search" class="btn">Start Your Next Adventure</a>
       </div>
     `;
     await this.sendEmail(
       email,
       "Welcome to Flybeth - Your journey begins here",
-      html,
+      this.resendService.brandWrapper(title, content),
+    );
+  }
+
+  async sendOtpEmail(
+    email: string,
+    firstName: string,
+    otp: string,
+  ): Promise<void> {
+    const title = "Verify Your Identity";
+    const content = `
+      <p>Hi ${firstName}, use the code below to securely sign in to your Flybeth account.</p>
+      
+      <div class="otp-card">
+        <span class="otp-label">Security Code</span>
+        <span class="otp-code">${otp}</span>
+      </div>
+      
+      <p style="font-size: 13px; color: #94a3b8; text-align: center; margin-top: 30px;">
+        This code will expire in 10 minutes. If you didn't request this, please ignore this email.
+      </p>
+    `;
+    await this.sendEmail(
+      email,
+      `${otp} is your Flybeth verification code`,
+      this.resendService.brandWrapper(title, content),
+    );
+  }
+
+  async sendResetPasswordEmail(
+    email: string,
+    firstName: string,
+    token: string,
+  ): Promise<void> {
+    const title = "Reset Your Password 🔒";
+    const resetUrl = `${this.configService.get("CLIENT_URL")}/auth/reset-password?token=${token}`;
+    const content = `
+      <p>Hi ${firstName},</p>
+      <p>We received a request to reset your password. Click the button below to initialize your new credentials.</p>
+      
+      <div class="action-area">
+        <a href="${resetUrl}" class="btn">Reset Password</a>
+      </div>
+      
+      <p style="font-size: 13px; color: #94a3b8; text-align: center; margin-top: 30px;">
+        This link will expire in 1 hour. If you didn't request this, please ignore this email.
+      </p>
+    `;
+    await this.sendEmail(
+      email,
+      "Password Reset Request - Flybeth",
+      this.resendService.brandWrapper(title, content),
+    );
+  }
+
+  async sendAgentWelcomeEmail(email: string, firstName: string): Promise<void> {
+    const title = "Welcome Home, Partner! 🧡";
+    const content = `
+      <p style="font-size: 18px; line-height: 1.7;">Dearest ${firstName},</p>
+      <p style="font-size: 16px; line-height: 1.7; margin-top: 10px;">
+        We are absolutely over the moon to have you join the Flybeth family! You're not just another agent to us; you're the heartbeat of modern travel. Together, we're going to redefine how the world explores.
+      </p>
+      
+      <div style="background: #f8fafc; border-radius: 16px; padding: 30px; margin: 40px 0; border: 1px solid #e2e8f0;">
+        <h3 style="color: #FF3D00; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">Your New Superpowers:</h3>
+        
+        <div style="margin-bottom: 25px;">
+          <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px;">💎 Exclusive Wholesale Inventory</p>
+          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Access rates from Amadeus & Duffel that others can only dream of.</p>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px;">🚀 Seamless Flight Wizard</p>
+          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Book global transit in seconds with our auto-advancing, keyboard-first engine.</p>
+        </div>
+      </div>
+
+      <div class="action-area">
+        <a href="${this.configService.get("CLIENT_URL")}/dashboard" class="btn">Step into Your Dashboard</a>
+      </div>
+    `;
+    await this.sendEmail(
+      email,
+      `Welcome to the future of travel, ${firstName}! ✨`,
+      this.resendService.brandWrapper(title, content),
     );
   }
 
@@ -145,29 +222,23 @@ export class NotificationsService {
     itemName: string;
     url: string;
   }): Promise<void> {
-    const html = `
-      <div style="font-family: 'Inter', system-ui, -apple-system, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-        <div style="background: #FF3D00; padding: 30px 20px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 800;">Don't let this slip away! ⏳</h1>
-        </div>
-        <div style="padding: 40px 30px;">
-          <p style="font-size: 16px; color: #1e293b; line-height: 1.6;">Hi ${params.firstName},</p>
-          <p style="font-size: 16px; color: #475569; line-height: 1.6;">We noticed you left your ${params.itemType} booking for <strong>${params.itemName}</strong> unfinished. Our prices are dynamic and might change soon!</p>
-          
-          <div style="background: #fff5f5; border: 1px dashed #feb2b2; border-radius: 8px; padding: 20px; margin: 30px 0; text-align: center;">
-            <p style="color: #c53030; font-weight: 600; margin: 0;">We've saved your spot for a limited time.</p>
-          </div>
-          
-          <div style="text-align: center; margin-top: 40px;">
-            <a href="${params.url}" style="background-color: #0f172a; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Complete My Booking</a>
-          </div>
-        </div>
+    const title = "Don't let this slip away! ⏳";
+    const content = `
+      <p>Hi ${params.firstName},</p>
+      <p>We noticed you left your ${params.itemType} booking for <strong>${params.itemName}</strong> unfinished. Our prices are dynamic and might change soon!</p>
+      
+      <div style="background: #fff5f5; border: 1px dashed #FF3D00; border-radius: 12px; padding: 20px; margin: 30px 0; text-align: center;">
+        <p style="color: #FF3D00; font-weight: 800; margin: 0; font-size: 14px;">We've saved your spot for a limited time.</p>
+      </div>
+      
+      <div class="action-area">
+        <a href="${params.url}" class="btn">Complete My Booking</a>
       </div>
     `;
     await this.sendEmail(
       params.email,
       `Did you forget something? Your ${params.itemType} is waiting`,
-      html,
+      this.resendService.brandWrapper(title, content),
     );
   }
 
@@ -179,28 +250,37 @@ export class NotificationsService {
     reference: string;
     pnr: string;
   }): Promise<void> {
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0;">Payment Receipt 💳</h1>
-        </div>
-        <div style="padding: 30px; background: #f8f9fa;">
-          <p>Dear ${params.firstName},</p>
-          <p>Your payment has been processed successfully.</p>
-          <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0;">
-            <p><strong>Amount:</strong> ${params.currency} ${params.amount.toLocaleString()}</p>
-            <p><strong>Reference:</strong> ${params.reference}</p>
-            <p><strong>Booking PNR:</strong> ${params.pnr}</p>
-            <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-          </div>
-        </div>
+    const title = "Payment Receipt 💳";
+    const content = `
+      <p>Dear ${params.firstName},</p>
+      <p>Your payment has been processed successfully.</p>
+      
+      <div style="background: #f8fafc; border-radius: 16px; padding: 30px; margin: 24px 0; border: 1px solid #e2e8f0;">
+        <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Amount Paid</td>
+            <td style="padding: 8px 0; text-align: right; color: #0D1DAD; font-weight: 800;">${params.currency} ${params.amount.toLocaleString()}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Reference</td>
+            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-family: monospace;">${params.reference}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #64748b;">Booking PNR</td>
+            <td style="padding: 8px 0; text-align: right; color: #1e293b; font-weight: 600;">${params.pnr}</td>
+          </tr>
+          <tr style="border-top: 1px solid #e2e8f0;">
+            <td style="padding: 8px 0; color: #64748b; padding-top: 16px;">Date</td>
+            <td style="padding: 8px 0; text-align: right; color: #1e293b; padding-top: 16px;">${new Date().toLocaleDateString()}</td>
+          </tr>
+        </table>
       </div>
     `;
 
     await this.sendEmail(
       params.email,
       `Payment Receipt - ${params.reference}`,
-      html,
+      this.resendService.brandWrapper(title, content),
     );
   }
 
@@ -279,12 +359,10 @@ export class NotificationsService {
 
   /**
    * Replaces {{variable}} placeholders with actual data
+   * @deprecated Use this.resendService.replaceVariables instead
    */
   private compileTemplate(html: string, data: Record<string, any>): string {
-    return html.replace(/\{\{(.*?)\}\}/g, (match, key) => {
-      const value = data[key.trim()];
-      return value !== undefined ? value : match;
-    });
+    return this.resendService.replaceVariables(html, data);
   }
 
   async sendDynamicEmail(params: {
@@ -299,10 +377,21 @@ export class NotificationsService {
       return;
     }
 
-    const html = this.compileTemplate(template.htmlContent, params.data);
-    const subject = this.compileTemplate(template.subject, params.data);
+    const htmlContent = this.resendService.replaceVariables(
+      template.htmlContent,
+      params.data,
+    );
+    const subject = this.resendService.replaceVariables(
+      template.subject,
+      params.data,
+    );
 
-    await this.sendEmail(params.to, subject, html);
+    // Wrap in branding if not a full HTML document
+    const finalHtml = htmlContent.includes("<html")
+      ? htmlContent
+      : this.resendService.brandWrapper(subject, htmlContent);
+
+    await this.sendEmail(params.to, subject, finalHtml);
   }
 
   async seedDefaultTemplates(): Promise<void> {

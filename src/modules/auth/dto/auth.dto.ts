@@ -42,6 +42,16 @@ export class RegisterDto {
   @IsEnum(Role)
   role?: Role;
 
+  @ApiPropertyOptional({ example: "MarquisTravels" })
+  @IsOptional()
+  @IsString()
+  agencyName?: string;
+
+  @ApiPropertyOptional({ example: "Independent OTA" })
+  @IsOptional()
+  @IsString()
+  agencyType?: string;
+
   @ApiPropertyOptional({ example: "USD" })
   @IsOptional()
   @IsString()
@@ -88,5 +98,13 @@ export class VerifyOtpDto {
 export class RefreshTokenDto {
   @ApiProperty()
   @IsString()
+  @MinLength(1)
   refreshToken: string;
+}
+
+export class ResendOtpDto {
+  @ApiProperty({ example: "john@example.com" })
+  @IsEmail()
+  @IsString()
+  email: string;
 }

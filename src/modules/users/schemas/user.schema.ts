@@ -40,8 +40,14 @@ export class User {
   @Prop({ required: true, trim: true })
   firstName: string;
 
-  @Prop({ required: true, trim: true })
+  @Prop({ trim: true })
   lastName: string;
+
+  @Prop()
+  agencyName: string;
+
+  @Prop()
+  agencyType: string;
 
   @Prop()
   phone: string;

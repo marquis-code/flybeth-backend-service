@@ -12,7 +12,7 @@ export class AmadeusProvider implements AirlineAdapter {
   readonly providerName = "amadeus";
   private readonly logger = new Logger(AmadeusProvider.name);
 
-  constructor(private amadeusHelper: AmadeusHelperService) {}
+  constructor(private amadeusHelper: AmadeusHelperService) { }
 
   /**
    * Search flights using Amadeus Flight Offers Search API
@@ -345,15 +345,15 @@ export class AmadeusProvider implements AirlineAdapter {
               },
               documents: p.passportNumber
                 ? [
-                    {
-                      documentType: "PASSPORT",
-                      number: p.passportNumber,
-                      expiryDate: p.passportExpiry,
-                      issuanceCountry: p.passportCountry || "US",
-                      nationality: p.nationality || "US",
-                      holder: true,
-                    },
-                  ]
+                  {
+                    documentType: "PASSPORT",
+                    number: p.passportNumber,
+                    expiryDate: p.passportExpiry,
+                    issuanceCountry: p.passportCountry || "US",
+                    nationality: p.nationality || "US",
+                    holder: true,
+                  },
+                ]
                 : undefined,
             };
           }),
@@ -545,5 +545,12 @@ export class AmadeusProvider implements AirlineAdapter {
       );
       return [];
     }
+  }
+
+  /**
+   * Predict the trip purpose (Business or Leisure) from a flight
+   */
+  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
+    return this.amadeusHelper.predictTripPurpose(origin, destination, departureDate, returnDate);
   }
 }

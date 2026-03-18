@@ -15,6 +15,7 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   VerifyOtpDto,
+  ResendOtpDto,
 } from "./dto/auth.dto";
 import { comparePassword, generateOTP } from "../../common/utils/crypto.util";
 import { Role } from "../../common/constants/roles.constant";
@@ -37,8 +38,10 @@ export class AuthService {
       password: registerDto.password,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
+      agencyName: registerDto.agencyName,
+      agencyType: registerDto.agencyType,
       phone: registerDto.phone,
-      role: registerDto.role || Role.CUSTOMER,
+      role: registerDto.role || Role.AGENT,
       tenant: registerDto.tenantId ? (registerDto.tenantId as any) : null,
       preferences: {
         currency: registerDto.currency || "USD",
@@ -51,34 +54,22 @@ export class AuthService {
     const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
-    // Send Welcome Email
+    // Send OTP Email for verification first
     this.notificationsService
-      .sendWelcomeEmail(user.email, user.firstName)
+      .sendOtpEmail(user.email, user.firstName, otp)
       .catch((err) => {
         this.logger.error(
-          `Failed to send welcome email to ${user.email}: ${err.message}`,
+          `Failed to send OTP email to ${user.email}: ${err.message}`,
         );
       });
 
-    this.logger.log(`User registered: ${user.email} (Role: ${user.role})`);
-
-    // Generate tokens
-    const tokens = await this.generateTokens(
-      user._id.toString(),
-      user.email,
-      user.role,
+    this.logger.log(
+      `User registered & OTP sent: ${user.email} (Role: ${user.role})`,
     );
 
     return {
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        isVerified: user.isVerified,
-      },
-      ...tokens,
+      message: "Registration successful. Please verify your email with the OTP sent.",
+      email: user.email,
     };
   }
 
@@ -102,38 +93,24 @@ export class AuthService {
       throw new UnauthorizedException("Invalid email or password");
     }
 
-    // Update last login
-    await this.usersService.updateLastLogin(user._id.toString());
+    // Instead of logging in immediately, send OTP for 2FA
+    const otp = generateOTP();
+    await this.usersService.setOTP(user._id.toString(), otp);
 
-    // Generate tokens
-    const tokens = await this.generateTokens(
-      user._id.toString(),
-      user.email,
-      user.role,
-    );
+    this.notificationsService
+      .sendOtpEmail(user.email, user.firstName, otp)
+      .catch((err) => {
+        this.logger.error(
+          `Failed to send login OTP to ${user.email}: ${err.message}`,
+        );
+      });
 
-    // Store refresh token
-    await this.usersService.updateRefreshToken(
-      user._id.toString(),
-      tokens.refreshToken,
-    );
-
-    this.logger.log(`User logged in: ${user.email}`);
+    this.logger.log(`Login OTP sent for: ${user.email}`);
 
     return {
-      user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        tenant: user.tenant,
-        isVerified: user.isVerified,
-        preferences: user.preferences,
-        permissions: user.permissions,
-        firstLogin: user.firstLogin,
-      },
-      ...tokens,
+      requiresOtp: true,
+      message: "Verification code sent to your email",
+      email: user.email,
     };
   }
 
@@ -167,9 +144,14 @@ export class AuthService {
     const resetToken = uuidv4();
     await this.usersService.setResetToken(user.email, resetToken);
 
+    await this.notificationsService.sendResetPasswordEmail(
+      user.email,
+      user.firstName,
+      resetToken,
+    );
+
     this.logger.log(`Password reset requested for: ${user.email}`);
 
-    // In production, send reset email with token
     return {
       message: "Password reset link sent to your email",
     };
@@ -195,6 +177,9 @@ export class AuthService {
   }
 
   async verifyOtp(verifyOtpDto: VerifyOtpDto) {
+    const wasVerified = (await this.usersService.findByEmail(verifyOtpDto.email))
+      ?.isVerified;
+
     const user = await this.usersService.verifyOTP(
       verifyOtpDto.email,
       verifyOtpDto.otp,
@@ -204,9 +189,69 @@ export class AuthService {
       throw new BadRequestException("Invalid or expired OTP");
     }
 
-    this.logger.log(`Email verified for: ${user.email}`);
+    // If this was the first time verifying (Signup flow), send the Sweet Welcome Email
+    if (!wasVerified && user.role === Role.AGENT) {
+      this.notificationsService
+        .sendAgentWelcomeEmail(user.email, user.firstName)
+        .catch((err) => {
+          this.logger.error(
+            `Failed to send Agent Welcome email: ${err.message}`,
+          );
+        });
+    }
 
-    return { message: "Email verified successfully", isVerified: true };
+    // Update last login
+    await this.usersService.updateLastLogin(user._id.toString());
+
+    // Generate tokens
+    const tokens = await this.generateTokens(
+      user._id.toString(),
+      user.email,
+      user.role,
+    );
+
+    // Store refresh token
+    await this.usersService.updateRefreshToken(
+      user._id.toString(),
+      tokens.refreshToken,
+    );
+
+    this.logger.log(`Email verified & User logged in: ${user.email}`);
+
+    return {
+      message: "Verification successful",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        agencyName: user.agencyName,
+        agencyType: user.agencyType,
+        role: user.role,
+        isVerified: user.isVerified,
+        tenant: user.tenant,
+        preferences: user.preferences,
+        permissions: user.permissions,
+        firstLogin: user.firstLogin,
+      },
+      ...tokens,
+    };
+  }
+
+  async resendOtp(resendOtpDto: ResendOtpDto) {
+    const user = await this.usersService.findByEmail(resendOtpDto.email);
+    if (!user) {
+      throw new BadRequestException("User not found");
+    }
+
+    const otp = generateOTP();
+    await this.usersService.setOTP(user._id.toString(), otp);
+
+    await this.notificationsService.sendOtpEmail(user.email, user.firstName, otp);
+
+    this.logger.log(`OTP resent for: ${user.email}`);
+
+    return { message: "Verification code resent successfully" };
   }
 
   async logout(userId: string) {

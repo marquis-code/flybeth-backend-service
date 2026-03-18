@@ -12,6 +12,7 @@ import {
   BankAccount,
   BankAccountSchema,
 } from "../payments/schemas/bank-account.schema";
+import { User, UserSchema } from "../users/schemas/user.schema";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import {
       { name: Airport.name, schema: AirportSchema },
       { name: Airline.name, schema: AirlineSchema },
       { name: BankAccount.name, schema: BankAccountSchema },
+      { name: User.name, schema: UserSchema },
     ]),
   ],
   providers: [SeedService],

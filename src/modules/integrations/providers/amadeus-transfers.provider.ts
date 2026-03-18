@@ -13,7 +13,7 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
   readonly providerName = "amadeus";
   private readonly logger = new Logger(AmadeusTransfersProvider.name);
 
-  constructor(private amadeusHelper: AmadeusHelperService) {}
+  constructor(private amadeusHelper: AmadeusHelperService) { }
 
   async searchTransfers(
     query: TransferSearchQuery,
@@ -92,10 +92,33 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
                 {
                   firstName: passengerDetails.firstName,
                   lastName: passengerDetails.lastName,
-                  email: passengerDetails.email,
-                  mobile: passengerDetails.phone,
+                  title: passengerDetails.title || "MR",
+                  contacts: {
+                    phoneNumber: passengerDetails.phone,
+                    email: passengerDetails.email,
+                  },
+                  billingAddress: passengerDetails.billingAddress || {
+                    line: "123 Main St",
+                    zip: "75001",
+                    countryCode: "FR",
+                    cityName: "Paris",
+                  },
                 },
               ],
+              agency: {
+                contacts: [{ email: { address: "bookings@flybeth.com" } }],
+              },
+              payment: passengerDetails.payment || {
+                methodOfPayment: "CREDIT_CARD",
+                creditCard: {
+                  number: "4111111111111111",
+                  holderName: passengerDetails.firstName + " " + passengerDetails.lastName,
+                  vendorCode: "VI",
+                  expiryDate: "1225",
+                  cvv: "123",
+                },
+              },
+              ...passengerDetails.extraParams,
             },
           }),
         },
@@ -118,6 +141,44 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
       };
     } catch (error) {
       this.logger.error(`Amadeus transfer order error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  async cancelTransferOrder(
+    orderId: string,
+    confirmNbr: string,
+  ): Promise<{ status: string; confirmNbr: string }> {
+    this.logger.log(`Canceling Amadeus transfer order: ${orderId} (confirmNbr: ${confirmNbr})`);
+
+    try {
+      const token = await this.amadeusHelper.getAccessToken();
+
+      const response = await fetch(
+        `${this.amadeusHelper.baseUrl}/v1/ordering/transfer-orders/${orderId}/transfers/cancellation?confirmNbr=${confirmNbr}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(
+          `Amadeus transfer cancellation failed: ${response.status} ${errText}`,
+        );
+      }
+
+      const data = await response.json();
+      return {
+        confirmNbr: data?.data?.confirmNbr || confirmNbr,
+        status: data?.data?.reservationStatus || "CANCELLED",
+      };
+    } catch (error) {
+      this.logger.error(`Amadeus transfer cancellation error: ${error.message}`);
       throw error;
     }
   }

@@ -63,6 +63,75 @@ export class AmadeusHelperService {
   }
 
   /**
+   * Search cities using Amadeus Reference Data Locations Cities API
+   * Used primarily for plotting destinations for Activities/Experiences
+   */
+  async searchCities(keyword: string, max: number = 10, countryCode?: string): Promise<any[]> {
+    if (!keyword || keyword.length < 3) return [];
+
+    try {
+      const token = await this.getAccessToken();
+      const params = new URLSearchParams({
+        keyword,
+        max: String(max),
+      });
+      if (countryCode) params.append("countryCode", countryCode);
+
+      const response = await fetch(`${this.baseUrl}/v1/reference-data/locations/cities?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        this.logger.error(`Amadeus city search failed: ${response.status} ${errText}`);
+        return [];
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      this.logger.error(`Amadeus city search error: ${error.message}`);
+      return [];
+    }
+  }
+
+  /**
+   * Predict the trip purpose (Business or Leisure) from a flight
+   */
+  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
+    try {
+      const token = await this.getAccessToken();
+      const params = new URLSearchParams({
+        originLocationCode: origin,
+        destinationLocationCode: destination,
+        departureDate,
+        returnDate,
+      });
+
+      const response = await fetch(`${this.baseUrl}/v1/travel/predictions/trip-purpose?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        this.logger.error(`Amadeus trip purpose prediction failed: ${response.status} ${errText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.data || null;
+    } catch (error) {
+      this.logger.error(`Amadeus trip purpose prediction error: ${error.message}`);
+      return null;
+    }
+  }
+  /**
    * Parse ISO 8601 duration (PT2H30M) to minutes
    */
   parseDuration(duration?: string): number {
