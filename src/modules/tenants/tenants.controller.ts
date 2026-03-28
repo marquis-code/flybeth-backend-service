@@ -16,6 +16,7 @@ import {
   CreateTenantDto,
   UpdateTenantDto,
   UpdateTenantStatusDto,
+  OnboardingDto,
 } from "./dto/create-tenant.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
@@ -95,5 +96,15 @@ export class TenantsController {
   @ApiOperation({ summary: "Get tenant statistics" })
   getStats(@Param("id", MongoIdValidationPipe) id: string) {
     return this.tenantsService.getStats(id);
+  }
+
+  @Patch(":id/onboarding")
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT)
+  @ApiOperation({ summary: "Update onboarding progress" })
+  updateOnboarding(
+    @Param("id", MongoIdValidationPipe) id: string,
+    @Body() onboardingDto: OnboardingDto,
+  ) {
+    return this.tenantsService.updateOnboarding(id, onboardingDto);
   }
 }

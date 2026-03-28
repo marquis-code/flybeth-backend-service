@@ -11,6 +11,7 @@ import {
   UpdateFlightDto,
 } from "./dto/flight.dto";
 import { FlightStatus } from "../../common/constants/roles.constant";
+import { CommissionsService } from "./commissions.service";
 
 @Injectable()
 export class FlightsService {
@@ -21,6 +22,7 @@ export class FlightsService {
   constructor(
     @InjectModel(Flight.name) private flightModel: Model<FlightDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private commissionsService: CommissionsService,
   ) {}
 
   async create(createFlightDto: CreateFlightDto): Promise<FlightDocument> {
@@ -129,8 +131,40 @@ export class FlightsService {
       this.flightModel.countDocuments(query).exec(),
     ]);
 
+    // Apply commissions to flight prices
+    const flightsWithCommissions = await Promise.all(
+      flights.map(async (flight: any) => {
+        const commission = await this.commissionsService.findByAirline(
+          flight.airline,
+          flight.tenant?._id?.toString() || searchDto.tenantId,
+        );
+
+        if (commission) {
+          flight.classes = flight.classes.map((cls: any) => {
+            let finalPrice = cls.basePrice;
+            if (commission.type === "fixed") {
+              finalPrice += commission.value;
+            } else if (commission.type === "percentage") {
+              finalPrice += (cls.basePrice * commission.value) / 100;
+            }
+            return {
+              ...cls,
+              basePrice: Math.round(finalPrice * 100) / 100,
+              originalPrice: cls.basePrice,
+              commission: {
+                type: commission.type,
+                value: commission.value,
+                added: Math.round((finalPrice - cls.basePrice) * 100) / 100,
+              },
+            };
+          });
+        }
+        return flight;
+      }),
+    );
+
     const result = {
-      data: flights,
+      data: flightsWithCommissions,
       meta: {
         total,
         page,

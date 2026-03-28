@@ -15,6 +15,7 @@ import {
   CreateTenantDto,
   UpdateTenantDto,
   UpdateTenantStatusDto,
+  OnboardingDto,
 } from "./dto/create-tenant.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
@@ -148,6 +149,70 @@ export class TenantsService {
     }
 
     await this.cacheManager.del(`tenant:${id}`);
+    return tenant;
+  }
+
+  async updateOnboarding(
+    id: string,
+    onboardingDto: OnboardingDto,
+  ): Promise<TenantDocument> {
+    const { step, ...data } = onboardingDto;
+    const updateData: any = { onboardingStep: step };
+
+    if (data.businessRegistrationNumber)
+      updateData.businessRegistrationNumber = data.businessRegistrationNumber;
+    if (data.country) updateData.country = data.country;
+    if (data.whatsappNumber) updateData.whatsappNumber = data.whatsappNumber;
+    if (data.billingAddress) updateData.billingAddress = data.billingAddress;
+    if (data.termsAgreed !== undefined)
+      updateData.termsAgreed = data.termsAgreed;
+
+    if (data.kycDocuments) {
+      if (data.kycDocuments.idCard)
+        updateData["kycDocuments.idCard"] = data.kycDocuments.idCard;
+      if (data.kycDocuments.selfie)
+        updateData["kycDocuments.selfie"] = data.kycDocuments.selfie;
+    }
+
+    if (data.businessDocuments) {
+      if (data.businessDocuments.documentUrl)
+        updateData["businessDocuments.documentUrl"] =
+          data.businessDocuments.documentUrl;
+      if (data.businessDocuments.ein)
+        updateData["businessDocuments.ein"] = data.businessDocuments.ein;
+      if (data.businessDocuments.type)
+        updateData["businessDocuments.type"] = data.businessDocuments.type;
+    }
+
+    if (data.bankDetails) {
+      if (data.bankDetails.bankName)
+        updateData["bankDetails.bankName"] = data.bankDetails.bankName;
+      if (data.bankDetails.accountNumber)
+        updateData["bankDetails.accountNumber"] =
+          data.bankDetails.accountNumber;
+      if (data.bankDetails.accountName)
+        updateData["bankDetails.accountName"] = data.bankDetails.accountName;
+      if (data.bankDetails.routingNumber)
+        updateData["bankDetails.routingNumber"] =
+          data.bankDetails.routingNumber;
+    }
+
+    // If it's the last step, move to UNDER_REVIEW
+    if (step === 7 && data.termsAgreed) {
+      updateData.status = TenantStatus.UNDER_REVIEW;
+    }
+
+    const tenant = await this.tenantModel
+      .findByIdAndUpdate(id, { $set: updateData }, { new: true })
+      .exec();
+
+    if (!tenant) {
+      throw new NotFoundException("Tenant not found");
+    }
+
+    await this.cacheManager.del(`tenant:${id}`);
+    await this.cacheManager.del(`tenant:slug:${tenant.slug}`);
+
     return tenant;
   }
 

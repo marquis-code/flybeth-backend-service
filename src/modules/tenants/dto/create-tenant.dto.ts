@@ -146,10 +146,119 @@ export class UpdateTenantDto {
   @IsOptional()
   @IsBoolean()
   allowB2B?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  onboardingStep?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  businessRegistrationNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  kycDocuments?: {
+    idCard?: string;
+    selfie?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  businessDocuments?: {
+    documentUrl?: string;
+    ein?: string;
+    type?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  bankDetails?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    routingNumber?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  billingAddress?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  termsAgreed?: boolean;
 }
 
 export class UpdateTenantStatusDto {
-  @ApiProperty({ enum: ["active", "suspended", "pending"] })
-  @IsEnum(["active", "suspended", "pending"])
+  @ApiProperty({ enum: ["active", "suspended", "pending", "under_review", "approved", "rejected"] })
+  @IsEnum(["active", "suspended", "pending", "under_review", "approved", "rejected"])
   status: string;
+}
+
+export class OnboardingDto {
+  @ApiProperty({ example: 2 })
+  @IsNumber()
+  step: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  businessRegistrationNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  kycDocuments?: {
+    idCard?: string;
+    selfie?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  businessDocuments?: {
+    documentUrl?: string;
+    ein?: string;
+    type?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  bankDetails?: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    routingNumber?: string;
+  };
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  billingAddress?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  termsAgreed?: boolean;
 }

@@ -244,6 +244,11 @@ export class SearchFlightsDto {
   @Type(() => Number)
   @IsNumber()
   limit?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tenantId?: string;
 }
 
 export class UpdateFlightDto {

@@ -5,6 +5,7 @@ import { SchedulerService } from "./scheduler.service";
 import { BookingsModule } from "../bookings/bookings.module";
 import { CurrencyModule } from "../currency/currency.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { UsersModule } from "../users/users.module";
 
 @Module({
   imports: [
@@ -12,7 +13,9 @@ import { NotificationsModule } from "../notifications/notifications.module";
     BookingsModule,
     CurrencyModule,
     NotificationsModule,
+    UsersModule,
   ],
   providers: [SchedulerService],
+  exports: [SchedulerService],
 })
 export class SchedulerModule {}

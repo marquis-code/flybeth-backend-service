@@ -1,8 +1,8 @@
-// src/modules/payments/providers/paystack.provider.ts
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, InternalServerErrorException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import * as crypto from "crypto";
+import * as https from "https";
 
 @Injectable()
 export class PaystackProvider {
@@ -10,12 +10,18 @@ export class PaystackProvider {
   private readonly secretKey: string;
   private readonly webhookSecret: string;
   private readonly logger = new Logger(PaystackProvider.name);
+  private readonly httpsAgent: https.Agent;
 
   constructor(private configService: ConfigService) {
     this.secretKey =
       this.configService.get<string>("PAYSTACK_SECRET_KEY") || "";
     this.webhookSecret =
       this.configService.get<string>("PAYSTACK_WEBHOOK_SECRET") || "";
+    
+    this.httpsAgent = new https.Agent({
+      minVersion: 'TLSv1.2',
+      keepAlive: true,
+    });
   }
 
   private getHeaders() {
@@ -27,7 +33,7 @@ export class PaystackProvider {
 
   async initializeTransaction(params: {
     amount: number;
-    currency: string;
+    currency?: string;
     email: string;
     reference: string;
     callbackUrl?: string;
@@ -38,34 +44,25 @@ export class PaystackProvider {
         `${this.baseUrl}/transaction/initialize`,
         {
           amount: Math.round(params.amount * 100), // Paystack expects kobo/pesewas
-          currency: params.currency.toUpperCase(),
+          currency: (params.currency || 'NGN').toUpperCase(),
           email: params.email,
           reference: params.reference,
           callback_url: params.callbackUrl,
           metadata: {
-            custom_fields: [
-              {
-                display_name: "Booking Reference",
-                variable_name: "booking_reference",
-                value: params.metadata?.bookingId || "",
-              },
-            ],
             ...params.metadata,
           },
         },
-        { headers: this.getHeaders() },
+        { 
+          headers: this.getHeaders(),
+          httpsAgent: this.httpsAgent
+        },
       );
 
-      return {
-        authorizationUrl: response.data.data.authorization_url,
-        accessCode: response.data.data.access_code,
-        reference: response.data.data.reference,
-      };
-    } catch (error) {
-      this.logger.error(
-        `Paystack initialization failed: ${error.response?.data?.message || error.message}`,
-      );
-      throw error;
+      return response.data;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || error.message;
+      this.logger.error(`Paystack initialization failed: ${errorMessage}`);
+      throw new InternalServerErrorException(errorMessage || 'Paystack initialization failed');
     }
   }
 
@@ -73,21 +70,24 @@ export class PaystackProvider {
     try {
       const response = await axios.get(
         `${this.baseUrl}/transaction/verify/${reference}`,
-        { headers: this.getHeaders() },
+        { 
+          headers: this.getHeaders(),
+          httpsAgent: this.httpsAgent
+        },
       );
 
+      const data = response.data.data;
       return {
-        status: response.data.data.status,
-        amount: response.data.data.amount / 100,
-        currency: response.data.data.currency,
-        reference: response.data.data.reference,
-        paidAt: response.data.data.paid_at,
-        channel: response.data.data.channel,
-        metadata: response.data.data.metadata,
+        status: data.status === 'success' ? 'success' : 'failed',
+        amount: data.amount / 100,
+        currency: data.currency,
+        reference: data.reference,
+        paidAt: data.paid_at,
+        data,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Paystack verification failed: ${error.message}`);
-      throw error;
+      throw new InternalServerErrorException(error.response?.data?.message || 'Paystack verification failed');
     }
   }
 
@@ -100,6 +100,7 @@ export class PaystackProvider {
 
       const response = await axios.post(`${this.baseUrl}/refund`, body, {
         headers: this.getHeaders(),
+        httpsAgent: this.httpsAgent
       });
 
       return {
@@ -107,9 +108,46 @@ export class PaystackProvider {
         status: response.data.data.status,
         amount: response.data.data.amount / 100,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Paystack refund failed: ${error.message}`);
-      throw error;
+      throw new InternalServerErrorException(error.response?.data?.message || 'Paystack refund failed');
+    }
+  }
+
+  async getBanks() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/bank`, {
+        headers: this.getHeaders(),
+        httpsAgent: this.httpsAgent,
+        params: {
+          country: 'nigeria',
+          perPage: 100,
+        },
+      });
+      return response.data.data || [];
+    } catch (error: any) {
+      this.logger.error(`Failed to fetch banks: ${error.message}`);
+      return [];
+    }
+  }
+
+  async resolveAccount(account_number: string, bank_code: string) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/bank/resolve`, {
+        headers: this.getHeaders(),
+        httpsAgent: this.httpsAgent,
+        params: {
+          account_number,
+          bank_code,
+        },
+      } as any);
+
+      return (response.data as any)?.data || {};
+    } catch (error: any) {
+      this.logger.error('Paystack Resolve Account Error:', error.response?.data || error.message);
+      throw new InternalServerErrorException(
+        error.response?.data?.message || 'Account resolution failed',
+      );
     }
   }
 

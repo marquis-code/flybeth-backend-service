@@ -21,6 +21,19 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix(apiPrefix);
 
+  // Aggressive Route Fix: Handle requests missing the prefix
+  app.use((req, res, next) => {
+    const url = req.url;
+    if (
+      (url.startsWith("/upload") || url.startsWith("/payments")) &&
+      !url.startsWith(`/${apiPrefix}`)
+    ) {
+      req.url = `/${apiPrefix}${url}`;
+      Logger.warn(`Aggressive Route Fix: Redirecting ${url} to ${req.url}`, 'Bootstrap');
+    }
+    next();
+  });
+
   // Security middleware
   app.use(helmet());
   app.use(compression());

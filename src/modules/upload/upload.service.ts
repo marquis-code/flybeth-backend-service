@@ -22,26 +22,30 @@ export class UploadService {
   ): Promise<{ url: string; publicId: string; width: number; height: number }> {
     if (!file) throw new BadRequestException("No file provided");
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
     if (!allowedTypes.includes(file.mimetype)) {
       throw new BadRequestException(
-        "Invalid file type. Allowed: JPEG, PNG, GIF, WebP",
+        "Invalid file type. Allowed: JPEG, PNG, GIF, WebP, PDF, DOC, DOCX",
       );
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      throw new BadRequestException("File size exceeds 10MB limit");
+    if (file.size > 25 * 1024 * 1024) {
+      throw new BadRequestException("File size exceeds 25MB limit");
     }
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `flight-booking/${folder}`,
-          resource_type: "image",
-          transformation: [
-            { width: 1200, crop: "limit" },
-            { quality: "auto", fetch_format: "auto" },
-          ],
+          resource_type: "auto",
         },
         (error, result: UploadApiResponse) => {
           if (error) {
@@ -68,9 +72,19 @@ export class UploadService {
   ): Promise<{ url: string; publicId: string }> {
     if (!file) throw new BadRequestException("No file provided");
 
-    const allowedTypes = ["application/pdf", "application/msword"];
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
     if (!allowedTypes.includes(file.mimetype)) {
-      throw new BadRequestException("Invalid file type. Allowed: PDF, DOC");
+      throw new BadRequestException(
+        "Invalid file type. Allowed: PDF, DOC, DOCX, JPEG, PNG, GIF, WebP",
+      );
     }
 
     if (file.size > 25 * 1024 * 1024) {
@@ -81,7 +95,7 @@ export class UploadService {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `flight-booking/${folder}`,
-          resource_type: "raw",
+          resource_type: "auto",
         },
         (error, result: UploadApiResponse) => {
           if (error) {

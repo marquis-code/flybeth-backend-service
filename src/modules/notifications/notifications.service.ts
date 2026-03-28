@@ -183,35 +183,127 @@ export class NotificationsService {
   }
 
   async sendAgentWelcomeEmail(email: string, firstName: string): Promise<void> {
-    const title = "Welcome Home, Partner! 🧡";
+    const title = "Welcome to the Flybeth Family 🧡";
+    const logoUrl = "http://agent.flybeth.com/_nuxt/logo.CJ2BWGNK.png";
     const content = `
-      <p style="font-size: 18px; line-height: 1.7;">Dearest ${firstName},</p>
-      <p style="font-size: 16px; line-height: 1.7; margin-top: 10px;">
-        We are absolutely over the moon to have you join the Flybeth family! You're not just another agent to us; you're the heartbeat of modern travel. Together, we're going to redefine how the world explores.
-      </p>
-      
-      <div style="background: #f8fafc; border-radius: 16px; padding: 30px; margin: 40px 0; border: 1px solid #e2e8f0;">
-        <h3 style="color: #FF3D00; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px;">Your New Superpowers:</h3>
-        
-        <div style="margin-bottom: 25px;">
-          <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px;">💎 Exclusive Wholesale Inventory</p>
-          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Access rates from Amadeus & Duffel that others can only dream of.</p>
-        </div>
-        
-        <div style="margin-bottom: 25px;">
-          <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px;">🚀 Seamless Flight Wizard</p>
-          <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px;">Book global transit in seconds with our auto-advancing, keyboard-first engine.</p>
-        </div>
-      </div>
+      <div style="background-color: #f8fafc; padding: 40px 20px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <div style="background-color: #ffffff; max-width: 640px; margin: 0 auto; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 40px rgba(13, 29, 173, 0.05); border: 1px solid #f1f5f9;">
+          
+          <!-- Header Image & Logo -->
+          <div style="background-color: #ffffff; padding: 50px 40px 30px; text-align: center; border-bottom: 1px solid #f1f5f9;">
+            <img src="${logoUrl}" alt="Flybeth" style="height: 55px; margin-bottom: 0px; display: inline-block;" />
+          </div>
 
-      <div class="action-area">
-        <a href="${this.configService.get("CLIENT_URL")}/dashboard" class="btn">Step into Your Dashboard</a>
+          <div style="padding: 50px 40px; background: #ffffff;">
+            
+            <h1 style="color: #0D1DAD; font-size: 32px; font-weight: 900; margin: 0 0 30px 0; letter-spacing: -0.5px; text-align: center;">
+              A Note from Our Founder 💌
+            </h1>
+
+            <p style="font-size: 18px; line-height: 2; color: #334155; margin-top: 0; margin-bottom: 25px;">
+              Dearest ${firstName},
+            </p>
+            
+            <p style="font-size: 17px; line-height: 2.1; color: #475569; margin-bottom: 25px;">
+              I am absolutely overjoyed to personally welcome you to the Flybeth family! When I first conceptualized this platform, I dreamt of partnering with passionate, dedicated individuals exactly like you. You aren't just an agent to us—you are the beating heart of modern travel, the bridge between explorers and the world.
+            </p>
+            
+            <p style="font-size: 17px; line-height: 2.1; color: #475569; margin-bottom: 40px;">
+              We've poured our souls into building an ecosystem that doesn't just work, but feels like sheer magic. The travel industry has been stuck in the past, but together, we are pulling it into a brilliant, seamless future. The value you bring to your clients is extraordinary, and we want to empower you with tools that match your brilliance.
+            </p>
+
+            <!-- Magic Awaits You Section -->
+            <div style="margin: 50px 0; border: 1px solid #e2e8f0; border-radius: 20px; padding: 40px 30px; background: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.02); position: relative;">
+              
+              <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #FF3D00; color: #ffffff; padding: 6px 20px; border-radius: 30px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.15em;">
+                ✨ Magic Awaits You
+              </div>
+
+              <div style="margin-top: 20px;">
+                <!-- Feature 1 -->
+                <div style="margin-bottom: 35px;">
+                  <h4 style="margin: 0 0 10px 0; color: #0D1DAD; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">💎</span> Exclusive Wholesale Rates
+                  </h4>
+                  <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #64748b;">
+                    Access heavily negotiated global flights and luxury stays that easily eclipse public markets. Maximizing your margins has never been this effortless.
+                  </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div style="margin-bottom: 35px;">
+                  <h4 style="margin: 0 0 10px 0; color: #0D1DAD; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">🚀</span> Lightning-fast Booking Wizard
+                  </h4>
+                  <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #64748b;">
+                    The fastest booking flow in the industry. Auto-advancing, predictive, and incredibly intuitive—designed to save you hours every single week.
+                  </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div style="margin-bottom: 35px;">
+                  <h4 style="margin: 0 0 10px 0; color: #0D1DAD; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">📊</span> Intelligent Analytics Dashboard
+                  </h4>
+                  <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #64748b;">
+                    Real-time reporting, seamless tracking, and automated financial insights right at your fingertips.
+                  </p>
+                </div>
+
+                <!-- Feature 4 -->
+                <div style="margin-bottom: 0;">
+                  <h4 style="margin: 0 0 10px 0; color: #0D1DAD; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 24px;">💰</span> Instant Global Payouts
+                  </h4>
+                  <p style="margin: 0; font-size: 16px; line-height: 1.8; color: #64748b;">
+                    Transparent commission structures designed to maximize your profit effortlessly and get you paid faster.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- What's Next Section (No Button) -->
+            <div style="background: #fffaf0; border-left: 5px solid #FF3D00; padding: 30px; border-radius: 0 16px 16px 0; margin-bottom: 50px;">
+              <h3 style="margin: 0 0 15px 0; color: #FF3D00; font-size: 18px; font-weight: 800;">
+                Our Next Steps
+              </h3>
+              <p style="margin: 0; font-size: 16px; line-height: 2; color: #475569;">
+                Our platform is currently in a highly-exclusive preview phase. Please hold tight! <strong style="color: #0D1DAD;">We are personally reviewing your application and will contact you via email the incredibly exciting second we go live!</strong>
+              </p>
+            </div>
+
+            <p style="font-size: 17px; line-height: 2.1; color: #475569; margin-bottom: 40px; text-align: center; font-weight: 500;">
+              We are about to change the world. Thank you for believing in Flybeth and trusting us with your business. I cannot wait to see you soar.
+            </p>
+
+            <div style="text-align: center; margin-top: 50px; padding-top: 40px; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 0 0 15px 0; font-family: 'Georgia', serif; font-style: italic; font-size: 22px; color: #0D1DAD;">
+                With boundless love and excitement,
+              </p>
+              <img src="${logoUrl}" alt="Flybeth logo" style="height: 30px; opacity: 0.1; position: absolute; margin-top: 10px; margin-left: 60px;" />
+              <p style="margin: 0; font-weight: 900; font-size: 20px; color: #1e293b; letter-spacing: -0.5px;">
+                Oluremi Oshinkoya
+              </p>
+              <p style="margin: 5px 0 0 0; font-size: 15px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;">
+                Founder & CEO, Flybeth
+              </p>
+            </div>
+
+          </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+          <p style="font-size: 13px; color: #94a3b8; font-weight: 500;">
+            © 2026 Flybeth Travel. All rights reserved. Let's elevate every journey together.
+          </p>
+        </div>
       </div>
     `;
+
     await this.sendEmail(
       email,
-      `Welcome to the future of travel, ${firstName}! ✨`,
-      this.resendService.brandWrapper(title, content),
+      "A warm welcome from our CEO 💌",
+      content
     );
   }
 

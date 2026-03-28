@@ -15,11 +15,12 @@ import {
   ApiBearerAuth,
   ApiConsumes,
 } from "@nestjs/swagger";
+import { Public } from "../../common/decorators/public.decorator";
 import { UploadService } from "./upload.service";
 
 @ApiTags("Upload")
-@ApiBearerAuth()
 @Controller("upload")
+@Public()
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 

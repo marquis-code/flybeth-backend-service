@@ -382,9 +382,17 @@ export class PaymentsService {
       .exec() as any;
   }
 
-  async getBankAccounts(currency?: string): Promise<BankAccountDocument[]> {
+  async getBanks(currency?: string): Promise<BankAccountDocument[]> {
     const query: any = { isActive: true };
     if (currency) query.currency = currency.toUpperCase();
     return this.bankAccountModel.find(query).sort({ bankName: 1 }).exec();
+  }
+
+  async getPaystackBanks() {
+    return this.paystackProvider.getBanks();
+  }
+
+  async verifyBankAccount(account_number: string, bank_code: string) {
+    return this.paystackProvider.resolveAccount(account_number, bank_code);
   }
 }

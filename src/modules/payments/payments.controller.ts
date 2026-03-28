@@ -76,7 +76,24 @@ export class PaymentsController {
   @Get("bank-accounts")
   @ApiOperation({ summary: "Get active bank accounts for manual payment" })
   findBankAccounts(@Query("currency") currency?: string) {
-    return this.paymentsService.getBankAccounts(currency);
+    return this.paymentsService.getBanks(currency);
+  }
+
+  @Public()
+  @Get("banks/paystack")
+  @ApiOperation({ summary: "Get list of banks from Paystack" })
+  getPaystackBanks() {
+    return this.paymentsService.getPaystackBanks();
+  }
+
+  @Public()
+  @Get("verify-account")
+  @ApiOperation({ summary: "Verify a bank account" })
+  verifyAccount(
+    @Query("account_number") account_number: string,
+    @Query("bank_code") bank_code: string,
+  ) {
+    return this.paymentsService.verifyBankAccount(account_number, bank_code);
   }
 
   @Get(":id")
@@ -93,15 +110,12 @@ export class PaymentsController {
     return this.paymentsService.findByBooking(bookingId);
   }
 
-  @Post(":id/refund")
+  @Post("refund/:paymentId")
   @ApiBearerAuth()
   @UseGuards(RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+  @Roles(Role.SUPER_ADMIN)
   @ApiOperation({ summary: "Refund a payment" })
-  refund(
-    @Param("id", MongoIdValidationPipe) id: string,
-    @Body() dto: RefundPaymentDto,
-  ) {
-    return this.paymentsService.refund(id, dto);
+  refund(@Param("paymentId") paymentId: string, @Body() dto: RefundPaymentDto) {
+    return this.paymentsService.refund(paymentId, dto);
   }
 }

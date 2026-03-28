@@ -76,6 +76,45 @@ export class Tenant {
   @Prop({ enum: TenantStatus, default: TenantStatus.PENDING })
   status: TenantStatus;
 
+  @Prop({ default: 1 })
+  onboardingStep: number;
+
+  @Prop({ trim: true })
+  businessRegistrationNumber: string;
+
+  @Prop({ trim: true })
+  country: string;
+
+  @Prop({ trim: true })
+  whatsappNumber: string;
+
+  @Prop({ type: Object })
+  kycDocuments: {
+    idCard?: string;
+    selfie?: string;
+  };
+
+  @Prop({ type: Object })
+  businessDocuments: {
+    documentUrl?: string;
+    ein?: string;
+    type?: string;
+  };
+
+  @Prop({ type: Object })
+  bankDetails: {
+    bankName?: string;
+    accountNumber?: string;
+    accountName?: string;
+    routingNumber?: string;
+  };
+
+  @Prop({ trim: true })
+  billingAddress: string;
+
+  @Prop({ default: false })
+  termsAgreed: boolean;
+
   @Prop({ type: Types.ObjectId, ref: "User" })
   createdBy: Types.ObjectId;
 

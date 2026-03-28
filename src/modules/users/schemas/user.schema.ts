@@ -1,7 +1,7 @@
 // src/modules/users/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document, Types } from "mongoose";
-import { Role, Permission } from "../../../common/constants/roles.constant";
+import { Role, Permission, AgentStatus, AgentTier } from "../../../common/constants/roles.constant";
 
 export type UserDocument = User & Document;
 
@@ -27,6 +27,53 @@ export class FrequentFlyer {
 
   @Prop()
   number: string;
+}
+
+@Schema({ _id: false })
+export class AgentProfile {
+  // Business Information
+  @Prop()
+  agencyName: string;
+
+  @Prop()
+  registrationNumber: string;
+
+  @Prop()
+  country: string;
+
+  @Prop()
+  businessAddress: string;
+
+  @Prop()
+  website: string;
+
+  // Contact Information
+  @Prop()
+  whatsappNumber: string;
+
+  // Identity Verification (KYC)
+  @Prop()
+  idCardUrl: string;
+
+  @Prop()
+  selfieUrl: string;
+
+  // Business Documents
+  @Prop()
+  cacCertificateUrl: string; // Nigeria
+
+  @Prop()
+  llcDocsUrl: string; // USA
+
+  @Prop()
+  ein: string; // USA
+
+  // Payment & Billing
+  @Prop({ type: Object })
+  bankAccountDetails: Record<string, any>;
+
+  @Prop()
+  billingAddress: string;
 }
 
 @Schema({ timestamps: true, collection: "users" })
@@ -57,6 +104,15 @@ export class User {
 
   @Prop({ enum: Role, default: Role.CUSTOMER })
   role: Role;
+
+  @Prop({ enum: AgentStatus, default: AgentStatus.PENDING })
+  agentStatus: AgentStatus;
+
+  @Prop({ enum: AgentTier, default: AgentTier.BASIC })
+  agentTier: AgentTier;
+
+  @Prop({ type: AgentProfile })
+  agentProfile: AgentProfile;
 
   @Prop({ type: [String], enum: Permission, default: [] })
   permissions: Permission[];
@@ -102,6 +158,9 @@ export class User {
   // Refresh token
   @Prop({ select: false })
   refreshToken: string;
+
+  @Prop()
+  lastIp: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

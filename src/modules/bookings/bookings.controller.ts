@@ -19,15 +19,17 @@ import {
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Public } from "../../common/decorators/public.decorator";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { RolesGuard } from "../../common/guards/roles.guard";
+import { AgentStatusGuard } from "../../common/guards/agent-status.guard";
 import { Role } from "../../common/constants/roles.constant";
 import { MongoIdValidationPipe } from "../../common/pipes/mongo-id-validation.pipe";
 
 @ApiTags("Bookings")
 @ApiBearerAuth()
 @Controller("bookings")
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, AgentStatusGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 

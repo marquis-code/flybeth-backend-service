@@ -32,7 +32,9 @@ export class SeedService implements OnModuleInit {
     await this.seedAirports();
     await this.seedAirlines();
     await this.seedBankAccounts();
+    await this.seedAdminUser();
     await this.seedAgentUser();
+    await this.seedCustomerUser();
   }
 
   private async seedAirports() {
@@ -431,5 +433,65 @@ export class SeedService implements OnModuleInit {
 
     await agent.save();
     this.logger.log("Seeded default agent user: agent@flybeth.com");
+  }
+
+  private async seedAdminUser() {
+    const existingAdmin = await this.userModel
+      .findOne({ email: "admin@flybeth.com" })
+      .exec();
+    if (existingAdmin) return;
+
+    const hashedPassword = await hashPassword("Admin@2026!");
+
+    const admin = new this.userModel({
+      email: "admin@flybeth.com",
+      password: hashedPassword,
+      firstName: "Flybeth",
+      lastName: "Admin",
+      phone: "+2348000000001",
+      role: Role.SUPER_ADMIN,
+      isVerified: true,
+      isActive: true,
+      firstLogin: false,
+      preferences: {
+        currency: "NGN",
+        language: "en",
+        emailNotifications: true,
+        pushNotifications: true,
+      },
+    });
+
+    await admin.save();
+    this.logger.log("Seeded default admin user: admin@flybeth.com");
+  }
+
+  private async seedCustomerUser() {
+    const existingUser = await this.userModel
+      .findOne({ email: "user@flybeth.com" })
+      .exec();
+    if (existingUser) return;
+
+    const hashedPassword = await hashPassword("User@2026!");
+
+    const user = new this.userModel({
+      email: "user@flybeth.com",
+      password: hashedPassword,
+      firstName: "Flybeth",
+      lastName: "User",
+      phone: "+2348000000002",
+      role: Role.CUSTOMER,
+      isVerified: true,
+      isActive: true,
+      firstLogin: false,
+      preferences: {
+        currency: "NGN",
+        language: "en",
+        emailNotifications: true,
+        pushNotifications: true,
+      },
+    });
+
+    await user.save();
+    this.logger.log("Seeded default customer user: user@flybeth.com");
   }
 }

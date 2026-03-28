@@ -10,6 +10,14 @@ import { Payment, PaymentSchema } from "../payments/schemas/payment.schema";
 import { TenantsModule } from "../tenants/tenants.module";
 import { UsersModule } from "../users/users.module";
 import { BookingsModule } from "../bookings/bookings.module";
+import { InvitationModule } from "./invitation.module";
+import { Invitation, InvitationSchema } from "./schemas/invitation.schema";
+import { NotificationsModule } from "../notifications/notifications.module";
+import { FlightsModule } from "../flights/flights.module";
+import { CampaignsModule } from "../campaigns/campaigns.module";
+import { SchedulerModule } from "../scheduler/scheduler.module";
+import { Campaign, CampaignSchema } from "../campaigns/schemas/campaign.schema";
+import { Commission, CommissionSchema } from "../flights/schemas/commission.schema";
 
 @Module({
   imports: [
@@ -18,10 +26,17 @@ import { BookingsModule } from "../bookings/bookings.module";
       { name: User.name, schema: UserSchema },
       { name: Tenant.name, schema: TenantSchema },
       { name: Payment.name, schema: PaymentSchema },
+      { name: Invitation.name, schema: InvitationSchema },
+      { name: Campaign.name, schema: CampaignSchema },
+      { name: Commission.name, schema: CommissionSchema },
     ]),
     TenantsModule,
     UsersModule,
     BookingsModule,
+    NotificationsModule,
+    FlightsModule,
+    CampaignsModule,
+    SchedulerModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

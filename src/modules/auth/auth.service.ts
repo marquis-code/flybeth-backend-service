@@ -49,26 +49,50 @@ export class AuthService {
         emailNotifications: true,
         pushNotifications: true,
       },
+      agentProfile: (registerDto.role === Role.AGENT || !registerDto.role) ? {
+        registrationNumber: registerDto.registrationNumber,
+        country: registerDto.country,
+        businessAddress: registerDto.businessAddress,
+        website: registerDto.website,
+        whatsappNumber: registerDto.whatsappNumber,
+        idCardUrl: registerDto.idCardUrl,
+        selfieUrl: registerDto.selfieUrl,
+        cacCertificateUrl: registerDto.cacCertificateUrl,
+        llcDocsUrl: registerDto.llcDocsUrl,
+        ein: registerDto.ein,
+        bankAccountDetails: registerDto.bankAccountDetails,
+        billingAddress: registerDto.billingAddress,
+      } as any : undefined,
+      lastIp: registerDto.ipAddress,
     });
 
-    const otp = generateOTP();
-    await this.usersService.setOTP(user._id.toString(), otp);
+    // -- OTP Verification Temp Bypassed --
+    // const otp = generateOTP();
+    // await this.usersService.setOTP(user._id.toString(), otp);
+    //
+    // this.notificationsService
+    //   .sendOtpEmail(user.email, user.firstName, otp)
+    //   .catch((err) => {
+    //     this.logger.error(
+    //       `Failed to send OTP email to ${user.email}: ${err.message}`,
+    //     );
+    //   });
 
-    // Send OTP Email for verification first
-    this.notificationsService
-      .sendOtpEmail(user.email, user.firstName, otp)
-      .catch((err) => {
-        this.logger.error(
-          `Failed to send OTP email to ${user.email}: ${err.message}`,
-        );
-      });
+    // Send Welcome Email immediately since OTP is bypassed
+    if (user.role === Role.AGENT) {
+      this.notificationsService
+        .sendAgentWelcomeEmail(user.email, user.firstName)
+        .catch((err) => {
+          this.logger.error(`Failed to send Agent Welcome email: ${err.message}`);
+        });
+    }
 
     this.logger.log(
-      `User registered & OTP sent: ${user.email} (Role: ${user.role})`,
+      `User registered (OTP bypassed): ${user.email} (Role: ${user.role})`,
     );
 
     return {
-      message: "Registration successful. Please verify your email with the OTP sent.",
+      message: "Registration successful. Welcome to Flybeth!",
       email: user.email,
     };
   }
@@ -200,8 +224,11 @@ export class AuthService {
         });
     }
 
-    // Update last login
+    // Update last login and IP
     await this.usersService.updateLastLogin(user._id.toString());
+    if (verifyOtpDto.ipAddress) {
+      await (this.usersService as any).userModel.findByIdAndUpdate(user._id, { lastIp: verifyOtpDto.ipAddress });
+    }
 
     // Generate tokens
     const tokens = await this.generateTokens(

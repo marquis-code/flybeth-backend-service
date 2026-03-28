@@ -10,6 +10,10 @@ import { TenantsService } from "../tenants/tenants.service";
 import { UsersService } from "../users/users.service";
 import { BookingsService } from "../bookings/bookings.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
+import { Invitation } from "./schemas/invitation.schema";
+import { NotificationsService } from "../notifications/notifications.service";
+import { InviteDto } from "./dto/invite.dto";
+import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
 export class AdminService {
@@ -20,9 +24,11 @@ export class AdminService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Tenant.name) private tenantModel: Model<Tenant>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
+    @InjectModel(Invitation.name) private invitationModel: Model<Invitation>,
     private tenantsService: TenantsService,
     private usersService: UsersService,
     private bookingsService: BookingsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getDashboard() {
@@ -154,5 +160,68 @@ export class AdminService {
 
   async getBookings(paginationDto: PaginationDto) {
     return this.bookingsService.getAllBookings(paginationDto);
+  }
+
+  async inviteTeamMember(inviteDto: InviteDto, invitedBy: string) {
+    // Check if user already exists
+    const existingUser = await this.usersService.findByEmail(inviteDto.email);
+    if (existingUser) {
+      throw new Error("User with this email already exists");
+    }
+
+    // Check if pending invitation already exists
+    const existingInvite = await this.invitationModel.findOne({
+      email: inviteDto.email.toLowerCase(),
+      status: "pending",
+    });
+    if (existingInvite) {
+      throw new Error("A pending invitation already exists for this email");
+    }
+
+    const token = uuidv4();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+    const invitation = new this.invitationModel({
+      email: inviteDto.email.toLowerCase(),
+      role: inviteDto.role,
+      permissions: inviteDto.permissions || [],
+      token,
+      expiresAt,
+      invitedBy: new Types.ObjectId(invitedBy),
+      tenant: inviteDto.tenantId ? new Types.ObjectId(inviteDto.tenantId) : null,
+    });
+
+    await invitation.save();
+
+    // Send invitation email
+    await this.notificationsService.sendDynamicEmail({
+      slug: "team-invitation",
+      to: inviteDto.email,
+      data: {
+        inviteUrl: `${process.env.ADMIN_URL || "http://localhost:3001"}/signup?token=${token}`,
+        role: inviteDto.role,
+        expiresAt: expiresAt.toLocaleDateString(),
+      },
+    });
+
+    this.logger.log(`Team invitation sent to ${inviteDto.email} (Role: ${inviteDto.role})`);
+    return { message: "Invitation sent successfully", token };
+  }
+
+  async getInvitations() {
+    return this.invitationModel
+      .find()
+      .populate("invitedBy", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .exec();
+  }
+
+  async cancelInvitation(id: string) {
+    const result = await this.invitationModel.findByIdAndDelete(id).exec();
+    if (!result) {
+      throw new Error("Invitation not found");
+    }
+    return { message: "Invitation cancelled successfully" };
   }
 }

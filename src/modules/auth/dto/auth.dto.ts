@@ -5,6 +5,7 @@ import {
   MinLength,
   IsOptional,
   IsEnum,
+  IsObject,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Role } from "../../../common/constants/roles.constant";
@@ -56,6 +57,72 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
+
+  // Agent Specific Fields
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  registrationNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  businessAddress?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  whatsappNumber?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  idCardUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  selfieUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  cacCertificateUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  llcDocsUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ein?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  bankAccountDetails?: Record<string, any>;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  billingAddress?: string;
 }
 
 export class LoginDto {
@@ -93,6 +160,11 @@ export class VerifyOtpDto {
   @ApiProperty({ example: "123456" })
   @IsString()
   otp: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
 }
 
 export class RefreshTokenDto {
