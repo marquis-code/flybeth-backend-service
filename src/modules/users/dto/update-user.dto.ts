@@ -8,7 +8,7 @@ import {
   IsArray,
 } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { Role } from "../../../common/constants/roles.constant";
+import { Role, AgentStatus } from "../../../common/constants/roles.constant";
 
 export class UpdateUserDto {
   @ApiPropertyOptional()
@@ -56,6 +56,12 @@ export class UpdateUserRoleDto {
   @ApiPropertyOptional({ enum: Role })
   @IsEnum(Role)
   role: Role;
+}
+
+export class UpdateAgentStatusDto {
+  @ApiPropertyOptional({ enum: AgentStatus })
+  @IsEnum(AgentStatus)
+  status: AgentStatus;
 }
 
 export class UserQueryDto {

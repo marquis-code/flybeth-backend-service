@@ -18,6 +18,7 @@ import { CampaignsModule } from "../campaigns/campaigns.module";
 import { SchedulerModule } from "../scheduler/scheduler.module";
 import { Campaign, CampaignSchema } from "../campaigns/schemas/campaign.schema";
 import { Commission, CommissionSchema } from "../flights/schemas/commission.schema";
+import { UploadModule } from "../upload/upload.module";
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { Commission, CommissionSchema } from "../flights/schemas/commission.sche
     FlightsModule,
     CampaignsModule,
     SchedulerModule,
+    UploadModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

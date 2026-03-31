@@ -8,6 +8,7 @@ import { JwtStrategy } from "./strategies/jwt.strategy";
 import { JwtRefreshStrategy } from "./strategies/jwt-refresh.strategy";
 import { UsersModule } from "../users/users.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { InvitationModule } from "../admin/invitation.module";
 import { jwtConfig } from "../../config/jwt.config";
 
 @Module({
@@ -16,6 +17,7 @@ import { jwtConfig } from "../../config/jwt.config";
     JwtModule.registerAsync(jwtConfig),
     UsersModule,
     NotificationsModule,
+    InvitationModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtRefreshStrategy],

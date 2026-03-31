@@ -118,9 +118,31 @@ export class UploadService {
     try {
       await cloudinary.uploader.destroy(publicId);
       this.logger.log(`File deleted: ${publicId}`);
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error(`Delete failed: ${error.message}`);
       throw new BadRequestException("File deletion failed");
+    }
+  }
+
+  async listFiles(folder?: string): Promise<any[]> {
+    try {
+      const result = await cloudinary.api.resources({
+        type: 'upload',
+        prefix: folder ? `flight-booking/${folder}` : 'flight-booking/',
+        max_results: 500
+      });
+      
+      return result.resources.map((resource: any) => ({
+        publicId: resource.public_id,
+        url: resource.secure_url,
+        format: resource.format,
+        size: resource.bytes,
+        createdAt: resource.created_at,
+        resourceType: resource.resource_type
+      }));
+    } catch (error: any) {
+      this.logger.error(`Failed to list files: ${error.message}`);
+      throw new BadRequestException("Failed to fetch storage items");
     }
   }
 }

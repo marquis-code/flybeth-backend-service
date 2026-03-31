@@ -209,6 +209,25 @@ export class AdminService {
     return { message: "Invitation sent successfully", token };
   }
 
+  async verifyInvitation(token: string) {
+    const invitation = await this.invitationModel.findOne({
+      token,
+      status: "pending",
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!invitation) {
+      throw new Error("Invalid or expired invitation token");
+    }
+
+    return {
+      email: invitation.email,
+      role: invitation.role,
+      permissions: invitation.permissions,
+      tenant: invitation.tenant,
+    };
+  }
+
   async getInvitations() {
     return this.invitationModel
       .find()
@@ -223,5 +242,61 @@ export class AdminService {
       throw new Error("Invitation not found");
     }
     return { message: "Invitation cancelled successfully" };
+  }
+
+  async createAdminUser(dto: any, createdBy: string) {
+    // Check if user already exists
+    const existing = await this.usersService.findByEmail(dto.email);
+    if (existing) {
+      throw new Error("A user with this email already exists");
+    }
+
+    const user = await this.usersService.create({
+      email: dto.email,
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      role: dto.role,
+      permissions: dto.permissions || [],
+      isVerified: true,
+      isActive: true,
+    });
+
+    this.logger.log(
+      `Admin user created: ${user.email} (Role: ${user.role}) by user ${createdBy}`,
+    );
+
+    // Send welcome notification (non-blocking)
+    this.notificationsService
+      .sendDynamicEmail({
+        slug: "admin-welcome",
+        to: user.email,
+        data: {
+          firstName: user.firstName,
+          role: user.role,
+          loginUrl: process.env.ADMIN_URL || "http://localhost:3001",
+        },
+      })
+      .catch((err) => {
+        this.logger.warn(`Failed to send admin welcome email: ${err.message}`);
+      });
+
+    return {
+      message: "Admin user created successfully",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        permissions: user.permissions,
+        isVerified: user.isVerified,
+      },
+    };
+  }
+
+  async deleteUser(userId: string) {
+    return this.usersService.delete(userId);
   }
 }

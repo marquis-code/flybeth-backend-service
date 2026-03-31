@@ -123,6 +123,11 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   billingAddress?: string;
+
+  @ApiPropertyOptional({ description: "Invitation token for administrative roles" })
+  @IsOptional()
+  @IsString()
+  token?: string;
 }
 
 export class LoginDto {

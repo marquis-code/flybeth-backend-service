@@ -13,6 +13,7 @@ import { UsersService } from "./users.service";
 import {
   UpdateUserDto,
   UpdateUserRoleDto,
+  UpdateAgentStatusDto,
   UserQueryDto,
 } from "./dto/update-user.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
@@ -69,5 +70,15 @@ export class UsersController {
     @Body() updateRoleDto: UpdateUserRoleDto,
   ) {
     return this.usersService.updateRole(id, updateRoleDto);
+  }
+
+  @Patch(":id/agent-status")
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+  @ApiOperation({ summary: "Update agent status" })
+  updateAgentStatus(
+    @Param("id", MongoIdValidationPipe) id: string,
+    @Body() updateAgentStatusDto: UpdateAgentStatusDto,
+  ) {
+    return this.usersService.updateAgentStatus(id, updateAgentStatusDto.status);
   }
 }

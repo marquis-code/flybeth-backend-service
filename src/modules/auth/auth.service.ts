@@ -3,12 +3,16 @@ import {
   Injectable,
   UnauthorizedException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { UsersService } from "../users/users.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { InjectModel } from "@nestjs/mongoose";
+import { Model } from "mongoose";
+import { Invitation, InvitationDocument } from "../admin/schemas/invitation.schema";
 import {
   RegisterDto,
   LoginDto,
@@ -30,9 +34,52 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
+    @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
   ) {}
 
   async register(registerDto: RegisterDto) {
+    // Block admin roles from public registration unless a valid invitation token is provided
+    const blockedRoles = [Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF];
+    if (registerDto.role && blockedRoles.includes(registerDto.role)) {
+      // Exception: Allow first Super Admin to register without a token
+      const isSuperAdminSignup = registerDto.role === Role.SUPER_ADMIN;
+      const superAdminCount = isSuperAdminSignup 
+        ? await this.usersService.countByRole(Role.SUPER_ADMIN) 
+        : 0;
+
+      if (!registerDto.token) {
+        // If it's the first Super Admin, allow it
+        if (isSuperAdminSignup && superAdminCount === 0) {
+          this.logger.log(`Initial Super Admin registration allowed for: ${registerDto.email}`);
+        } else {
+          throw new ForbiddenException(
+            "Administrative accounts cannot be created through public registration. Contact your system administrator or use an invitation link.",
+          );
+        }
+      } else {
+        // Verify invitation token
+        const invitation = await this.invitationModel.findOne({
+          token: registerDto.token,
+          status: "pending",
+          expiresAt: { $gt: new Date() },
+        });
+
+        if (!invitation) {
+          throw new ForbiddenException("Invalid or expired invitation token");
+        }
+
+        if (invitation.email !== registerDto.email.toLowerCase()) {
+          throw new ForbiddenException("Email does not match the invitation");
+        }
+
+        if (invitation.role !== registerDto.role) {
+          throw new ForbiddenException("Role does not match the invitation");
+        }
+
+        // Mark invitation as accepted (we'll do this after user creation)
+      }
+    }
+
     const user = await this.usersService.create({
       email: registerDto.email,
       password: registerDto.password,
@@ -66,33 +113,39 @@ export class AuthService {
       lastIp: registerDto.ipAddress,
     });
 
-    // -- OTP Verification Temp Bypassed --
-    // const otp = generateOTP();
-    // await this.usersService.setOTP(user._id.toString(), otp);
-    //
-    // this.notificationsService
-    //   .sendOtpEmail(user.email, user.firstName, otp)
-    //   .catch((err) => {
-    //     this.logger.error(
-    //       `Failed to send OTP email to ${user.email}: ${err.message}`,
-    //     );
-    //   });
+    const otp = generateOTP();
+    await this.usersService.setOTP(user._id.toString(), otp);
 
-    // Send Welcome Email immediately since OTP is bypassed
+    this.notificationsService
+      .sendOtpEmail(user.email, user.firstName, otp)
+      .catch((err) => {
+        this.logger.error(
+          `Failed to send OTP email to ${user.email}: ${err.message}`,
+        );
+      });
+
     if (user.role === Role.AGENT) {
       this.notificationsService
-        .sendAgentWelcomeEmail(user.email, user.firstName)
+        .sendAgentSignupUnderReviewEmail(user.email, user.firstName)
         .catch((err) => {
-          this.logger.error(`Failed to send Agent Welcome email: ${err.message}`);
+          this.logger.error(`Failed to send Agent Under Review email: ${err.message}`);
         });
     }
 
+    if (registerDto.token) {
+      await this.invitationModel.updateOne(
+        { token: registerDto.token },
+        { status: "accepted" },
+      );
+    }
+
     this.logger.log(
-      `User registered (OTP bypassed): ${user.email} (Role: ${user.role})`,
+      `User registered and OTP sent: ${user.email} (Role: ${user.role})`,
     );
 
     return {
-      message: "Registration successful. Welcome to Flybeth!",
+      requiresOtp: true,
+      message: "Registration successful. A verification code has been sent to your email.",
       email: user.email,
     };
   }
@@ -213,16 +266,7 @@ export class AuthService {
       throw new BadRequestException("Invalid or expired OTP");
     }
 
-    // If this was the first time verifying (Signup flow), send the Sweet Welcome Email
-    if (!wasVerified && user.role === Role.AGENT) {
-      this.notificationsService
-        .sendAgentWelcomeEmail(user.email, user.firstName)
-        .catch((err) => {
-          this.logger.error(
-            `Failed to send Agent Welcome email: ${err.message}`,
-          );
-        });
-    }
+    // Note: Agents are now put Under Review, welcome/approval email is sent when Admin approves them.
 
     // Update last login and IP
     await this.usersService.updateLastLogin(user._id.toString());

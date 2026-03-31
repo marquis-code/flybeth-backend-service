@@ -8,11 +8,14 @@ import { RolesGuard } from "../../common/guards/roles.guard";
 import { PermissionsGuard } from "../../common/guards/permissions.guard";
 import { Role, Permission } from "../../common/constants/roles.constant";
 import { InviteDto } from "./dto/invite.dto";
+import { CreateAdminUserDto } from "./dto/create-admin-user.dto";
+import { Public } from "../../common/decorators/public.decorator";
 import { CommissionDto } from "./dto/commission.dto";
 import { CampaignDto } from "./dto/campaign.dto";
 import { CommissionsService } from "../flights/commissions.service";
 import { CampaignsService } from "../campaigns/campaigns.service";
 import { SchedulerService } from "../scheduler/scheduler.service";
+import { UploadService } from "../upload/upload.service";
 
 @ApiTags("Admin")
 @ApiBearerAuth()
@@ -25,6 +28,7 @@ export class AdminController {
     private readonly commissionsService: CommissionsService,
     private readonly campaignsService: CampaignsService,
     private readonly schedulerService: SchedulerService,
+    private readonly uploadService: UploadService,
   ) {}
 
   @Get("dashboard")
@@ -147,5 +151,40 @@ export class AdminController {
   @Roles(Role.SUPER_ADMIN)
   triggerUserReminders() {
     return this.schedulerService.sendUserReminders();
+  }
+
+  @Post("users/create")
+  @ApiOperation({ summary: "Create an admin/staff user (Super Admin only)" })
+  @Roles(Role.SUPER_ADMIN)
+  createAdminUser(@Body() createAdminUserDto: CreateAdminUserDto, @Req() req: any) {
+    return this.adminService.createAdminUser(createAdminUserDto, req.user.sub);
+  }
+
+  @Get("invitations/verify/:token")
+  @ApiOperation({ summary: "Verify invitation token and get details" })
+  verifyInvitation(@Param("token") token: string) {
+    return this.adminService.verifyInvitation(token);
+  }
+
+  @Delete("users/:id")
+  @ApiOperation({ summary: "Delete an admin/staff user (Super Admin only)" })
+  @Roles(Role.SUPER_ADMIN)
+  deleteUser(@Param("id") id: string) {
+    return this.adminService.deleteUser(id);
+  }
+
+  // --- File Storage Management ---
+  @Get("storage")
+  @ApiOperation({ summary: "List all stored files" })
+  @Permissions(Permission.MANAGE_SETTINGS)
+  getFiles(@Query("folder") folder?: string) {
+    return this.uploadService.listFiles(folder);
+  }
+
+  @Delete("storage/:publicId")
+  @ApiOperation({ summary: "Delete a stored file" })
+  @Permissions(Permission.MANAGE_SETTINGS)
+  deleteFile(@Param("publicId") publicId: string) {
+    return this.uploadService.deleteFile(publicId);
   }
 }

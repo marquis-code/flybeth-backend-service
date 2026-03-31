@@ -8,6 +8,8 @@ import {
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { User, UserDocument } from "./schemas/user.schema";
+import { NotificationsService } from "../notifications/notifications.service";
+import { AgentStatus } from "../../common/constants/roles.constant";
 import {
   UpdateUserDto,
   UpdateUserRoleDto,
@@ -21,7 +23,10 @@ import { hashPassword } from "../../common/utils/crypto.util";
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async create(userData: Partial<User>): Promise<UserDocument> {
     const existing = await this.userModel.findOne({ email: userData.email });
@@ -127,6 +132,29 @@ export class UsersService {
     return user;
   }
 
+  async updateAgentStatus(id: string, status: string): Promise<UserDocument> {
+    const previousUser = await this.userModel.findById(id).exec();
+    if (!previousUser) {
+      throw new NotFoundException("User not found");
+    }
+
+    const user = await this.userModel
+      .findByIdAndUpdate(id, { agentStatus: status }, { new: true })
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    // If approved, send the congratulatory email
+    if (status === AgentStatus.APPROVED && previousUser.agentStatus !== AgentStatus.APPROVED) {
+      this.notificationsService.sendAgentApprovalEmail(user.email, user.firstName)
+        .catch(err => this.logger.error(`Failed to send Agent Approval email: ${err.message}`));
+    }
+
+    return user;
+  }
+
   async updateRefreshToken(
     id: string,
     refreshToken: string | null,
@@ -194,10 +222,21 @@ export class UsersService {
       .exec();
   }
 
+  async delete(id: string): Promise<void> {
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+    if (!result) {
+      throw new NotFoundException("User not found");
+    }
+  }
+
   async getTenantUsers(
     tenantId: string,
     paginationDto: PaginationDto,
   ): Promise<PaginatedResult<UserDocument>> {
     return paginate(this.userModel, { tenant: tenantId }, paginationDto);
+  }
+
+  async countByRole(role: string): Promise<number> {
+    return this.userModel.countDocuments({ role }).exec();
   }
 }

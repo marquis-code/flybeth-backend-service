@@ -307,6 +307,45 @@ export class NotificationsService {
     );
   }
 
+  async sendAgentSignupUnderReviewEmail(email: string, firstName: string): Promise<void> {
+    const title = "Your Application is Under Review ⏳";
+    const content = `
+      <p>Hi ${firstName},</p>
+      <p>Thank you for signing up to become a Flybeth agent! Your registration was completed successfully.</p>
+      
+      <div style="background: #fffaf0; border-left: 4px solid #FF3D00; padding: 15px; margin: 30px 0; border-radius: 0 12px 12px 0;">
+        <p style="color: #FF3D00; font-weight: 800; font-size: 14px; text-transform: uppercase; margin: 0 0 5px 0;">Next Steps</p>
+        <p style="margin: 0; color: #475569;">Our team is currently reviewing your profile and submitted documents. This process usually takes 24-48 hours. We'll notify you as soon as your account is approved and activated.</p>
+      </div>
+    `;
+    await this.sendEmail(
+      email,
+      "Signup Successful - Profile Under Review",
+      this.resendService.brandWrapper(title, content)
+    );
+  }
+
+  async sendAgentApprovalEmail(email: string, firstName: string): Promise<void> {
+    const title = "Welcome! Your Account is Approved 🎉";
+    const content = `
+      <p>Congratulations ${firstName}!</p>
+      <p>We're thrilled to inform you that your agent application has been approved. You now have full access to the Flybeth agent platform.</p>
+      
+      <div style="margin: 30px 0;">
+        <p style="margin: 0 0 15px 0;">You can now log in to the dashboard to access exclusive wholesale rates, lightning-fast booking workflows, and intelligent analytics.</p>
+      </div>
+      
+      <div class="action-area">
+        <a href="http://agent.flybeth.com/auth/login" class="btn">Log In to Your Dashboard</a>
+      </div>
+    `;
+    await this.sendEmail(
+      email,
+      "Your Flybeth Agent Account is Approved!",
+      this.resendService.brandWrapper(title, content)
+    );
+  }
+
   async sendAbandonedBookingReminder(params: {
     email: string;
     firstName: string;
