@@ -6,7 +6,10 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Res,
+  Req,
 } from "@nestjs/common";
+import { Response, Request } from "express";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import {
@@ -21,11 +24,42 @@ import {
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { AuthGuard } from "@nestjs/passport";
+import { ConfigService } from "@nestjs/config";
 
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken: string }) {
+    const isProd = this.configService.get("NODE_ENV") === "production";
+    
+    // Cookie options for both tokens
+    const cookieOptions = {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: (isProd ? "strict" as const : "lax" as const),
+        path: "/",
+    };
+
+    res.cookie("accessToken", tokens.accessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000, // 15 mins
+    });
+
+    res.cookie("refreshToken", tokens.refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
+  private clearTokenCookies(res: Response) {
+    res.clearCookie("accessToken", { path: "/" });
+    res.clearCookie("refreshToken", { path: "/" });
+  }
 
   @Public()
   @Post("register")
@@ -47,8 +81,13 @@ export class AuthController {
   @UseGuards(AuthGuard("jwt-refresh"))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Refresh access token" })
-  refreshToken(@CurrentUser("_id") userId: string) {
-    return this.authService.refreshToken(userId);
+  async refreshToken(
+    @CurrentUser("_id") userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const tokens = await this.authService.refreshToken(userId);
+    this.setTokenCookies(res, tokens);
+    return { message: "Token refreshed successfully" };
   }
 
   @Public()
@@ -71,8 +110,22 @@ export class AuthController {
   @Post("verify-otp")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Verify email with OTP" })
-  verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
-    return this.authService.verifyOtp(verifyOtpDto);
+  async verifyOtp(
+    @Body() verifyOtpDto: VerifyOtpDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.verifyOtp(verifyOtpDto);
+    if (result.accessToken && result.refreshToken) {
+      this.setTokenCookies(res, {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+      
+      // Remove tokens from the response body for security
+      delete (result as any).accessToken;
+      delete (result as any).refreshToken;
+    }
+    return result;
   }
 
   @Public()
@@ -87,7 +140,11 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Logout current user" })
-  logout(@CurrentUser("_id") userId: string) {
+  async logout(
+    @CurrentUser("_id") userId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.clearTokenCookies(res);
     return this.authService.logout(userId);
   }
 }

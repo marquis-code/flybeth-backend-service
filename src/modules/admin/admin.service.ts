@@ -154,8 +154,12 @@ export class AdminService {
     return this.tenantsService.findAll(paginationDto);
   }
 
-  async getUsers(paginationDto: PaginationDto) {
-    return this.usersService.findAll(paginationDto);
+  async getUsers(queryDto: any) {
+    const { role, status, tier, ...paginationDto } = queryDto;
+    const filterDto: any = {};
+    if (role) filterDto.role = role;
+    if (status) filterDto.isActive = status === 'active';
+    return this.usersService.findAll(paginationDto, filterDto);
   }
 
   async getBookings(paginationDto: PaginationDto) {

@@ -22,6 +22,28 @@ export class CampaignDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsString()
+  targetAudience?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  specificUsers?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  customEmails?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsDateString()
   scheduledAt?: string;
 }

@@ -191,7 +191,7 @@ export class ResendService {
         <div class="email-wrapper">
           <div class="container">
             <div class="logo">
-              <div class="logo-text">Fly<span>beth</span></div>
+              <img src="https://agent.flybeth.com/_nuxt/logo.CJ2BWGNK.png" alt="Flybeth Logo" height="36" style="height: 36px; display: block; margin: 0 auto; border: none; outline: none;" />
             </div>
             <div class="header">
               <div class="title-pill"><span>Security Notification</span></div>

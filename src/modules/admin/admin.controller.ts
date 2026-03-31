@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Query, Body, Req, UseGuards, Param } from "@nestjs/common";
+import { Controller, Get, Post, Put, Delete, Query, Body, Req, UseGuards, Param } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminService } from "./admin.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
+import { UserQueryDto } from "./dto/user-query.dto";
 import { Roles } from "../../common/decorators/roles.decorator";
 import { Permissions } from "../../common/decorators/permissions.decorator";
 import { RolesGuard } from "../../common/guards/roles.guard";
@@ -21,7 +22,7 @@ import { UploadService } from "../upload/upload.service";
 @ApiBearerAuth()
 @Controller("admin")
 @UseGuards(RolesGuard, PermissionsGuard)
-@Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+@Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
@@ -54,8 +55,8 @@ export class AdminController {
 
   @Get("users")
   @ApiOperation({ summary: "List all users" })
-  getUsers(@Query() paginationDto: PaginationDto) {
-    return this.adminService.getUsers(paginationDto);
+  getUsers(@Query() queryDto: UserQueryDto) {
+    return this.adminService.getUsers(queryDto);
   }
 
   @Get("bookings")
@@ -75,7 +76,7 @@ export class AdminController {
   @ApiOperation({ summary: "Invite a team member" })
   @Permissions(Permission.INVITE_MEMBERS)
   inviteTeamMember(@Body() inviteDto: InviteDto, @Req() req: any) {
-    return this.adminService.inviteTeamMember(inviteDto, req.user.sub);
+    return this.adminService.inviteTeamMember(inviteDto, req.user?._id || req.user?.sub);
   }
 
   @Get("invitations")
@@ -128,14 +129,21 @@ export class AdminController {
   upsertCampaign(@Body() campaignDto: CampaignDto, @Req() req: any) {
     return this.campaignsService.create({ 
       ...campaignDto, 
-      createdBy: req.user.sub 
+      createdBy: req.user?._id || req.user?.sub 
     });
+  }
+
+  @Put("campaigns/:id")
+  @ApiOperation({ summary: "Update an existing email campaign" })
+  @Permissions(Permission.MANAGE_CAMPAIGNS)
+  updateCampaign(@Param("id") id: string, @Body() campaignDto: CampaignDto) {
+    return this.campaignsService.update(id, campaignDto);
   }
 
   @Post("campaigns/:id/send")
   @ApiOperation({ summary: "Send email campaign blast" })
   @Permissions(Permission.MANAGE_CAMPAIGNS)
-  sendCampaign(@Query("id") id: string) {
+  sendCampaign(@Param("id") id: string) {
     return this.campaignsService.sendCampaign(id);
   }
 
@@ -157,7 +165,7 @@ export class AdminController {
   @ApiOperation({ summary: "Create an admin/staff user (Super Admin only)" })
   @Roles(Role.SUPER_ADMIN)
   createAdminUser(@Body() createAdminUserDto: CreateAdminUserDto, @Req() req: any) {
-    return this.adminService.createAdminUser(createAdminUserDto, req.user.sub);
+    return this.adminService.createAdminUser(createAdminUserDto, req.user?._id || req.user?.sub);
   }
 
   @Get("invitations/verify/:token")

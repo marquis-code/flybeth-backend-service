@@ -20,8 +20,20 @@ export class Campaign {
   @Prop()
   scheduledAt: Date;
 
-  @Prop({ type: [String], default: ["customer"] })
+  @Prop({ type: [String] })
   targetRoles: string[];
+
+  @Prop({ default: "all", enum: ["all", "active", "roles", "specific"] })
+  targetAudience: string;
+
+  @Prop({ type: [Types.ObjectId], ref: "User", default: [] })
+  specificUsers: Types.ObjectId[];
+
+  @Prop({ type: [String], default: [] })
+  customEmails: string[];
+
+  @Prop()
+  imageUrl: string;
 
   @Prop({ type: Types.ObjectId, ref: "User", required: true })
   createdBy: Types.ObjectId;

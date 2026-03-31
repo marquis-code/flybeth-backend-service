@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
-import { Permission } from "../constants/roles.constant";
+import { Permission, Role } from "../constants/roles.constant";
 import { PERMISSIONS_KEY } from "../decorators/permissions.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 
@@ -26,6 +26,12 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
     const { user } = context.switchToHttp().getRequest();
+    
+    // Super Admins bypass permission checks
+    if (user?.role === Role.SUPER_ADMIN) {
+      return true;
+    }
+
     if (!user?.permissions) return false;
     
     return requiredPermissions.every((permission) => user.permissions?.includes(permission));

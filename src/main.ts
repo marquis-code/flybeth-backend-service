@@ -6,6 +6,7 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import compression from "compression";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
@@ -37,13 +38,20 @@ async function bootstrap() {
   // Security middleware
   app.use(helmet());
   app.use(compression());
+  app.use(cookieParser());
 
   // CORS
   app.enableCors({
-    origin: true, // Reflect the request origin
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3004", // User's active port
+    ],
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
     allowedHeaders: "Content-Type,Accept,Authorization,X-Tenant-ID",
+    exposedHeaders: ["set-cookie"],
   });
 
   // Global validation pipe

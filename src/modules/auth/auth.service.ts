@@ -41,14 +41,16 @@ export class AuthService {
     // Block admin roles from public registration unless a valid invitation token is provided
     const blockedRoles = [Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF];
     if (registerDto.role && blockedRoles.includes(registerDto.role)) {
-      // Exception: Allow first Super Admin to register without a token
       const isSuperAdminSignup = registerDto.role === Role.SUPER_ADMIN;
       const superAdminCount = isSuperAdminSignup 
         ? await this.usersService.countByRole(Role.SUPER_ADMIN) 
         : 0;
 
+      const masterToken = this.configService.get("ADMIN_REGISTRATION_TOKEN");
+      const isMasterToken = registerDto.token && registerDto.token === masterToken;
+
       if (!registerDto.token) {
-        // If it's the first Super Admin, allow it
+        // Exception: Allow first Super Admin to register without a token
         if (isSuperAdminSignup && superAdminCount === 0) {
           this.logger.log(`Initial Super Admin registration allowed for: ${registerDto.email}`);
         } else {
@@ -56,8 +58,8 @@ export class AuthService {
             "Administrative accounts cannot be created through public registration. Contact your system administrator or use an invitation link.",
           );
         }
-      } else {
-        // Verify invitation token
+      } else if (!isMasterToken) {
+        // Verify invitation token only if it's not the master token
         const invitation = await this.invitationModel.findOne({
           token: registerDto.token,
           status: "pending",
@@ -75,8 +77,8 @@ export class AuthService {
         if (invitation.role !== registerDto.role) {
           throw new ForbiddenException("Role does not match the invitation");
         }
-
-        // Mark invitation as accepted (we'll do this after user creation)
+      } else {
+        this.logger.log(`Administrative registration using Master Token allowed for: ${registerDto.email} (Role: ${registerDto.role})`);
       }
     }
 
