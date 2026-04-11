@@ -107,6 +107,11 @@ class BookingContactDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @ApiPropertyOptional({ example: "Hawaii" })
+  @IsOptional()
+  @IsString()
+  state?: string;
 }
 
 export class CreateBookingDto {
@@ -167,6 +172,21 @@ export class CreateBookingDto {
   @IsOptional()
   @IsBoolean()
   isRoundTrip?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  deviceFingerprint?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  userAgent?: string;
 }
 
 export class CancelBookingDto {

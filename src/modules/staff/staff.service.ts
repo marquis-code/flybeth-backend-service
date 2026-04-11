@@ -17,7 +17,7 @@ export class StaffService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private usersService: UsersService,
     private notificationsService: NotificationsService,
-  ) { }
+  ) {}
 
   async createStaff(adminId: string, staffData: any) {
     const existing = await this.usersService.findByEmail(staffData.email);

@@ -10,6 +10,7 @@ export interface FlightSearchQuery {
   infants?: number;
   class?: string; // economy, business, premium_economy, first
   maxConnections?: number;
+  userRole?: string;
 }
 
 export interface FlightSegment {
@@ -75,5 +76,11 @@ export interface AirlineAdapter {
   ): Promise<{ success: boolean; refundAmount?: number }>;
   searchLocations?(keyword: string, countryCode?: string): Promise<any[]>;
   getNearestAirports?(latitude: number, longitude: number): Promise<any[]>;
-  predictTripPurpose?(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any>;
+  predictTripPurpose?(
+    origin: string,
+    destination: string,
+    departureDate: string,
+    returnDate: string,
+  ): Promise<any>;
+  getFlightInspiration?(origin: string, departureDate?: string): Promise<any[]>;
 }

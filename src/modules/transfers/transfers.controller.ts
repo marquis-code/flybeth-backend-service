@@ -12,7 +12,7 @@ import { CancelTransferDto } from "./dto/cancel-transfer.dto";
 export class TransfersController {
   constructor(
     private readonly transfersIntegrationService: TransfersIntegrationService,
-  ) { }
+  ) {}
 
   @Public()
   @Post("search/live")

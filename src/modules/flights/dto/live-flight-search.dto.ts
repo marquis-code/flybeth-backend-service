@@ -71,4 +71,10 @@ export class LiveFlightSearchDto {
   @IsNumber()
   @Min(0)
   maxStops?: number;
+  @ApiPropertyOptional({
+    description: "User role for commission calculation",
+  })
+  @IsOptional()
+  @IsString()
+  userRole?: string;
 }

@@ -14,7 +14,7 @@ export enum Permission {
   VIEW_REPORTS = "view_reports",
   MANAGE_INTEGRATIONS = "manage_integrations",
   MANAGE_SETTINGS = "manage_settings",
-  
+
   // Real-time
   CHAT_WITH_CUSTOMERS = "chat_with_customers",
   CHAT_WITH_AGENTS = "chat_with_agents",

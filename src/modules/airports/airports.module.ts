@@ -23,4 +23,4 @@ import {
   providers: [AirportsService],
   exports: [AirportsService],
 })
-export class AirportsModule { }
+export class AirportsModule {}

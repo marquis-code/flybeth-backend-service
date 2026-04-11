@@ -1,4 +1,3 @@
-// src/modules/integrations/provider-config.service.ts
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
@@ -6,6 +5,7 @@ import {
   FlightProviderConfig,
   FlightProviderConfigDocument,
 } from "./schemas/flight-provider-config.schema";
+import { SystemConfigService } from "../system-config/system-config.service";
 
 @Injectable()
 export class ProviderConfigService {
@@ -14,6 +14,7 @@ export class ProviderConfigService {
   constructor(
     @InjectModel(FlightProviderConfig.name)
     private configModel: Model<FlightProviderConfigDocument>,
+    private systemConfigService: SystemConfigService,
   ) {}
 
   /**
@@ -55,7 +56,7 @@ export class ProviderConfigService {
       provider.enabled = enabled;
       await config.save();
       this.logger.log(
-        `Provider ${providerName} ${enabled ? "enabled" : "disabled"}`,
+         `Provider ${providerName} ${enabled ? "enabled" : "disabled"}`,
       );
     }
     return config;
@@ -75,8 +76,20 @@ export class ProviderConfigService {
   }
 
   /**
-   * Calculate price with commission
+   * Calculate price with commission based on user segment
    */
+  async applySegmentedCommission(
+    basePrice: number,
+    role: string = 'customer',
+  ): Promise<number> {
+    const systemConfig = await this.systemConfigService.getConfig();
+    const rate = role === 'agent' || role === 'tenant_admin' 
+        ? systemConfig.b2bCommission 
+        : systemConfig.b2cCommission;
+        
+    return Math.round(basePrice * (1 + rate / 100) * 100) / 100;
+  }
+
   applyCommission(
     basePrice: number,
     config: FlightProviderConfigDocument,

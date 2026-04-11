@@ -1,4 +1,8 @@
-import { Injectable, Logger, InternalServerErrorException } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
 import * as crypto from "crypto";
@@ -17,9 +21,9 @@ export class PaystackProvider {
       this.configService.get<string>("PAYSTACK_SECRET_KEY") || "";
     this.webhookSecret =
       this.configService.get<string>("PAYSTACK_WEBHOOK_SECRET") || "";
-    
+
     this.httpsAgent = new https.Agent({
-      minVersion: 'TLSv1.2',
+      minVersion: "TLSv1.2",
       keepAlive: true,
     });
   }
@@ -44,7 +48,7 @@ export class PaystackProvider {
         `${this.baseUrl}/transaction/initialize`,
         {
           amount: Math.round(params.amount * 100), // Paystack expects kobo/pesewas
-          currency: (params.currency || 'NGN').toUpperCase(),
+          currency: (params.currency || "NGN").toUpperCase(),
           email: params.email,
           reference: params.reference,
           callback_url: params.callbackUrl,
@@ -52,9 +56,9 @@ export class PaystackProvider {
             ...params.metadata,
           },
         },
-        { 
+        {
           headers: this.getHeaders(),
-          httpsAgent: this.httpsAgent
+          httpsAgent: this.httpsAgent,
         },
       );
 
@@ -62,7 +66,9 @@ export class PaystackProvider {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message;
       this.logger.error(`Paystack initialization failed: ${errorMessage}`);
-      throw new InternalServerErrorException(errorMessage || 'Paystack initialization failed');
+      throw new InternalServerErrorException(
+        errorMessage || "Paystack initialization failed",
+      );
     }
   }
 
@@ -70,15 +76,15 @@ export class PaystackProvider {
     try {
       const response = await axios.get(
         `${this.baseUrl}/transaction/verify/${reference}`,
-        { 
+        {
           headers: this.getHeaders(),
-          httpsAgent: this.httpsAgent
+          httpsAgent: this.httpsAgent,
         },
       );
 
       const data = response.data.data;
       return {
-        status: data.status === 'success' ? 'success' : 'failed',
+        status: data.status === "success" ? "success" : "failed",
         amount: data.amount / 100,
         currency: data.currency,
         reference: data.reference,
@@ -87,7 +93,9 @@ export class PaystackProvider {
       };
     } catch (error: any) {
       this.logger.error(`Paystack verification failed: ${error.message}`);
-      throw new InternalServerErrorException(error.response?.data?.message || 'Paystack verification failed');
+      throw new InternalServerErrorException(
+        error.response?.data?.message || "Paystack verification failed",
+      );
     }
   }
 
@@ -100,7 +108,7 @@ export class PaystackProvider {
 
       const response = await axios.post(`${this.baseUrl}/refund`, body, {
         headers: this.getHeaders(),
-        httpsAgent: this.httpsAgent
+        httpsAgent: this.httpsAgent,
       });
 
       return {
@@ -110,7 +118,9 @@ export class PaystackProvider {
       };
     } catch (error: any) {
       this.logger.error(`Paystack refund failed: ${error.message}`);
-      throw new InternalServerErrorException(error.response?.data?.message || 'Paystack refund failed');
+      throw new InternalServerErrorException(
+        error.response?.data?.message || "Paystack refund failed",
+      );
     }
   }
 
@@ -120,7 +130,7 @@ export class PaystackProvider {
         headers: this.getHeaders(),
         httpsAgent: this.httpsAgent,
         params: {
-          country: 'nigeria',
+          country: "nigeria",
           perPage: 100,
         },
       });
@@ -144,9 +154,12 @@ export class PaystackProvider {
 
       return (response.data as any)?.data || {};
     } catch (error: any) {
-      this.logger.error('Paystack Resolve Account Error:', error.response?.data || error.message);
+      this.logger.error(
+        "Paystack Resolve Account Error:",
+        error.response?.data || error.message,
+      );
       throw new InternalServerErrorException(
-        error.response?.data?.message || 'Account resolution failed',
+        error.response?.data?.message || "Account resolution failed",
       );
     }
   }

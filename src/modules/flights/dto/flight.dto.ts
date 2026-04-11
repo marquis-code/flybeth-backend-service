@@ -249,6 +249,11 @@ export class SearchFlightsDto {
   @IsOptional()
   @IsString()
   tenantId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  userRole?: string;
 }
 
 export class UpdateFlightDto {

@@ -12,7 +12,7 @@ export class AmadeusProvider implements AirlineAdapter {
   readonly providerName = "amadeus";
   private readonly logger = new Logger(AmadeusProvider.name);
 
-  constructor(private amadeusHelper: AmadeusHelperService) { }
+  constructor(private amadeusHelper: AmadeusHelperService) {}
 
   /**
    * Search flights using Amadeus Flight Offers Search API
@@ -21,6 +21,8 @@ export class AmadeusProvider implements AirlineAdapter {
     this.logger.log(
       `Searching Amadeus: ${query.origin} -> ${query.destination} on ${query.departureDate}`,
     );
+
+    if (this.amadeusHelper.isRateLimited()) return [];
 
     try {
       const token = await this.amadeusHelper.getAccessToken();
@@ -71,6 +73,9 @@ export class AmadeusProvider implements AirlineAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
+        if (response.status === 429) {
+          this.amadeusHelper.markRateLimited();
+        }
         this.logger.error(
           `Amadeus search failed: ${response.status} ${errorBody}`,
         );
@@ -345,15 +350,15 @@ export class AmadeusProvider implements AirlineAdapter {
               },
               documents: p.passportNumber
                 ? [
-                  {
-                    documentType: "PASSPORT",
-                    number: p.passportNumber,
-                    expiryDate: p.passportExpiry,
-                    issuanceCountry: p.passportCountry || "US",
-                    nationality: p.nationality || "US",
-                    holder: true,
-                  },
-                ]
+                    {
+                      documentType: "PASSPORT",
+                      number: p.passportNumber,
+                      expiryDate: p.passportExpiry,
+                      issuanceCountry: p.passportCountry || "US",
+                      nationality: p.nationality || "US",
+                      holder: true,
+                    },
+                  ]
                 : undefined,
             };
           }),
@@ -466,6 +471,9 @@ export class AmadeusProvider implements AirlineAdapter {
    */
   async searchLocations(keyword: string, countryCode?: string): Promise<any[]> {
     this.logger.log(`Searching Amadeus locations for keyword: ${keyword}`);
+
+    if (this.amadeusHelper.isRateLimited()) return [];
+
     try {
       const token = await this.amadeusHelper.getAccessToken();
       const params = new URLSearchParams({
@@ -487,6 +495,9 @@ export class AmadeusProvider implements AirlineAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
+        if (response.status === 429) {
+          this.amadeusHelper.markRateLimited();
+        }
         this.logger.error(
           `Amadeus location search failed: ${response.status} ${errorBody}`,
         );
@@ -511,6 +522,9 @@ export class AmadeusProvider implements AirlineAdapter {
     this.logger.log(
       `Searching Amadeus nearest airports for: ${latitude}, ${longitude}`,
     );
+
+    if (this.amadeusHelper.isRateLimited()) return [];
+
     try {
       const token = await this.amadeusHelper.getAccessToken();
       const params = new URLSearchParams({
@@ -531,6 +545,9 @@ export class AmadeusProvider implements AirlineAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
+        if (response.status === 429) {
+          this.amadeusHelper.markRateLimited();
+        }
         this.logger.error(
           `Amadeus nearest airports search failed: ${response.status} ${errorBody}`,
         );
@@ -550,7 +567,27 @@ export class AmadeusProvider implements AirlineAdapter {
   /**
    * Predict the trip purpose (Business or Leisure) from a flight
    */
-  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
-    return this.amadeusHelper.predictTripPurpose(origin, destination, departureDate, returnDate);
+  async predictTripPurpose(
+    origin: string,
+    destination: string,
+    departureDate: string,
+    returnDate: string,
+  ): Promise<any> {
+    return this.amadeusHelper.predictTripPurpose(
+      origin,
+      destination,
+      departureDate,
+      returnDate,
+    );
+  }
+
+  /**
+   * Search for cheapest destinations from an origin (Flight Inspiration Search)
+   */
+  async getFlightInspiration(
+    origin: string,
+    departureDate?: string,
+  ): Promise<any[]> {
+    return this.amadeusHelper.getFlightInspiration(origin, departureDate);
   }
 }

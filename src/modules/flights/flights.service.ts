@@ -12,6 +12,7 @@ import {
 } from "./dto/flight.dto";
 import { FlightStatus } from "../../common/constants/roles.constant";
 import { CommissionsService } from "./commissions.service";
+import { SystemConfigService } from "../system-config/system-config.service";
 
 @Injectable()
 export class FlightsService {
@@ -23,6 +24,7 @@ export class FlightsService {
     @InjectModel(Flight.name) private flightModel: Model<FlightDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private commissionsService: CommissionsService,
+    private configService: SystemConfigService,
   ) {}
 
   async create(createFlightDto: CreateFlightDto): Promise<FlightDocument> {
@@ -132,33 +134,48 @@ export class FlightsService {
     ]);
 
     // Apply commissions to flight prices
+    const config = await this.configService.getConfig();
+    const b2bComm = config?.b2bCommission || 5;
+    const b2cComm = config?.b2cCommission || 10;
+    
     const flightsWithCommissions = await Promise.all(
       flights.map(async (flight: any) => {
-        const commission = await this.commissionsService.findByAirline(
+        // 1. Check for airline-specific overrides first
+        const airlineComm = await this.commissionsService.findByAirline(
           flight.airline,
           flight.tenant?._id?.toString() || searchDto.tenantId,
         );
 
-        if (commission) {
-          flight.classes = flight.classes.map((cls: any) => {
-            let finalPrice = cls.basePrice;
-            if (commission.type === "fixed") {
-              finalPrice += commission.value;
-            } else if (commission.type === "percentage") {
-              finalPrice += (cls.basePrice * commission.value) / 100;
-            }
-            return {
-              ...cls,
-              basePrice: Math.round(finalPrice * 100) / 100,
-              originalPrice: cls.basePrice,
-              commission: {
-                type: commission.type,
-                value: commission.value,
-                added: Math.round((finalPrice - cls.basePrice) * 100) / 100,
-              },
-            };
-          });
+        // 2. Fallback to global role-based commission
+        const userRole = (searchDto as any).userRole || 'customer';
+        const globalRate = userRole === 'customer' ? b2cComm : b2bComm;
+        
+        let finalRate = globalRate;
+        if (airlineComm) {
+            finalRate = userRole === 'customer' ? airlineComm.b2cValue : airlineComm.b2bValue;
         }
+        
+        const rateType = airlineComm ? airlineComm.type : 'percentage';
+
+        flight.classes = flight.classes.map((cls: any) => {
+          let finalPrice = cls.basePrice;
+          if (rateType === "fixed") {
+            finalPrice += finalRate;
+          } else if (rateType === "percentage") {
+            finalPrice += (cls.basePrice * finalRate) / 100;
+          }
+          return {
+            ...cls,
+            basePrice: Math.round(finalPrice * 100) / 100,
+            originalPrice: cls.basePrice,
+            commission: {
+              type: rateType,
+              value: finalRate,
+              added: Math.round((finalPrice - cls.basePrice) * 100) / 100,
+              source: airlineComm ? 'airline_override' : 'global_role_policy'
+            },
+          };
+        });
         return flight;
       }),
     );
@@ -251,22 +268,41 @@ export class FlightsService {
 
   async getDeals(limit: number = 10) {
     const cacheKey = `flights:deals:${limit}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
 
-    const flights = await this.flightModel
-      .find({
-        status: FlightStatus.SCHEDULED,
-        isActive: true,
-        "departure.time": { $gte: new Date() },
-      })
-      .sort({ "classes.basePrice": 1 })
-      .limit(limit)
-      .lean()
-      .exec();
+      const flights = await this.flightModel
+        .find({
+          status: FlightStatus.SCHEDULED,
+          isActive: true,
+          "departure.time": { $gte: new Date() },
+        })
+        .sort({ "classes.basePrice": 1 })
+        .limit(limit)
+        .lean()
+        .exec();
 
-    await this.cacheManager.set(cacheKey, flights, this.POPULAR_CACHE_TTL);
-    return flights;
+      await this.cacheManager.set(cacheKey, flights, this.POPULAR_CACHE_TTL);
+      return flights;
+    } catch (error) {
+      this.logger.error(`Error fetching flight deals: ${error.message}`);
+      // Try DB without cache if cache failed, or return empty
+      try {
+        return await this.flightModel
+          .find({
+            status: FlightStatus.SCHEDULED,
+            isActive: true,
+            "departure.time": { $gte: new Date() },
+          })
+          .sort({ "classes.basePrice": 1 })
+          .limit(limit)
+          .lean()
+          .exec();
+      } catch (dbError) {
+        return [];
+      }
+    }
   }
 
   async updateSeatAvailability(

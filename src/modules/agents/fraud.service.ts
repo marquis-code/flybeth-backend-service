@@ -28,7 +28,7 @@ export class FraudService {
 
     // 2. Different names on account vs business (Simplified check)
     if (user.firstName && user.agentProfile?.agencyName) {
-        // Logic to check if names are vastly different or suspicious
+      // Logic to check if names are vastly different or suspicious
     }
 
     return flags;

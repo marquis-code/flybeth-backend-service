@@ -1,5 +1,11 @@
-import { IsEmail, IsEnum, IsArray, IsOptional, IsString } from 'class-validator';
-import { Role, Permission } from '../../../common/constants/roles.constant';
+import {
+  IsEmail,
+  IsEnum,
+  IsArray,
+  IsOptional,
+  IsString,
+} from "class-validator";
+import { Role, Permission } from "../../../common/constants/roles.constant";
 
 export class InviteDto {
   @IsEmail()

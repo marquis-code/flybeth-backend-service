@@ -34,15 +34,18 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
-  private setTokenCookies(res: Response, tokens: { accessToken: string; refreshToken: string }) {
+  private setTokenCookies(
+    res: Response,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
     const isProd = this.configService.get("NODE_ENV") === "production";
-    
+
     // Cookie options for both tokens
     const cookieOptions = {
-        httpOnly: true,
-        secure: isProd,
-        sameSite: (isProd ? "strict" as const : "lax" as const),
-        path: "/",
+      httpOnly: true,
+      secure: isProd,
+      sameSite: isProd ? ("strict" as const) : ("lax" as const),
+      path: "/",
     };
 
     res.cookie("accessToken", tokens.accessToken, {
@@ -120,10 +123,10 @@ export class AuthController {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
       });
-      
-      // Remove tokens from the response body for security
-      delete (result as any).accessToken;
-      delete (result as any).refreshToken;
+
+      // Tokens are preserved in response body to support explicit Bearer headers
+      // delete (result as any).accessToken;
+      // delete (result as any).refreshToken;
     }
     return result;
   }

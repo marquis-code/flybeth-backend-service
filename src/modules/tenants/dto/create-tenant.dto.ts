@@ -203,8 +203,24 @@ export class UpdateTenantDto {
 }
 
 export class UpdateTenantStatusDto {
-  @ApiProperty({ enum: ["active", "suspended", "pending", "under_review", "approved", "rejected"] })
-  @IsEnum(["active", "suspended", "pending", "under_review", "approved", "rejected"])
+  @ApiProperty({
+    enum: [
+      "active",
+      "suspended",
+      "pending",
+      "under_review",
+      "approved",
+      "rejected",
+    ],
+  })
+  @IsEnum([
+    "active",
+    "suspended",
+    "pending",
+    "under_review",
+    "approved",
+    "rejected",
+  ])
   status: string;
 }
 

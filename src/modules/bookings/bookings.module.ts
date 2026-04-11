@@ -11,6 +11,7 @@ import { CarsModule } from "../cars/cars.module";
 import { CruisesModule } from "../cruises/cruises.module";
 import { PackagesModule } from "../packages/packages.module";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { FraudModule } from "../fraud/fraud.module";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
     CruisesModule,
     PackagesModule,
     NotificationsModule,
+    FraudModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

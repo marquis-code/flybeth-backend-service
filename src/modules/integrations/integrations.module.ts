@@ -30,9 +30,6 @@ import { HotelbedsHelperService } from "./providers/hotelbeds-helper.service";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
-import { SabreHelperService } from "./providers/sabre-helper.service";
-import { SabreCarsProvider } from "./providers/sabre-cars.provider";
-
 // Controller
 import { ProviderConfigController } from "./provider-config.controller";
 import { MarketInsightsController } from "./market-insights.controller";
@@ -55,7 +52,6 @@ import { MarketInsightsController } from "./market-insights.controller";
     // Helper
     AmadeusHelperService,
     HotelbedsHelperService,
-    SabreHelperService,
 
     // Flight providers
     AmadeusProvider,
@@ -73,9 +69,6 @@ import { MarketInsightsController } from "./market-insights.controller";
     // Experience providers
     AmadeusExperiencesProvider,
     HotelbedsExperiencesProvider,
-
-    // Car providers
-    SabreCarsProvider,
 
     // Integration services
     FlightsIntegrationService,
@@ -96,4 +89,4 @@ import { MarketInsightsController } from "./market-insights.controller";
     AmadeusHelperService,
   ],
 })
-export class IntegrationsModule { }
+export class IntegrationsModule {}

@@ -19,7 +19,7 @@ export class AirportsService {
     @InjectModel(Airline.name) private airlineModel: Model<AirlineDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private amadeusHelper: AmadeusHelperService,
-  ) { }
+  ) {}
 
   async searchAirports(query: string, limit: number = 10) {
     const cacheKey = `airports:search:${query}:${limit}`;
@@ -137,12 +137,20 @@ export class AirportsService {
     return airlines as unknown as AirlineDocument[];
   }
 
-  async searchCities(keyword: string, limit: number = 10, countryCode?: string) {
+  async searchCities(
+    keyword: string,
+    limit: number = 10,
+    countryCode?: string,
+  ) {
     const cacheKey = `cities:search:${keyword}:${limit}:${countryCode}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
-    const results = await this.amadeusHelper.searchCities(keyword, limit, countryCode);
+    const results = await this.amadeusHelper.searchCities(
+      keyword,
+      limit,
+      countryCode,
+    );
     await this.cacheManager.set(cacheKey, results, 86400000); // 24h cache
     return results;
   }

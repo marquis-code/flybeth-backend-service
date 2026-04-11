@@ -12,7 +12,10 @@ export class Commission {
   type: string;
 
   @Prop({ required: true, default: 0 })
-  value: number;
+  b2bValue: number;
+
+  @Prop({ required: true, default: 0 })
+  b2cValue: number;
 
   @Prop({ default: true })
   isActive: boolean;

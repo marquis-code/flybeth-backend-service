@@ -127,18 +127,18 @@ export class UploadService {
   async listFiles(folder?: string): Promise<any[]> {
     try {
       const result = await cloudinary.api.resources({
-        type: 'upload',
-        prefix: folder ? `flight-booking/${folder}` : 'flight-booking/',
-        max_results: 500
+        type: "upload",
+        prefix: folder ? `flight-booking/${folder}` : "flight-booking/",
+        max_results: 500,
       });
-      
+
       return result.resources.map((resource: any) => ({
         publicId: resource.public_id,
         url: resource.secure_url,
         format: resource.format,
         size: resource.bytes,
         createdAt: resource.created_at,
-        resourceType: resource.resource_type
+        resourceType: resource.resource_type,
       }));
     } catch (error: any) {
       this.logger.error(`Failed to list files: ${error.message}`);

@@ -1,7 +1,12 @@
 // src/modules/users/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { Document, Types } from "mongoose";
-import { Role, Permission, AgentStatus, AgentTier } from "../../../common/constants/roles.constant";
+import {
+  Role,
+  Permission,
+  AgentStatus,
+  AgentTier,
+} from "../../../common/constants/roles.constant";
 
 export type UserDocument = User & Document;
 
@@ -55,18 +60,30 @@ export class AgentProfile {
   @Prop()
   idCardUrl: string;
 
+  @Prop({ enum: ["pending", "approved", "rejected"], default: "pending" })
+  idCardStatus: string;
+
   @Prop()
   selfieUrl: string;
+
+  @Prop({ enum: ["pending", "approved", "rejected"], default: "pending" })
+  selfieStatus: string;
 
   // Business Documents
   @Prop()
   cacCertificateUrl: string; // Nigeria
+
+  @Prop({ enum: ["pending", "approved", "rejected"], default: "pending" })
+  cacCertificateStatus: string;
 
   @Prop()
   llcDocsUrl: string; // USA
 
   @Prop()
   ein: string; // USA
+
+  @Prop()
+  kycFeedback: string;
 
   // Payment & Billing
   @Prop({ type: Object })
@@ -102,20 +119,20 @@ export class User {
   @Prop()
   avatar: string;
 
-  @Prop({ enum: Role, default: Role.CUSTOMER })
-  role: Role;
+  @Prop({ enum: AgentTier, default: AgentTier.BASIC })
+  agentTier: AgentTier;
 
   @Prop({ enum: AgentStatus, default: AgentStatus.PENDING })
   agentStatus: AgentStatus;
 
-  @Prop({ enum: AgentTier, default: AgentTier.BASIC })
-  agentTier: AgentTier;
+  @Prop({ type: Types.ObjectId, ref: "RoleEntity", default: null })
+  role: Types.ObjectId | any;
 
   @Prop({ type: AgentProfile })
   agentProfile: AgentProfile;
 
-  @Prop({ type: [String], enum: Permission, default: [] })
-  permissions: Permission[];
+  @Prop({ type: [String], default: [] })
+  permissions: string[];
 
   @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
@@ -143,17 +160,17 @@ export class User {
 
   // OTP fields
   @Prop({ select: false })
-  otp: string;
+  otp?: string;
 
   @Prop({ select: false })
-  otpExpiry: Date;
+  otpExpiry?: Date;
 
   // Password reset
   @Prop({ select: false })
-  resetToken: string;
+  resetToken?: string;
 
   @Prop({ select: false })
-  resetTokenExpiry: Date;
+  resetTokenExpiry?: Date;
 
   // Refresh token
   @Prop({ select: false })
@@ -161,6 +178,25 @@ export class User {
 
   @Prop()
   lastIp: string;
+
+  // Security & 2FA
+  @Prop({ default: false })
+  twoFactorEnabled: boolean;
+
+  @Prop({ select: false })
+  twoFactorSecret: string;
+
+  @Prop({ default: 0 })
+  failedLoginAttempts: number;
+
+  @Prop()
+  lockUntil: Date;
+
+  @Prop({ type: [String], default: [] })
+  lastLoginIps: string[];
+
+  @Prop({ type: [String], default: [] })
+  lastLoginDevices: string[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

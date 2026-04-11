@@ -1,5 +1,5 @@
 // src/modules/notifications/notifications.module.ts
-import { Module } from "@nestjs/common";
+import { Module, Global } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { NotificationsController } from "./notifications.controller";
 import { NotificationsService } from "./notifications.service";
@@ -12,16 +12,22 @@ import {
   EmailTemplateSchema,
 } from "./schemas/email-template.schema";
 import { ResendService } from "./resend.service";
+import { BullModule } from "@nestjs/bull";
+import { EmailProcessor } from "./email.processor";
 
+@Global()
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Notification.name, schema: NotificationSchema },
       { name: EmailTemplate.name, schema: EmailTemplateSchema },
     ]),
+    BullModule.registerQueue({
+      name: "email-queue",
+    }),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, ResendService],
+  providers: [NotificationsService, ResendService, EmailProcessor],
   exports: [NotificationsService, ResendService],
 })
 export class NotificationsModule {}

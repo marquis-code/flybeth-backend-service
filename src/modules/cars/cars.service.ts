@@ -5,7 +5,10 @@ import { Model } from "mongoose";
 import { Car, CarDocument } from "./schemas/car.schema";
 import { SearchCarsDto, CreateCarDto } from "./dto/car.dto";
 import { CarsIntegrationService } from "../integrations/cars-integration.service";
-import { CarSearchQuery, CarSearchResult } from "../integrations/interfaces/car-adapter.interface";
+import {
+  CarSearchQuery,
+  CarSearchResult,
+} from "../integrations/interfaces/car-adapter.interface";
 
 @Injectable()
 export class CarsService {
@@ -14,7 +17,7 @@ export class CarsService {
   constructor(
     @InjectModel(Car.name) private carModel: Model<CarDocument>,
     private carsIntegrationService: CarsIntegrationService,
-  ) { }
+  ) {}
 
   async search(searchDto: SearchCarsDto): Promise<any> {
     const query: any = {
@@ -42,7 +45,7 @@ export class CarsService {
     // Fetch from database
     const dbCars = await this.carModel.find(query).exec();
 
-    // Fetch from live integrations (Sabre)
+    // Fetch from live integrations
     let liveCars: CarSearchResult[] = [];
     if (searchDto.pickUpLocation && searchDto.pickUpDate) {
       try {
@@ -55,7 +58,8 @@ export class CarsService {
           returnTime: searchDto.dropOffTime || "10:00",
           currencyCode: searchDto.currency || "USD",
         };
-        const integrationResults = await this.carsIntegrationService.search(liveQuery);
+        const integrationResults =
+          await this.carsIntegrationService.search(liveQuery);
         liveCars = integrationResults.results;
       } catch (error) {
         this.logger.error(`Integration search failed: ${error.message}`);

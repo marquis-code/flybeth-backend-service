@@ -25,40 +25,64 @@ async function bootstrap() {
   // Aggressive Route Fix: Handle requests missing the prefix
   app.use((req, res, next) => {
     const url = req.url;
-    if (
-      (url.startsWith("/upload") || url.startsWith("/payments")) &&
-      !url.startsWith(`/${apiPrefix}`)
-    ) {
+    const modulesRequiringPrefix = [
+      "/upload",
+      "/payments",
+      "/market-insights",
+      "/flights",
+      "/stays",
+      "/auth",
+      "/users",
+      "/bookings",
+    ];
+
+    const needsPrefix =
+      modulesRequiringPrefix.some((path) => url.startsWith(path)) &&
+      !url.startsWith(`/${apiPrefix}`);
+
+    if (needsPrefix) {
       req.url = `/${apiPrefix}${url}`;
-      Logger.warn(`Aggressive Route Fix: Redirecting ${url} to ${req.url}`, 'Bootstrap');
+      Logger.warn(
+        `Aggressive Route Fix: Redirecting ${url} to ${req.url}`,
+        "Bootstrap",
+      );
     }
     next();
   });
 
   // Security middleware
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginResourcePolicy: { policy: "cross-origin" },
+      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    }),
+  );
   app.use(compression());
   app.use(cookieParser());
 
-  // CORS
+  // CORS - Aggressive settings for production and development
   app.enableCors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      "http://localhost:3002",
-      "http://localhost:3004", // User's active port
-    ],
+    origin: (origin, callback) => callback(null, true),
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
-    allowedHeaders: "Content-Type,Accept,Authorization,X-Tenant-ID",
+    allowedHeaders: [
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "X-Tenant-ID",
+      "X-Requested-With",
+      "x-captcha-token",
+    ],
     exposedHeaders: ["set-cookie"],
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
   });
 
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false, // Relaxed to avoid 400s from cache-busters or extra query params
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,

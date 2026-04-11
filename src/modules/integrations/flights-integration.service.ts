@@ -83,14 +83,14 @@ export class FlightsIntegrationService {
     const allResults = await Promise.all(promises);
     const merged = allResults.flat();
 
-    // Apply commission to all results
-    const withCommission = merged.map((result) => ({
+    // Apply commission to all results based on user segment
+    const withCommission = await Promise.all(merged.map(async (result) => ({
       ...result,
-      priceWithCommission: this.providerConfigService.applyCommission(
+      priceWithCommission: await this.providerConfigService.applySegmentedCommission(
         result.price,
-        config,
+        (query as any).userRole || 'customer',
       ),
-    }));
+    })));
 
     // Sort by final price (with commission) — cheapest first
     withCommission.sort(
@@ -213,70 +213,106 @@ export class FlightsIntegrationService {
   /**
    * Predict the trip purpose using Amadeus Itinerary Management API
    */
-  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
+  async predictTripPurpose(
+    origin: string,
+    destination: string,
+    departureDate: string,
+    returnDate: string,
+  ): Promise<any> {
     const amadeus = this.adapters.get("amadeus") as AmadeusProvider;
     if (amadeus && amadeus.predictTripPurpose) {
-      return amadeus.predictTripPurpose(origin, destination, departureDate, returnDate);
+      return amadeus.predictTripPurpose(
+        origin,
+        destination,
+        departureDate,
+        returnDate,
+      );
     }
     return null;
+  }
+
+  /**
+   * Get flight inspiration/cheapest destinations from an origin
+   */
+  async getFlightInspiration(
+    origin: string,
+    departureDate?: string,
+  ): Promise<any[]> {
+    const amadeus = this.adapters.get("amadeus") as AmadeusProvider;
+    if (amadeus && amadeus.getFlightInspiration) {
+      return amadeus.getFlightInspiration(origin, departureDate);
+    }
+    return [];
   }
 
   /**
    * Get live deals for a specific origin
    * This fetches real-time offers for 6-8 popular destinations
    */
-  async getLiveDeals(originCode: string): Promise<FlightSearchResult[]> {
-    const cacheKey = `flights:live-deals:${originCode}`;
-    const cached = await this.cacheManager.get<FlightSearchResult[]>(cacheKey);
-    if (cached) return cached;
+  async getLiveDeals(
+    originCode: string,
+    tripType: string = "round-trip",
+  ): Promise<FlightSearchResult[]> {
+    const cacheKey = `flights:live-deals:${originCode}:${tripType}`;
+    try {
+      const cached = await this.cacheManager.get<FlightSearchResult[]>(cacheKey);
+      if (cached) return cached;
 
-    // Popular destinations from Nigeria (or generally if origin is different)
-    const destinations = [
-      "LHR",
-      "DXB",
-      "NYC",
-      "YUL",
-      "ACC",
-      "NBO",
-      "FRA",
-      "AMS",
-    ].filter((d) => d !== originCode);
+      // Popular destinations from Nigeria (or generally if origin is different)
+      const destinations = [
+        "LHR",
+        "DXB",
+        "NYC",
+        "YUL",
+        "ACC",
+        "NBO",
+        "FRA",
+        "AMS",
+      ].filter((d) => d !== originCode);
 
-    const formatDate = (date: Date) => date.toISOString().split("T")[0];
-    const addDays = (date: Date, days: number) => {
-      const result = new Date(date);
-      result.setDate(result.getDate() + days);
-      return result;
-    };
+      const formatDate = (date: Date) => date.toISOString().split("T")[0];
+      const addDays = (date: Date, days: number) => {
+        const result = new Date(date);
+        result.setDate(result.getDate() + days);
+        return result;
+      };
 
-    const departureDate = formatDate(addDays(new Date(), 30));
-    const returnDate = formatDate(addDays(new Date(), 37));
+      const departureDate = formatDate(addDays(new Date(), 30));
+      const returnDate = formatDate(addDays(new Date(), 37));
 
-    this.logger.log(`Fetching live deals for origin ${originCode}`);
+      this.logger.log(`Fetching live deals for origin ${originCode}`);
 
-    const dealPromises = destinations.slice(0, 6).map((dest) =>
-      this.search({
-        origin: originCode,
-        destination: dest,
-        departureDate,
-        returnDate,
-        adults: 1,
-        class: "ECONOMY",
-      })
-        .then((res) => {
-          // Return the cheapest result for this destination
-          return res.results[0] || null;
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+
+      const dealPromises = destinations.slice(0, 6).map(async (dest, idx) => {
+        // Stagger calls by 200ms to avoid rate limits
+        await delay(idx * 200);
+        return this.search({
+          origin: originCode,
+          destination: dest,
+          departureDate,
+          ...(tripType === "round-trip" ? { returnDate } : {}),
+          adults: 1,
+          class: "ECONOMY",
         })
-        .catch(() => null),
-    );
+          .then((res) => res.results[0] || null)
+          .catch(() => null);
+      });
 
-    const results = (await Promise.all(dealPromises)).filter(
-      Boolean,
-    ) as FlightSearchResult[];
+      const settedResults = await Promise.allSettled(dealPromises);
+      const results = settedResults
+        .filter((r) => r.status === "fulfilled" && r.value !== null)
+        .map((r: any) => r.value) as FlightSearchResult[];
 
-    // Cache for 1 hour
-    await this.cacheManager.set(cacheKey, results, 3600000);
+      // Cache for 4 hours (longer TTL for homepage/discovery data)
+      if (results.length > 0) {
+        await this.cacheManager.set(cacheKey, results, 14400000);
+      }
 
-    return results;
+      return results;
+    } catch (error) {
+      this.logger.error(`Error in getLiveDeals: ${error.message}`);
+      return [];
+    }
   }
 }

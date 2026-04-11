@@ -13,7 +13,7 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
   readonly providerName = "amadeus";
   private readonly logger = new Logger(AmadeusTransfersProvider.name);
 
-  constructor(private amadeusHelper: AmadeusHelperService) { }
+  constructor(private amadeusHelper: AmadeusHelperService) {}
 
   async searchTransfers(
     query: TransferSearchQuery,
@@ -112,7 +112,10 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
                 methodOfPayment: "CREDIT_CARD",
                 creditCard: {
                   number: "4111111111111111",
-                  holderName: passengerDetails.firstName + " " + passengerDetails.lastName,
+                  holderName:
+                    passengerDetails.firstName +
+                    " " +
+                    passengerDetails.lastName,
                   vendorCode: "VI",
                   expiryDate: "1225",
                   cvv: "123",
@@ -149,7 +152,9 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
     orderId: string,
     confirmNbr: string,
   ): Promise<{ status: string; confirmNbr: string }> {
-    this.logger.log(`Canceling Amadeus transfer order: ${orderId} (confirmNbr: ${confirmNbr})`);
+    this.logger.log(
+      `Canceling Amadeus transfer order: ${orderId} (confirmNbr: ${confirmNbr})`,
+    );
 
     try {
       const token = await this.amadeusHelper.getAccessToken();
@@ -178,7 +183,9 @@ export class AmadeusTransfersProvider implements TransfersAdapter {
         status: data?.data?.reservationStatus || "CANCELLED",
       };
     } catch (error) {
-      this.logger.error(`Amadeus transfer cancellation error: ${error.message}`);
+      this.logger.error(
+        `Amadeus transfer cancellation error: ${error.message}`,
+      );
       throw error;
     }
   }

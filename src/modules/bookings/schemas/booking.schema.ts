@@ -212,6 +212,25 @@ export class Booking {
 
   @Prop({ default: false })
   reminderSent: boolean;
+
+  // Security & Fraud tracking
+  @Prop()
+  ipAddress: string;
+
+  @Prop()
+  deviceFingerprint: string;
+
+  @Prop({ default: 0 })
+  riskScore: number;
+
+  @Prop({ type: [String], default: [] })
+  fraudSignals: string[];
+
+  @Prop()
+  userAgent: string;
+
+  @Prop()
+  termsAcceptedAt: Date;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

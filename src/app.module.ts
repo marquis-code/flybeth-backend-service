@@ -1,5 +1,10 @@
 // src/app.module.ts
-import { Module } from "@nestjs/common";
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { CacheModule } from "@nestjs/cache-manager";
@@ -18,6 +23,7 @@ import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { TimeoutInterceptor } from "./common/interceptors/timeout.interceptor";
 import { JwtAuthGuard } from "./modules/auth/guards/jwt-auth.guard";
 import { RolesGuard } from "./common/guards/roles.guard";
+import { BotGuardMiddleware } from "./common/middleware/bot-guard.middleware";
 
 // Feature Modules
 import { AuthModule } from "./modules/auth/auth.module";
@@ -49,6 +55,10 @@ import { ExperiencesModule } from "./modules/experiences/experiences.module";
 import { AuditModule } from "./modules/audit/audit.module";
 import { AuditInterceptor } from "./modules/audit/audit.interceptor";
 import { VoiceAgentModule } from "./modules/voice-agent/voice-agent.module";
+import { QueueModule } from "./modules/queue/queue.module";
+import { FraudModule } from "./modules/fraud/fraud.module";
+import { SystemConfigModule } from "./modules/system-config/system-config.module";
+import { AccessControlModule } from "./modules/access-control/access-control.module";
 
 @Module({
   imports: [
@@ -111,8 +121,12 @@ import { VoiceAgentModule } from "./modules/voice-agent/voice-agent.module";
     ExperiencesModule,
     AuditModule,
     VoiceAgentModule,
+    FraudModule,
+    SystemConfigModule,
+    AccessControlModule,
 
     // Infrastructure
+    QueueModule,
     SchedulerModule,
     SeedModule,
   ],
@@ -132,4 +146,10 @@ import { VoiceAgentModule } from "./modules/voice-agent/voice-agent.module";
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(BotGuardMiddleware)
+      .forRoutes({ path: "*", method: RequestMethod.ALL });
+  }
+}

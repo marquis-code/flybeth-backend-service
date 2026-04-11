@@ -20,13 +20,21 @@ export class CommissionsService {
     // Check for tenant-specific commission first, then global
     if (tenantId) {
       const tenantCommission = await this.commissionModel
-        .findOne({ airlineCode: airlineCode.toUpperCase(), tenant: tenantId, isActive: true })
+        .findOne({
+          airlineCode: airlineCode.toUpperCase(),
+          tenant: tenantId,
+          isActive: true,
+        })
         .exec();
       if (tenantCommission) return tenantCommission;
     }
 
     return this.commissionModel
-      .findOne({ airlineCode: airlineCode.toUpperCase(), tenant: null, isActive: true })
+      .findOne({
+        airlineCode: airlineCode.toUpperCase(),
+        tenant: null,
+        isActive: true,
+      })
       .exec();
   }
 

@@ -15,4 +15,4 @@ import { IntegrationsModule } from "../integrations/integrations.module";
   providers: [CarsService],
   exports: [CarsService],
 })
-export class CarsModule { }
+export class CarsModule {}

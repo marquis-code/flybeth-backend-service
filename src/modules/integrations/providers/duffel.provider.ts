@@ -110,7 +110,8 @@ export class DuffelProvider implements AirlineAdapter {
    * In Duffel, this is simply GET /air/offers/:id which returns up-to-date pricing
    */
   async priceOffer(offer: any): Promise<any> {
-    const offerId = typeof offer === "string" ? offer : offer.id || offer.offerId;
+    const offerId =
+      typeof offer === "string" ? offer : offer.id || offer.offerId;
     this.logger.log(`Pricing Duffel offer: ${offerId}`);
 
     try {

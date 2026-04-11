@@ -82,6 +82,25 @@ export class HotelbedsProvider implements StaysAdapter {
   ): Promise<Partial<StaysSearchResult>> {
     this.logger.log(`Fetching HotelBeds details for: ${accommodationId}`);
     try {
+      if (accommodationId.startsWith("mock-")) {
+        return {
+          name: "Premium Mock Hotelbeds Resort",
+          description:
+            "This is a premium fallback accommodation since we are using a mock ID.",
+          photos: [
+            "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800",
+          ],
+          location: {
+            latitude: 0,
+            longitude: 0,
+            city: "Mock City",
+            address: "123 Mock Avenue",
+            countryCode: "US",
+          },
+          rating: 5,
+        };
+      }
+
       const response = await fetch(
         `${this.helper.baseUrl}/hotel-content-api/1.0/hotels/${accommodationId}?language=ENG`,
         {
@@ -115,17 +134,76 @@ export class HotelbedsProvider implements StaysAdapter {
     }
   }
 
-  async fetchRates(searchResultId: string): Promise<StaysRoomResult[]> {
+  async fetchRates(
+    searchResultId: string,
+    query?: Partial<StaysSearchQuery>,
+  ): Promise<StaysRoomResult[]> {
     this.logger.log(`Fetching HotelBeds rates for: ${searchResultId}`);
-    // searchResultId format: code|checkIn|checkOut|adults|children|childAges
-    const [code, checkIn, checkOut, adults, children, childAges] =
-      searchResultId.split("|");
+
+    // searchResultId format might be: code|checkIn|checkOut|adults|children|childAges
+    // or just 'code' if accessing from straight URL.
+    let code, checkIn, checkOut, adults, children, childAges;
+
+    if (searchResultId.includes("|")) {
+      [code, checkIn, checkOut, adults, children, childAges] =
+        searchResultId.split("|");
+    } else {
+      code = searchResultId;
+      checkIn = query?.checkInDate;
+      checkOut = query?.checkOutDate;
+
+      let numAdults = 2;
+      let numChildren = 0;
+
+      if (query?.guests && query.guests.length > 0) {
+        numAdults =
+          query.guests.filter((g: any) => g.type === "adult").length || 1;
+        numChildren =
+          query.guests.filter((g: any) => g.type === "child").length || 0;
+        childAges = query.guests
+          .filter((g: any) => g.type === "child")
+          .map((g: any) => g.age || 7)
+          .join(",");
+      }
+
+      adults = String(numAdults);
+      children = String(numChildren);
+    }
 
     try {
+      if (code.startsWith("mock-")) {
+        this.logger.warn(
+          `Returning mock rates for Hotelbeds due to mock ID: ${code}`,
+        );
+        return [
+          {
+            roomId: `${code}-room-1`,
+            name: "Standard Double Room",
+            photos: [],
+            beds: [],
+            rates: [
+              {
+                rateId: `${code}-rate-1`,
+                price: 150.0,
+                priceWithCommission: 150.0,
+                currency: "USD",
+                boardType: "RO",
+                conditions: [
+                  {
+                    title: "Non-refundable",
+                    description: "Standard non-refundable rate",
+                  },
+                ],
+              },
+            ],
+          },
+        ] as any;
+      }
+
       const paxes = childAges
         ? childAges
             .split(",")
-            .map((age) => ({ type: "CH", age: parseInt(age) }))
+            .map((age: any) => ({ type: "CH", age: parseInt(age) }))
         : [];
       const body = {
         stay: { checkIn, checkOut },
@@ -182,6 +260,18 @@ export class HotelbedsProvider implements StaysAdapter {
   async createQuote(rateId: string): Promise<any> {
     this.logger.log(`Creating HotelBeds quote for rateKey: ${rateId}`);
     try {
+      if (rateId.startsWith("mock-")) {
+        return {
+          quoteId: `${rateId}-quote`,
+          hotelName: "Premium Mock Hotelbeds Resort",
+          roomName: "Standard Double Room",
+          price: 150.0,
+          currency: "USD",
+          rateType: "RECHECK",
+          raw: {},
+        };
+      }
+
       const response = await fetch(
         `${this.helper.baseUrl}/hotel-api/1.0/checkrates`,
         {
@@ -224,8 +314,37 @@ export class HotelbedsProvider implements StaysAdapter {
     this.logger.log(`Creating HotelBeds booking for rateKey: ${quoteId}`);
 
     try {
+      if (quoteId.startsWith("mock-")) {
+        return {
+          bookingId: `MOCKHB-${Date.now()}`,
+          reference: `FLYBETH-${Date.now()}`,
+          status: "CONFIRMED",
+          accommodationName: "Premium Mock Hotelbeds Resort",
+          checkInDate: new Date().toISOString().split("T")[0],
+          checkOutDate: new Date(Date.now() + 86400000)
+            .toISOString()
+            .split("T")[0],
+          confirmedAt: new Date().toISOString(),
+        };
+      }
+
       const primaryGuest = guestDetails.guests?.[0] || guestDetails;
-      const body = {
+
+      const paxes = guestDetails.guests?.map((guest: any) => ({
+        roomId: 1,
+        type: guest.type || "AD",
+        name: guest.firstName || primaryGuest.firstName || "Guest",
+        surname: guest.lastName || primaryGuest.lastName || "User",
+      })) || [
+        {
+          roomId: 1,
+          type: "AD",
+          name: primaryGuest.firstName || "Guest",
+          surname: primaryGuest.lastName || "User",
+        },
+      ];
+
+      const body: any = {
         holder: {
           name: primaryGuest.firstName || "Guest",
           surname: primaryGuest.lastName || "User",
@@ -233,18 +352,17 @@ export class HotelbedsProvider implements StaysAdapter {
         rooms: [
           {
             rateKey: quoteId,
-            paxes: [
-              {
-                roomId: 1,
-                type: "AD",
-                name: primaryGuest.firstName || "Guest",
-                surname: primaryGuest.lastName || "User",
-              },
-            ],
+            paxes: paxes,
           },
         ],
         clientReference: `FLYBETH-${Date.now()}`,
+        remark: "Booking from Flybeth Platform",
+        tolerance: 2,
       };
+
+      if (guestDetails.paymentData) {
+        body.paymentData = guestDetails.paymentData;
+      }
 
       const response = await fetch(
         `${this.helper.baseUrl}/hotel-api/1.0/bookings`,

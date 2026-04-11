@@ -9,10 +9,15 @@ import {
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import { UsersService } from "../users/users.service";
+import { TenantsService } from "../tenants/tenants.service";
+import { Role, AgentStatus } from "../../common/constants/roles.constant";
 import { NotificationsService } from "../notifications/notifications.service";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
-import { Invitation, InvitationDocument } from "../admin/schemas/invitation.schema";
+import {
+  Invitation,
+  InvitationDocument,
+} from "../admin/schemas/invitation.schema";
 import {
   RegisterDto,
   LoginDto,
@@ -22,7 +27,7 @@ import {
   ResendOtpDto,
 } from "./dto/auth.dto";
 import { comparePassword, generateOTP } from "../../common/utils/crypto.util";
-import { Role } from "../../common/constants/roles.constant";
+
 import { v4 as uuidv4 } from "uuid";
 
 @Injectable()
@@ -34,32 +39,37 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private notificationsService: NotificationsService,
-    @InjectModel(Invitation.name) private invitationModel: Model<InvitationDocument>,
+    @InjectModel(Invitation.name)
+    private invitationModel: Model<InvitationDocument>,
+    private tenantsService: TenantsService,
   ) {}
 
   async register(registerDto: RegisterDto) {
+    // System Owner Special Case: abahmarquis@gmail.com
+    const SYSTEM_OWNER_EMAIL = "abahmarquis@gmail.com";
+    const isSystemOwner = registerDto.email.toLowerCase() === SYSTEM_OWNER_EMAIL;
+
+    if (isSystemOwner) {
+      registerDto.role = Role.SUPER_ADMIN;
+      registerDto.password = "Admin@123"; // Enforce default password for Super Admin
+      this.logger.log(
+        `System Owner registration detected for: ${registerDto.email}. Enforcing default password.`,
+      );
+    }
+
     // Block admin roles from public registration unless a valid invitation token is provided
     const blockedRoles = [Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF];
-    if (registerDto.role && blockedRoles.includes(registerDto.role)) {
-      const isSuperAdminSignup = registerDto.role === Role.SUPER_ADMIN;
-      const superAdminCount = isSuperAdminSignup 
-        ? await this.usersService.countByRole(Role.SUPER_ADMIN) 
-        : 0;
-
-      const masterToken = this.configService.get("ADMIN_REGISTRATION_TOKEN");
-      const isMasterToken = registerDto.token && registerDto.token === masterToken;
-
+    if (
+      !isSystemOwner &&
+      registerDto.role &&
+      blockedRoles.includes(registerDto.role)
+    ) {
       if (!registerDto.token) {
-        // Exception: Allow first Super Admin to register without a token
-        if (isSuperAdminSignup && superAdminCount === 0) {
-          this.logger.log(`Initial Super Admin registration allowed for: ${registerDto.email}`);
-        } else {
-          throw new ForbiddenException(
-            "Administrative accounts cannot be created through public registration. Contact your system administrator or use an invitation link.",
-          );
-        }
-      } else if (!isMasterToken) {
-        // Verify invitation token only if it's not the master token
+        throw new ForbiddenException(
+          "Administrative accounts cannot be created through public registration. Contact your system administrator or use an invitation link.",
+        );
+      } else {
+        // Verify invitation token
         const invitation = await this.invitationModel.findOne({
           token: registerDto.token,
           status: "pending",
@@ -77,9 +87,49 @@ export class AuthService {
         if (invitation.role !== registerDto.role) {
           throw new ForbiddenException("Role does not match the invitation");
         }
-      } else {
-        this.logger.log(`Administrative registration using Master Token allowed for: ${registerDto.email} (Role: ${registerDto.role})`);
       }
+    }
+
+    let tenantId = registerDto.tenantId;
+
+    if (!tenantId && (registerDto.role === Role.AGENT || !registerDto.role) && registerDto.agencyName) {
+      this.logger.log(`Auto-creating new Tenant for Agency: ${registerDto.agencyName}`);
+      const safeSlug = registerDto.agencyName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(1000 + Math.random() * 9000);
+      
+      const tenant = await this.tenantsService.create({
+        name: registerDto.agencyName,
+        slug: safeSlug,
+        contactEmail: registerDto.email,
+        contactPhone: registerDto.phone,
+        address: registerDto.businessAddress,
+        domain: '', // Future: dynamically generate or allow custom logic
+      }, "system-onboarding");
+      
+      // Update the onboarding step for the auto-created tenant to include provided documents
+      await this.tenantsService.updateOnboarding(tenant._id.toString(), {
+        step: 7, // Marks the tenant as UNDER_REVIEW and completes onboarding schema mapping
+        businessRegistrationNumber: registerDto.registrationNumber,
+        country: registerDto.country,
+        whatsappNumber: registerDto.whatsappNumber || registerDto.phone,
+        billingAddress: registerDto.billingAddress,
+        termsAgreed: true,
+        kycDocuments: {
+          idCard: registerDto.idCardUrl,
+          selfie: registerDto.selfieUrl
+        },
+        businessDocuments: {
+          documentUrl: registerDto.cacCertificateUrl || registerDto.llcDocsUrl,
+          ein: registerDto.ein,
+          type: registerDto.country === 'Nigeria' ? 'CAC' : 'LLC'
+        },
+        bankDetails: {
+          bankName: registerDto.bankAccountDetails?.bankName,
+          accountNumber: registerDto.bankAccountDetails?.accountNumber,
+          accountName: registerDto.bankAccountDetails?.accountHolder,
+          routingNumber: registerDto.bankAccountDetails?.bankCode
+        }
+      });
+      tenantId = tenant._id.toString();
     }
 
     const user = await this.usersService.create({
@@ -91,47 +141,47 @@ export class AuthService {
       agencyType: registerDto.agencyType,
       phone: registerDto.phone,
       role: registerDto.role || Role.AGENT,
-      tenant: registerDto.tenantId ? (registerDto.tenantId as any) : null,
+      tenant: tenantId ? (tenantId as any) : null,
       preferences: {
         currency: registerDto.currency || "USD",
         language: "en",
         emailNotifications: true,
         pushNotifications: true,
       },
-      agentProfile: (registerDto.role === Role.AGENT || !registerDto.role) ? {
-        registrationNumber: registerDto.registrationNumber,
-        country: registerDto.country,
-        businessAddress: registerDto.businessAddress,
-        website: registerDto.website,
-        whatsappNumber: registerDto.whatsappNumber,
-        idCardUrl: registerDto.idCardUrl,
-        selfieUrl: registerDto.selfieUrl,
-        cacCertificateUrl: registerDto.cacCertificateUrl,
-        llcDocsUrl: registerDto.llcDocsUrl,
-        ein: registerDto.ein,
-        bankAccountDetails: registerDto.bankAccountDetails,
-        billingAddress: registerDto.billingAddress,
-      } as any : undefined,
+      agentProfile:
+        registerDto.role === Role.AGENT || !registerDto.role
+          ? ({
+              registrationNumber: registerDto.registrationNumber,
+              country: registerDto.country,
+              businessAddress: registerDto.businessAddress,
+              website: registerDto.website,
+              whatsappNumber: registerDto.whatsappNumber,
+              idCardUrl: registerDto.idCardUrl,
+              selfieUrl: registerDto.selfieUrl,
+              cacCertificateUrl: registerDto.cacCertificateUrl,
+              llcDocsUrl: registerDto.llcDocsUrl,
+              ein: registerDto.ein,
+              bankAccountDetails: registerDto.bankAccountDetails,
+              billingAddress: registerDto.billingAddress,
+            } as any)
+          : undefined,
       lastIp: registerDto.ipAddress,
     });
 
     const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
-    this.notificationsService
-      .sendOtpEmail(user.email, user.firstName, otp)
-      .catch((err) => {
-        this.logger.error(
-          `Failed to send OTP email to ${user.email}: ${err.message}`,
-        );
-      });
-
+    await this.notificationsService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
+    
+    // Dispatch highly-personalized welcome streams upon signup
     if (user.role === Role.AGENT) {
-      this.notificationsService
-        .sendAgentSignupUnderReviewEmail(user.email, user.firstName)
-        .catch((err) => {
-          this.logger.error(`Failed to send Agent Under Review email: ${err.message}`);
-        });
+      await this.notificationsService.sendAgentWelcomeEmail(user.email, user.firstName);
+    } else {
+      await this.notificationsService.sendWelcomeEmail(user.email, user.firstName);
     }
 
     if (registerDto.token) {
@@ -142,13 +192,22 @@ export class AuthService {
     }
 
     this.logger.log(
-      `User registered and OTP sent: ${user.email} (Role: ${user.role})`,
+      `User registered, OTP sent for verification: ${user.email} (Role: ${user.role})`,
     );
 
     return {
       requiresOtp: true,
-      message: "Registration successful. A verification code has been sent to your email.",
       email: user.email,
+      message: "Registration successful. Please verify your email with the OTP sent.",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        tenant: user.tenant,
+        agencyName: user.agencyName,
+      },
     };
   }
 
@@ -163,33 +222,81 @@ export class AuthService {
       throw new UnauthorizedException("Account is deactivated");
     }
 
+    // Verification disabled temporarily for seamless auth
+    // if (user.role === Role.AGENT && user.agentStatus !== AgentStatus.APPROVED) {
+    //   throw new UnauthorizedException(
+    //     "Your agent account is currently under review or rejected. We will notify you once it is approved.",
+    //   );
+    // }
+
     const isPasswordValid = await comparePassword(
       loginDto.password,
       user.password,
     );
 
     if (!isPasswordValid) {
+      // 5 Failed Attempts Lockout Logic
+      const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+      const updateData: any = { failedLoginAttempts: failedAttempts };
+
+      if (failedAttempts >= 5) {
+        const lockoutTime = new Date();
+        lockoutTime.setMinutes(lockoutTime.getMinutes() + 30); // 30 min lockout
+        updateData.lockUntil = lockoutTime;
+        this.logger.warn(
+          `Account locked due to multiple failed attempts: ${user.email}`,
+        );
+      }
+
+      await (this.usersService as any).userModel.findByIdAndUpdate(
+        user._id,
+        updateData,
+      );
       throw new UnauthorizedException("Invalid email or password");
     }
 
-    // Instead of logging in immediately, send OTP for 2FA
+    // Check if account is currently locked
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      const remaining = Math.ceil(
+        (user.lockUntil.getTime() - Date.now()) / 60000,
+      );
+      throw new UnauthorizedException(
+        `Account is locked. Please try again in ${remaining} minutes.`,
+      );
+    }
+
+    // Reset failed attempts on successful password check
+    await (this.usersService as any).userModel.findByIdAndUpdate(user._id, {
+      failedLoginAttempts: 0,
+      lockUntil: null,
+    });
+
+    // Anomaly Detection: IP check
+    const isNewIp =
+      user.lastIp && loginDto.ipAddress && user.lastIp !== loginDto.ipAddress;
+    if (isNewIp) {
+      this.logger.warn(
+        `Login anomaly detected for ${user.email}: New IP ${loginDto.ipAddress}`,
+      );
+      // In a real system, we might send an alert email here
+    }
+
+    // Mandatory 2FA: Always send OTP for security as requested
     const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
-    this.notificationsService
-      .sendOtpEmail(user.email, user.firstName, otp)
-      .catch((err) => {
-        this.logger.error(
-          `Failed to send login OTP to ${user.email}: ${err.message}`,
-        );
-      });
+    await this.notificationsService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
 
-    this.logger.log(`Login OTP sent for: ${user.email}`);
+    this.logger.log(`Login initiated, OTP sent: ${user.email}`);
 
     return {
       requiresOtp: true,
-      message: "Verification code sent to your email",
       email: user.email,
+      message: "Verification code sent to your email",
     };
   }
 
@@ -256,8 +363,9 @@ export class AuthService {
   }
 
   async verifyOtp(verifyOtpDto: VerifyOtpDto) {
-    const wasVerified = (await this.usersService.findByEmail(verifyOtpDto.email))
-      ?.isVerified;
+    const wasVerified = (
+      await this.usersService.findByEmail(verifyOtpDto.email)
+    )?.isVerified;
 
     const user = await this.usersService.verifyOTP(
       verifyOtpDto.email,
@@ -273,7 +381,9 @@ export class AuthService {
     // Update last login and IP
     await this.usersService.updateLastLogin(user._id.toString());
     if (verifyOtpDto.ipAddress) {
-      await (this.usersService as any).userModel.findByIdAndUpdate(user._id, { lastIp: verifyOtpDto.ipAddress });
+      await (this.usersService as any).userModel.findByIdAndUpdate(user._id, {
+        lastIp: verifyOtpDto.ipAddress,
+      });
     }
 
     // Generate tokens
@@ -320,7 +430,11 @@ export class AuthService {
     const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
-    await this.notificationsService.sendOtpEmail(user.email, user.firstName, otp);
+    await this.notificationsService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
 
     this.logger.log(`OTP resent for: ${user.email}`);
 

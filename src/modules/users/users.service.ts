@@ -19,6 +19,8 @@ import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
 import { hashPassword } from "../../common/utils/crypto.util";
 
+import { AccessControlService } from "../access-control/access-control.service";
+
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
@@ -26,6 +28,7 @@ export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly notificationsService: NotificationsService,
+    private readonly accessControlService: AccessControlService,
   ) {}
 
   async create(userData: Partial<User>): Promise<UserDocument> {
@@ -36,6 +39,13 @@ export class UsersService {
 
     if (userData.password) {
       userData.password = await hashPassword(userData.password);
+    }
+
+    if (typeof userData.role === 'string') {
+      const roleEntity = await this.accessControlService.findRoleByName(userData.role);
+      if (roleEntity) {
+        userData.role = roleEntity._id;
+      }
     }
 
     const user = new this.userModel(userData);
@@ -50,20 +60,29 @@ export class UsersService {
     if (selectPassword) {
       query.select("+password +refreshToken");
     }
-    return query.populate("tenant").exec();
+    const user = await query.populate("tenant").populate("role").exec();
+    if (user && user.role) {
+      user.permissions = (user.role as any).permissions || [];
+    }
+    return user;
   }
 
   async findById(id: string): Promise<UserDocument> {
     const user = await this.userModel
       .findById(id)
       .populate("tenant")
-      .lean()
+      .populate("role")
       .exec();
 
     if (!user) {
       throw new NotFoundException("User not found");
     }
-    return user as unknown as UserDocument;
+
+    if (user.role) {
+      user.permissions = (user.role as any).permissions || [];
+    }
+
+    return user;
   }
 
   async findAll(
@@ -73,7 +92,32 @@ export class UsersService {
     const query: any = {};
 
     if (queryDto?.tenant) query.tenant = queryDto.tenant;
-    if (queryDto?.role) query.role = queryDto.role;
+    
+    if (queryDto?.role) {
+       if (typeof queryDto.role === 'string') {
+          const roleEntity = await this.accessControlService.findRoleByName(queryDto.role);
+          if (roleEntity) {
+             query.role = roleEntity._id;
+          } else {
+             query.role = queryDto.role;
+          }
+       } else if (typeof queryDto.role === 'object' && (queryDto.role as any)?.$in) {
+          // Support resolving role name arrays in $in operator
+          const resolvedRoles = await Promise.all(
+             (queryDto.role as any).$in.map(async (val: any) => {
+                if (typeof val === 'string' && val.length < 24) { // Heuristic for role name vs ObjectId
+                   const role = await this.accessControlService.findRoleByName(val);
+                   return role ? role._id : val;
+                }
+                return val;
+             })
+          );
+          query.role = { $in: resolvedRoles };
+       } else {
+          query.role = queryDto.role;
+       }
+    }
+
     if (queryDto?.isActive !== undefined) query.isActive = queryDto.isActive;
     if (paginationDto.search) {
       query.$text = { $search: paginationDto.search };
@@ -122,8 +166,17 @@ export class UsersService {
     id: string,
     updateRoleDto: UpdateUserRoleDto,
   ): Promise<UserDocument> {
+    let roleId: any = updateRoleDto.role;
+    
+    if (typeof updateRoleDto.role === 'string') {
+        const roleEntity = await this.accessControlService.findRoleByName(updateRoleDto.role);
+        if (roleEntity) {
+            roleId = roleEntity._id;
+        }
+    }
+
     const user = await this.userModel
-      .findByIdAndUpdate(id, { role: updateRoleDto.role }, { new: true })
+      .findByIdAndUpdate(id, { role: roleId }, { new: true })
       .exec();
 
     if (!user) {
@@ -147,9 +200,17 @@ export class UsersService {
     }
 
     // If approved, send the congratulatory email
-    if (status === AgentStatus.APPROVED && previousUser.agentStatus !== AgentStatus.APPROVED) {
-      this.notificationsService.sendAgentApprovalEmail(user.email, user.firstName)
-        .catch(err => this.logger.error(`Failed to send Agent Approval email: ${err.message}`));
+    if (
+      status === AgentStatus.APPROVED &&
+      previousUser.agentStatus !== AgentStatus.APPROVED
+    ) {
+      this.notificationsService
+        .sendAgentApprovalEmail(user.email, user.firstName)
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send Agent Approval email: ${err.message}`,
+          ),
+        );
     }
 
     return user;
@@ -169,34 +230,69 @@ export class UsersService {
   }
 
   async setOTP(id: string, otp: string): Promise<void> {
+    const otpValue = String(otp).trim();
     const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-    await this.userModel
-      .findByIdAndUpdate(id, { otp, otpExpiry: expiry })
-      .exec();
+
+    await this.userModel.findByIdAndUpdate(id, {
+      $set: {
+        otp: otpValue,
+        otpExpiry: expiry
+      }
+    }).exec();
+    
+    this.logger.debug(`[OTP-SET] Updated OTP for user ID: ${id}`);
   }
 
   async verifyOTP(email: string, otp: string): Promise<UserDocument | null> {
-    return this.userModel
-      .findOneAndUpdate(
-        {
-          email,
-          otp,
-          otpExpiry: { $gt: new Date() },
-        },
-        {
-          isVerified: true,
-          $unset: { otp: 1, otpExpiry: 1 },
-        },
-        { new: true },
-      )
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedOtp = String(otp).trim();
+    this.logger.debug(`[OTP-STRICT] Verifying ${normalizedOtp} for ${normalizedEmail}`);
+
+    const user = await this.userModel
+      .findOne({ email: normalizedEmail })
+      .select("+otp +otpExpiry")
       .exec();
+
+    if (!user) {
+      this.logger.warn(`[OTP-STRICT] User not found: ${normalizedEmail}`);
+      return null;
+    }
+
+    if (!user.otp || !user.otpExpiry) {
+      this.logger.warn(`[OTP-STRICT] No OTP record for: ${normalizedEmail}`);
+      return null;
+    }
+
+    // Check match first (trim both)
+    if (String(user.otp).trim() !== normalizedOtp) {
+      this.logger.warn(`[OTP-STRICT] Mismatch for ${normalizedEmail}. Expected "${user.otp}", got "${normalizedOtp}"`);
+      return null;
+    }
+
+    // Check expiry with 5-minute grace period to account for clock drift
+    const now = new Date();
+    const graceExpiry = new Date(user.otpExpiry.getTime() + 5 * 60 * 1000); 
+    
+    if (now > graceExpiry) {
+      this.logger.warn(`[OTP-STRICT] Expired for ${normalizedEmail}. Now: ${now}, Expiry: ${user.otpExpiry}`);
+      return null;
+    }
+
+    // Success
+    await this.userModel.findByIdAndUpdate(user._id, {
+      $set: { isVerified: true },
+      $unset: { otp: 1, otpExpiry: 1 }
+    }).exec();
+
+    this.logger.log(`[OTP-STRICT] SUCCESS: ${normalizedEmail}`);
+    return user;
   }
 
   async setResetToken(email: string, token: string): Promise<void> {
     const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await this.userModel
       .findOneAndUpdate(
-        { email },
+        { email: email.toLowerCase() },
         { resetToken: token, resetTokenExpiry: expiry },
       )
       .exec();
@@ -238,5 +334,56 @@ export class UsersService {
 
   async countByRole(role: string): Promise<number> {
     return this.userModel.countDocuments({ role }).exec();
+  }
+  async updateKycStatus(
+    id: string,
+    docType: "idCard" | "selfie" | "cacCertificate",
+    status: "approved" | "rejected",
+    feedback?: string,
+  ): Promise<UserDocument> {
+    const user = await this.userModel.findById(id).exec();
+    if (!user) throw new NotFoundException("Agent not found");
+
+    const updateField = `agentProfile.${docType}Status`;
+    const updateData: any = { [updateField]: status };
+
+    if (feedback) {
+      updateData["agentProfile.kycFeedback"] = feedback;
+    }
+
+    const updatedUser = await this.userModel
+      .findByIdAndUpdate(id, { $set: updateData }, { new: true })
+      .exec();
+
+    if (!updatedUser) throw new NotFoundException("Failed to update KYC status");
+
+    // Map internal docType to friendly name for email
+    const friendlyNames = {
+      idCard: "Identity Card",
+      selfie: "Identity Selfie",
+      cacCertificate: "Business Registration (CAC)",
+    };
+
+    // Trigger Email
+    if (status === "approved") {
+      this.notificationsService
+        .sendKycDocumentApprovalEmail(
+          updatedUser.email,
+          updatedUser.firstName,
+          friendlyNames[docType],
+        )
+        .catch((e) => this.logger.error(`KYC Approval Email Error: ${e.message}`));
+    } else {
+      this.notificationsService
+        .sendKycDocumentRejectionEmail(
+          updatedUser.email,
+          updatedUser.firstName,
+          friendlyNames[docType],
+          feedback || "Document was not clear or did not meet our requirements.",
+        )
+        .catch((e) => this.logger.error(`KYC Rejection Email Error: ${e.message}`));
+    }
+
+    return updatedUser;
   }
 }

@@ -20,6 +20,11 @@ export class RegisterDto {
   @MinLength(8)
   password: string;
 
+  @ApiPropertyOptional({ example: "StrongP@ss1" })
+  @IsOptional()
+  @IsString()
+  confirmPassword?: string;
+
   @ApiProperty({ example: "John" })
   @IsString()
   firstName: string;
@@ -124,7 +129,9 @@ export class RegisterDto {
   @IsString()
   billingAddress?: string;
 
-  @ApiPropertyOptional({ description: "Invitation token for administrative roles" })
+  @ApiPropertyOptional({
+    description: "Invitation token for administrative roles",
+  })
   @IsOptional()
   @IsString()
   token?: string;
@@ -138,6 +145,16 @@ export class LoginDto {
   @ApiProperty({ example: "StrongP@ss1" })
   @IsString()
   password: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  deviceFingerprint?: string;
 }
 
 export class ForgotPasswordDto {

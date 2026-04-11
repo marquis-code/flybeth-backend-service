@@ -7,6 +7,7 @@ export class AmadeusHelperService {
   private readonly logger = new Logger(AmadeusHelperService.name);
   private accessToken: string | null = null;
   private tokenExpiresAt: number = 0;
+  private rateLimitedUntil: number = 0;
 
   readonly baseUrl: string;
   private readonly apiKey: string;
@@ -18,6 +19,32 @@ export class AmadeusHelperService {
       "https://test.api.amadeus.com";
     this.apiKey = this.configService.get<string>("AMADEUS_API_KEY") || "";
     this.apiSecret = this.configService.get<string>("AMADEUS_API_SECRET") || "";
+  }
+
+  /**
+   * Check if we are currently rate-limited by Amadeus
+   */
+  isRateLimited(): boolean {
+    if (Date.now() < this.rateLimitedUntil) {
+      const remainingSec = Math.ceil(
+        (this.rateLimitedUntil - Date.now()) / 1000,
+      );
+      this.logger.warn(
+        `Amadeus rate-limited — skipping call (${remainingSec}s remaining)`,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Mark Amadeus as rate-limited for the given duration (default 60s)
+   */
+  markRateLimited(durationMs: number = 60_000): void {
+    this.rateLimitedUntil = Date.now() + durationMs;
+    this.logger.warn(
+      `Amadeus rate-limited — backing off for ${durationMs / 1000}s`,
+    );
   }
 
   /**
@@ -66,7 +93,11 @@ export class AmadeusHelperService {
    * Search cities using Amadeus Reference Data Locations Cities API
    * Used primarily for plotting destinations for Activities/Experiences
    */
-  async searchCities(keyword: string, max: number = 10, countryCode?: string): Promise<any[]> {
+  async searchCities(
+    keyword: string,
+    max: number = 10,
+    countryCode?: string,
+  ): Promise<any[]> {
     if (!keyword || keyword.length < 3) return [];
 
     try {
@@ -77,16 +108,21 @@ export class AmadeusHelperService {
       });
       if (countryCode) params.append("countryCode", countryCode);
 
-      const response = await fetch(`${this.baseUrl}/v1/reference-data/locations/cities?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
+      const response = await fetch(
+        `${this.baseUrl}/v1/reference-data/locations/cities?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         const errText = await response.text();
-        this.logger.error(`Amadeus city search failed: ${response.status} ${errText}`);
+        this.logger.error(
+          `Amadeus city search failed: ${response.status} ${errText}`,
+        );
         return [];
       }
 
@@ -101,7 +137,12 @@ export class AmadeusHelperService {
   /**
    * Predict the trip purpose (Business or Leisure) from a flight
    */
-  async predictTripPurpose(origin: string, destination: string, departureDate: string, returnDate: string): Promise<any> {
+  async predictTripPurpose(
+    origin: string,
+    destination: string,
+    departureDate: string,
+    returnDate: string,
+  ): Promise<any> {
     try {
       const token = await this.getAccessToken();
       const params = new URLSearchParams({
@@ -111,26 +152,82 @@ export class AmadeusHelperService {
         returnDate,
       });
 
-      const response = await fetch(`${this.baseUrl}/v1/travel/predictions/trip-purpose?${params}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
+      const response = await fetch(
+        `${this.baseUrl}/v1/travel/predictions/trip-purpose?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         const errText = await response.text();
-        this.logger.error(`Amadeus trip purpose prediction failed: ${response.status} ${errText}`);
+        this.logger.error(
+          `Amadeus trip purpose prediction failed: ${response.status} ${errText}`,
+        );
         return null;
       }
 
       const data = await response.json();
       return data.data || null;
     } catch (error) {
-      this.logger.error(`Amadeus trip purpose prediction error: ${error.message}`);
+      this.logger.error(
+        `Amadeus trip purpose prediction error: ${error.message}`,
+      );
       return null;
     }
   }
+
+  /**
+   * Search for cheapest flight destinations from an origin (Inspiration Search)
+   */
+  async getFlightInspiration(
+    origin: string,
+    departureDate?: string,
+  ): Promise<any[]> {
+    try {
+      const token = await this.getAccessToken();
+      const params = new URLSearchParams({
+        origin,
+        ...(departureDate ? { departureDate } : {}),
+      });
+
+      const response = await fetch(
+        `${this.baseUrl}/v1/shopping/flight-destinations?${params}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errText = await response.text();
+        // 429 = rate limited — set backoff
+        if (response.status === 429) {
+          this.markRateLimited();
+        }
+        // 404 is expected for many origins on the test API — use debug level
+        const logLevel = response.status === 404 ? "debug" : "error";
+        this.logger[logLevel](
+          `Amadeus flight inspiration search failed: ${response.status} ${errText}`,
+        );
+        return [];
+      }
+
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      this.logger.error(
+        `Amadeus flight inspiration search error: ${error.message}`,
+      );
+      return [];
+    }
+  }
+
   /**
    * Parse ISO 8601 duration (PT2H30M) to minutes
    */

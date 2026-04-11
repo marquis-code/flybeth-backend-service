@@ -12,6 +12,7 @@ import {
 } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { FlightsService } from "./flights.service";
+import { Req } from "@nestjs/common";
 import {
   CreateFlightDto,
   SearchFlightsDto,
@@ -32,7 +33,7 @@ export class FlightsController {
   constructor(
     private readonly flightsService: FlightsService,
     private readonly flightsIntegrationService: FlightsIntegrationService,
-  ) { }
+  ) {}
 
   // ─── Live Provider Search ─────────────────────────────────────
   @Public()
@@ -42,7 +43,8 @@ export class FlightsController {
     description:
       "Searches all active airline providers concurrently and returns aggregated results sorted by lowest price including commission.",
   })
-  searchLive(@Body() searchDto: LiveFlightSearchDto) {
+  searchLive(@Body() searchDto: LiveFlightSearchDto, @Req() req: any) {
+    const userRole = req.user?.role || 'customer';
     return this.flightsIntegrationService.search({
       origin: searchDto.origin,
       destination: searchDto.destination,
@@ -53,6 +55,7 @@ export class FlightsController {
       infants: searchDto.infants || 0,
       class: searchDto.cabinClass,
       maxConnections: searchDto.maxStops,
+      userRole, // Passed for commission calculation
     });
   }
 
@@ -61,8 +64,11 @@ export class FlightsController {
   @ApiOperation({
     summary: "Get live flight deals based on origin (real-time data)",
   })
-  getLiveDeals(@Query("origin") origin: string = "LOS") {
-    return this.flightsIntegrationService.getLiveDeals(origin);
+  getLiveDeals(
+    @Query("origin") origin: string = "LOS",
+    @Query("tripType") tripType: string = "round-trip",
+  ) {
+    return this.flightsIntegrationService.getLiveDeals(origin, tripType);
   }
 
   @Public()
@@ -173,7 +179,7 @@ export class FlightsController {
       origin,
       destination,
       departureDate,
-      returnDate
+      returnDate,
     );
     return { success: true, data };
   }
@@ -182,8 +188,9 @@ export class FlightsController {
   @Public()
   @Post("search")
   @ApiOperation({ summary: "Search flights from internal database" })
-  search(@Body() searchDto: SearchFlightsDto) {
-    return this.flightsService.search(searchDto);
+  search(@Body() searchDto: SearchFlightsDto, @Req() req: any) {
+    const userRole = req.user?.role || 'customer';
+    return this.flightsService.search({...searchDto, userRole });
   }
 
   @Public()
@@ -198,6 +205,20 @@ export class FlightsController {
   @ApiOperation({ summary: "Get flight deals (cheapest)" })
   getDeals(@Query("limit") limit?: number) {
     return this.flightsService.getDeals(limit);
+  }
+
+  @Public()
+  @Get("inspiration")
+  @ApiOperation({ summary: "Get flight inspiration/cheapest destinations" })
+  async getFlightInspiration(
+    @Query("origin") origin: string,
+    @Query("departureDate") departureDate?: string,
+  ) {
+    const data = await this.flightsIntegrationService.getFlightInspiration(
+      origin,
+      departureDate,
+    );
+    return { success: true, data };
   }
 
   @Public()

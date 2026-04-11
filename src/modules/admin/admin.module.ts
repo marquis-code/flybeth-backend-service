@@ -17,8 +17,12 @@ import { FlightsModule } from "../flights/flights.module";
 import { CampaignsModule } from "../campaigns/campaigns.module";
 import { SchedulerModule } from "../scheduler/scheduler.module";
 import { Campaign, CampaignSchema } from "../campaigns/schemas/campaign.schema";
-import { Commission, CommissionSchema } from "../flights/schemas/commission.schema";
+import {
+  Commission,
+  CommissionSchema,
+} from "../flights/schemas/commission.schema";
 import { UploadModule } from "../upload/upload.module";
+import { SeedModule } from "../seed/seed.module";
 
 @Module({
   imports: [
@@ -39,6 +43,7 @@ import { UploadModule } from "../upload/upload.module";
     CampaignsModule,
     SchedulerModule,
     UploadModule,
+    SeedModule,
   ],
   controllers: [AdminController],
   providers: [AdminService],

@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Put, Delete, Query, Body, Req, UseGuards, Param } from "@nestjs/common";
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Query,
+  Body,
+  Req,
+  UseGuards,
+  Param,
+  Res,
+} from "@nestjs/common";
+import { Response } from "express";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { AdminService } from "./admin.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
@@ -18,6 +31,8 @@ import { CampaignsService } from "../campaigns/campaigns.service";
 import { SchedulerService } from "../scheduler/scheduler.service";
 import { UploadService } from "../upload/upload.service";
 
+import { SeedService } from "../seed/seed.service";
+
 @ApiTags("Admin")
 @ApiBearerAuth()
 @Controller("admin")
@@ -30,7 +45,15 @@ export class AdminController {
     private readonly campaignsService: CampaignsService,
     private readonly schedulerService: SchedulerService,
     private readonly uploadService: UploadService,
+    private readonly seedService: SeedService,
   ) {}
+
+  @Post("system-seed")
+  @ApiOperation({ summary: "Force trigger global system seeding" })
+  @Roles(Role.SUPER_ADMIN)
+  triggerGlobalSeed() {
+    return this.seedService.onModuleInit();
+  }
 
   @Get("dashboard")
   @ApiOperation({ summary: "Get admin dashboard overview" })
@@ -45,6 +68,23 @@ export class AdminController {
     @Query("tenantId") tenantId?: string,
   ) {
     return this.adminService.getRevenue(period, tenantId);
+  }
+
+  @Get("revenue/ledger")
+  @ApiOperation({ summary: "Download revenue ledger CSV" })
+  @Roles(Role.SUPER_ADMIN)
+  async downloadLedger(@Res() res: Response) {
+    const csv = await this.adminService.downloadLedger();
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", 'attachment; filename="ledger.csv"');
+    return res.send(csv);
+  }
+
+  @Post("revenue/settle")
+  @ApiOperation({ summary: "Initiate global settlement" })
+  @Roles(Role.SUPER_ADMIN)
+  initiateSettlement() {
+    return this.adminService.initiateSettlement();
   }
 
   @Get("tenants")
@@ -76,7 +116,10 @@ export class AdminController {
   @ApiOperation({ summary: "Invite a team member" })
   @Permissions(Permission.INVITE_MEMBERS)
   inviteTeamMember(@Body() inviteDto: InviteDto, @Req() req: any) {
-    return this.adminService.inviteTeamMember(inviteDto, req.user?._id || req.user?.sub);
+    return this.adminService.inviteTeamMember(
+      inviteDto,
+      req.user?._id || req.user?.sub,
+    );
   }
 
   @Get("invitations")
@@ -118,18 +161,24 @@ export class AdminController {
   // --- Campaign Management ---
   @Get("campaigns")
   @ApiOperation({ summary: "List email campaigns" })
-  @Permissions(Permission.MANAGE_CAMPAIGNS)
   getCampaigns() {
     return this.campaignsService.findAll();
+  }
+
+  @Post("campaigns/seed")
+  @ApiOperation({ summary: "Seed default email campaigns" })
+  @Roles(Role.SUPER_ADMIN, Role.STAFF)
+  seedCampaigns() {
+    return this.campaignsService.seedDefaultCampaigns();
   }
 
   @Post("campaigns")
   @ApiOperation({ summary: "Create or update email campaign" })
   @Permissions(Permission.MANAGE_CAMPAIGNS)
   upsertCampaign(@Body() campaignDto: CampaignDto, @Req() req: any) {
-    return this.campaignsService.create({ 
-      ...campaignDto, 
-      createdBy: req.user?._id || req.user?.sub 
+    return this.campaignsService.create({
+      ...campaignDto,
+      createdBy: req.user?._id || req.user?.sub,
     });
   }
 
@@ -153,7 +202,7 @@ export class AdminController {
   deleteCampaign(@Param("id") id: string) {
     return this.campaignsService.delete(id);
   }
-  
+
   @Post("scheduler/trigger-user-reminders")
   @ApiOperation({ summary: "Manually trigger user engagement email reminders" })
   @Roles(Role.SUPER_ADMIN)
@@ -164,8 +213,14 @@ export class AdminController {
   @Post("users/create")
   @ApiOperation({ summary: "Create an admin/staff user (Super Admin only)" })
   @Roles(Role.SUPER_ADMIN)
-  createAdminUser(@Body() createAdminUserDto: CreateAdminUserDto, @Req() req: any) {
-    return this.adminService.createAdminUser(createAdminUserDto, req.user?._id || req.user?.sub);
+  createAdminUser(
+    @Body() createAdminUserDto: CreateAdminUserDto,
+    @Req() req: any,
+  ) {
+    return this.adminService.createAdminUser(
+      createAdminUserDto,
+      req.user?._id || req.user?.sub,
+    );
   }
 
   @Get("invitations/verify/:token")
@@ -184,15 +239,27 @@ export class AdminController {
   // --- File Storage Management ---
   @Get("storage")
   @ApiOperation({ summary: "List all stored files" })
-  @Permissions(Permission.MANAGE_SETTINGS)
   getFiles(@Query("folder") folder?: string) {
     return this.uploadService.listFiles(folder);
   }
 
   @Delete("storage/:publicId")
   @ApiOperation({ summary: "Delete a stored file" })
-  @Permissions(Permission.MANAGE_SETTINGS)
   deleteFile(@Param("publicId") publicId: string) {
     return this.uploadService.deleteFile(publicId);
+  }
+  @Post("users/:id/kyc-status")
+  @ApiOperation({ summary: "Update status for a specific KYC document" })
+  @Roles(Role.SUPER_ADMIN, Role.STAFF)
+  updateKycStatus(
+    @Param("id") id: string,
+    @Body() kycData: { docType: any; status: any; feedback?: string },
+  ) {
+    return this.adminService.updateKycStatus(
+      id,
+      kycData.docType,
+      kycData.status,
+      kycData.feedback,
+    );
   }
 }

@@ -20,6 +20,8 @@ import { CarsService } from "../cars/cars.service";
 import { CruisesService } from "../cruises/cruises.service";
 import { PackagesService } from "../packages/packages.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { FraudService } from "../fraud/fraud.service";
+import { SystemConfigService } from "../system-config/system-config.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
 import { generatePNR } from "../../common/utils/crypto.util";
@@ -41,12 +43,23 @@ export class BookingsService {
     private cruisesService: CruisesService,
     private packagesService: PackagesService,
     private notificationsService: NotificationsService,
+    private fraudService: FraudService,
+    private configService: SystemConfigService,
   ) {}
 
   async create(
     userId: string,
     createBookingDto: CreateBookingDto,
   ): Promise<BookingDocument> {
+    // 0. Whitelist Check
+    const config = await this.configService.getConfig();
+    if (config.isWhitelistingEnabled) {
+      const userState = createBookingDto.contactDetails.state;
+      if (!userState || !config.whitelistedStates.includes(userState)) {
+        throw new BadRequestException(`Bookings are currently restricted. We only accept bookings from: ${config.whitelistedStates.join(', ')}`);
+      }
+    }
+
     // Generate unique PNR
     let pnr = "";
     let pnrExists = true;
@@ -263,9 +276,19 @@ export class BookingsService {
       totalPassengers,
       isRoundTrip: createBookingDto.isRoundTrip || false,
       notes: createBookingDto.notes,
+      ipAddress: createBookingDto.ipAddress,
+      deviceFingerprint: createBookingDto.deviceFingerprint,
+      userAgent: createBookingDto.userAgent,
+      termsAcceptedAt: new Date(),
     });
 
     const saved = await booking.save();
+
+    // Calculate risk score asynchronously (but we'll wait or use a hook)
+    this.fraudService.calculateRiskScore(saved._id.toString()).catch((err) => {
+      this.logger.error(`Risk scoring failed for ${saved.pnr}: ${err.message}`);
+    });
+
     this.logger.log(`Booking created: ${saved.pnr} for user ${userId}`);
 
     return this.findById(saved._id.toString());

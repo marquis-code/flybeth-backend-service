@@ -16,6 +16,9 @@ import { User, UserDocument } from "../users/schemas/user.schema";
 import { Role } from "../../common/constants/roles.constant";
 import { hashPassword } from "../../common/utils/crypto.util";
 
+import { RoleEntity, RoleDocument } from "../access-control/schemas/role.schema";
+import { PermissionEntity, PermissionDocument } from "../access-control/schemas/permission.schema";
+
 @Injectable()
 export class SeedService implements OnModuleInit {
   private readonly logger = new Logger(SeedService.name);
@@ -26,15 +29,93 @@ export class SeedService implements OnModuleInit {
     @InjectModel(BankAccount.name)
     private bankAccountModel: Model<BankAccountDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(RoleEntity.name) private roleModel: Model<RoleDocument>,
+    @InjectModel(PermissionEntity.name)
+    private permissionModel: Model<PermissionDocument>,
   ) {}
 
   async onModuleInit() {
+    await this.seedPermissions();
+    await this.seedRoles();
     await this.seedAirports();
     await this.seedAirlines();
     await this.seedBankAccounts();
     await this.seedAdminUser();
     await this.seedAgentUser();
     await this.seedCustomerUser();
+  }
+
+  private async seedPermissions() {
+    const count = await this.permissionModel.countDocuments().exec();
+    if (count > 0) return;
+
+    const permissions = [
+      { name: 'View Dashboard', key: 'view_dashboard', category: 'General', description: 'Access to system overview and metrics' },
+      { name: 'Manage Agents', key: 'manage_agents', category: 'Infrastructure', description: 'Create, edit and suspend agency accounts' },
+      { name: 'Manage Tenants', key: 'manage_tenants', category: 'Infrastructure', description: 'Control multi-tenant white-label portals' },
+      { name: 'Manage Team', key: 'manage_team', category: 'Security', description: 'Manage internal admin and staff accounts' },
+      { name: 'View Bookings', key: 'view_bookings', category: 'Operations', description: 'Monitor and search platform-wide transactions' },
+      { name: 'Audit Revenue', key: 'audit_revenue', category: 'Finance', description: 'Access financial ledgers and settlement tools' },
+      { name: 'Manage Storage', key: 'manage_storage', category: 'General', description: 'Manage asset library and file uploads' },
+      { name: 'Manage Emails', key: 'manage_emails', category: 'Marketing', description: 'Edit system notification blueprints' },
+      { name: 'Manage Campaigns', key: 'manage_campaigns', category: 'Marketing', description: 'Orchestrate marketing email blasts' },
+      { name: 'Manage Fraud', key: 'manage_fraud', category: 'Security', description: 'Access security signals and risk modules' },
+      { name: 'Manage Roles', key: 'manage_roles', category: 'Security', description: 'Define security tiers and permissions' },
+      { name: 'Manage Settings', key: 'manage_settings', category: 'General', description: 'Configure global platform parameters' },
+      { name: 'Invite Members', key: 'invite_members', category: 'Security', description: 'Trigger team invitation logic' },
+      { name: 'Manage Commissions', key: 'manage_commissions', category: 'Finance', description: 'Set airline pricing overrides' },
+    ];
+
+    await this.permissionModel.insertMany(permissions);
+    this.logger.log(`Seeded ${permissions.length} granular permissions`);
+  }
+
+  private async seedRoles() {
+    const allPerms = await this.permissionModel.find().exec();
+    const allKeys = allPerms.map(p => p.key);
+
+    const roles = [
+      {
+        name: Role.SUPER_ADMIN,
+        description: 'Ultimate system control. Unrestricted access to all modules.',
+        permissions: allKeys,
+        isDefault: true,
+      },
+      {
+        name: Role.STAFF,
+        description: 'Standard operational access for platform employees.',
+        permissions: ['view_dashboard', 'view_bookings', 'manage_agents', 'manage_emails'],
+        isDefault: true,
+      },
+      {
+        name: Role.AGENT,
+        description: 'Agency account for travel professionals.',
+        permissions: ['view_dashboard', 'view_bookings'],
+        isDefault: true,
+      },
+      {
+        name: Role.CUSTOMER,
+        description: 'Standard end-user account for travel bookings.',
+        permissions: [],
+        isDefault: true,
+      },
+    ];
+
+    for (const r of roles) {
+      await this.roleModel.updateOne({ name: r.name }, { $set: r }, { upsert: true });
+    }
+    this.logger.log(`Synchronized ${roles.length} system roles`);
+    
+    // Remediation: Fix existing users with string roles
+    const usersWithLegacyRoles = await this.userModel.find({ role: { $type: 'string' } }).exec();
+    for (const user of usersWithLegacyRoles) {
+      const roleName = user.role as any;
+      const roleEntity = await this.roleModel.findOne({ name: roleName }).exec();
+      if (roleEntity) {
+        await this.userModel.updateOne({ _id: user._id }, { role: roleEntity._id });
+        this.logger.log(`Remediated legacy role for ${user.email}: ${roleName} -> ${roleEntity._id}`);
+      }
+    }
   }
 
   private async seedAirports() {
@@ -411,6 +492,7 @@ export class SeedService implements OnModuleInit {
       .exec();
     if (existingAgent) return;
 
+    const agentRole = await this.roleModel.findOne({ name: Role.AGENT }).exec();
     const hashedPassword = await hashPassword("Agent@2026!");
 
     const agent = new this.userModel({
@@ -419,7 +501,7 @@ export class SeedService implements OnModuleInit {
       firstName: "Flybeth",
       lastName: "Agent",
       phone: "+2348000000000",
-      role: Role.AGENT,
+      role: agentRole?._id,
       isVerified: true,
       isActive: true,
       firstLogin: false,
@@ -436,20 +518,26 @@ export class SeedService implements OnModuleInit {
   }
 
   private async seedAdminUser() {
-    const existingAdmin = await this.userModel
-      .findOne({ email: "admin@flybeth.com" })
-      .exec();
-    if (existingAdmin) return;
+    const email = "abahmarquis@gmail.com";
+    const existingAdmin = await this.userModel.findOne({ email }).exec();
+    
+    if (existingAdmin) {
+      this.logger.log(`Admin user ${email} already exists. Updating password.`);
+      const hashedPassword = await hashPassword("Admin@123");
+      await this.userModel.updateOne({ _id: existingAdmin._id }, { password: hashedPassword });
+      return;
+    }
 
-    const hashedPassword = await hashPassword("Admin@2026!");
+    const adminRole = await this.roleModel.findOne({ name: Role.SUPER_ADMIN }).exec();
+    const hashedPassword = await hashPassword("Admin@123");
 
     const admin = new this.userModel({
-      email: "admin@flybeth.com",
+      email,
       password: hashedPassword,
-      firstName: "Flybeth",
-      lastName: "Admin",
+      firstName: "Abah",
+      lastName: "Marquis",
       phone: "+2348000000001",
-      role: Role.SUPER_ADMIN,
+      role: adminRole?._id,
       isVerified: true,
       isActive: true,
       firstLogin: false,
@@ -462,7 +550,7 @@ export class SeedService implements OnModuleInit {
     });
 
     await admin.save();
-    this.logger.log("Seeded default admin user: admin@flybeth.com");
+    this.logger.log(`Seeded default admin user: ${email}`);
   }
 
   private async seedCustomerUser() {
@@ -471,6 +559,7 @@ export class SeedService implements OnModuleInit {
       .exec();
     if (existingUser) return;
 
+    const customerRole = await this.roleModel.findOne({ name: Role.CUSTOMER }).exec();
     const hashedPassword = await hashPassword("User@2026!");
 
     const user = new this.userModel({
@@ -479,7 +568,7 @@ export class SeedService implements OnModuleInit {
       firstName: "Flybeth",
       lastName: "User",
       phone: "+2348000000002",
-      role: Role.CUSTOMER,
+      role: customerRole?._id,
       isVerified: true,
       isActive: true,
       firstLogin: false,

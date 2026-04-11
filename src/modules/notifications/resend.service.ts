@@ -102,6 +102,7 @@ export class ResendService {
    * Flybeth Brand Wrapper for emails
    */
   public brandWrapper(title: string, content: string): string {
+    const logoUrl = "https://res.cloudinary.com/marquis/image/upload/v1775916479/logo_aqftpd.png";
     return `
       <!DOCTYPE html>
       <html>
@@ -109,102 +110,207 @@ export class ResendService {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Outfit:wght@400;600;800&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
           
-          body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', 'Outfit', -apple-system, sans-serif; }
-          .email-wrapper { background-color: #f8fafc; padding: 40px 15px; }
+          body { 
+            margin: 0; 
+            padding: 0; 
+            width: 100% !important; 
+            -webkit-text-size-adjust: 100%; 
+            -ms-text-size-adjust: 100%; 
+            background-color: #f1f5f9; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+          }
+          
+          .email-wrapper { 
+            background-color: #f1f5f9; 
+            padding: 60px 20px; 
+            display: flex;
+            justify-content: center;
+          }
+          
           .container { 
             background-color: #ffffff; 
-            max-width: 580px; 
+            max-width: 600px; 
+            width: 100%;
             margin: 0 auto; 
             border-radius: 24px; 
-            padding: 48px 40px; 
-            box-shadow: 0 20px 50px rgba(13, 29, 173, 0.05); 
-            border: 1px solid #e2e8f0;
+            padding: 0; 
+            box-shadow: 0 40px 100px -20px rgba(13, 29, 173, 0.08); 
+            border: 1px solid rgba(226, 232, 240, 1);
+            overflow: hidden;
           }
-          .logo { text-align: center; margin-bottom: 40px; }
-          .logo-text { 
-            font-size: 28px; 
-            font-weight: 900; 
-            color: #0D1DAD; 
-            letter-spacing: -0.05em; 
-            text-transform: uppercase;
-          }
-          .logo-text span { color: #FF3D00; }
           
-          .header { text-align: center; margin-bottom: 32px; }
-          .title-pill {
+          .top-bar {
+            height: 6px;
+            background: linear-gradient(90deg, #0D1DAD, #FF3D00);
+          }
+          
+          .header { 
+            padding: 50px 40px 30px; 
+            text-align: center; 
+            background-color: #ffffff;
+          }
+          
+          .logo { 
+            height: 48px; 
+            width: auto; 
+            margin-bottom: 30px; 
+          }
+          
+          .hero-pill {
             display: inline-block;
             padding: 8px 16px;
-            background: #eff6ff;
+            background-color: #eff6ff;
             border-radius: 100px;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
           }
-          .title-pill span {
-            color: #0d47a1;
-            font-size: 10px;
+          
+          .hero-pill span {
+            color: #1d4ed8;
+            font-size: 11px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
           }
-          .title { color: #0D1DAD; font-size: 28px; font-weight: 800; margin: 0; letter-spacing: -0.03em; line-height: 1.2; }
           
-          .content { font-size: 16px; line-height: 1.7; color: #475569; margin-bottom: 40px; }
-          .content p { margin-bottom: 20px; }
-          .content strong { color: #0D1DAD; font-weight: 600; }
+          .title { 
+            color: #0D1DAD; 
+            font-size: 32px; 
+            font-weight: 800; 
+            margin: 0; 
+            letter-spacing: -0.04em; 
+            line-height: 1.1; 
+          }
           
-          .action-area { text-align: center; margin: 40px 0; }
+          .body-content { 
+            padding: 0 50px 50px; 
+            font-size: 17px; 
+            line-height: 1.8; 
+            color: #334155; 
+          }
+          
+          .body-content p { 
+            margin-bottom: 24px; 
+            color: #475569;
+          }
+          
+          .body-content strong { 
+            color: #0D1DAD; 
+            font-weight: 700; 
+          }
+          
+          .action-area { 
+            text-align: center; 
+            margin: 40px 0; 
+          }
+          
           .btn { 
             display: inline-block; 
-            padding: 18px 36px; 
-            background: linear-gradient(135deg, #FF3D00 0%, #D32F2F 100%);
+            padding: 20px 40px; 
+            background: linear-gradient(135deg, #0D1DAD 0%, #081163 100%);
             color: #ffffff !important; 
-            text-decoration: none; 
-            border-radius: 12px; 
+            text-decoration: none !important; 
+            border-radius: 16px; 
             font-weight: 700; 
             font-size: 16px; 
-            box-shadow: 0 12px 24px -6px rgba(255, 61, 0, 0.3);
+            box-shadow: 0 20px 40px -10px rgba(13, 29, 173, 0.3);
+            transition: all 0.3s ease;
           }
           
           .otp-card { 
-            background: #f1f5f9; 
-            border-radius: 16px; 
-            padding: 32px; 
+            background: #f8fafc; 
+            border-radius: 20px; 
+            padding: 40px; 
             text-align: center; 
-            margin: 32px 0; 
-            border: 2px dashed #0D1DAD; 
+            margin: 40px 0; 
+            border: 2px solid #e2e8f0; 
+            position: relative;
           }
-          .otp-label { font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 12px; display: block; }
-          .otp-code { font-size: 42px; font-weight: 900; letter-spacing: 12px; color: #0D1DAD; font-family: 'Outfit', monospace; }
+          
+          .otp-label { 
+            font-size: 12px; 
+            font-weight: 800; 
+            color: #64748b; 
+            text-transform: uppercase; 
+            letter-spacing: 0.2em; 
+            margin-bottom: 16px; 
+            display: block; 
+          }
+          
+          .otp-code { 
+            font-size: 48px; 
+            font-weight: 900; 
+            letter-spacing: 16px; 
+            color: #0D1DAD; 
+            font-family: 'Inter', monospace; 
+            margin-left: 16px;
+          }
           
           .footer { 
             text-align: center; 
-            padding: 32px 0 0;
+            padding: 40px 50px;
+            background-color: #f8fafc;
             border-top: 1px solid #f1f5f9;
-            margin-top: 40px;
           }
-          .footer-text { font-size: 13px; color: #94a3b8; line-height: 1.6; }
-          .footer-brand { font-weight: 800; color: #0D1DAD; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; }
+          
+          .footer-brand { 
+            font-weight: 800; 
+            color: #0D1DAD; 
+            margin-bottom: 12px; 
+            font-size: 14px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.2em;
+          }
+          
+          .footer-text { 
+            font-size: 13px; 
+            color: #94a3b8; 
+            line-height: 1.8; 
+            font-weight: 500;
+          }
+          
+          .footer-text strong {
+            color: #64748b;
+          }
+          
+          .divider {
+            height: 1px;
+            background-color: #f1f5f9;
+            margin: 40px 0;
+          }
+
+          @media only screen and (max-width: 620px) {
+            .container { 
+              border-radius: 0; 
+              width: 100% !important; 
+              max-width: 100% !important; 
+            }
+            .body-content { padding: 0 30px 40px; }
+            .header { padding: 40px 30px 20px; }
+            .title { font-size: 28px; }
+            .otp-code { font-size: 36px; letter-spacing: 8px; }
+          }
         </style>
       </head>
       <body>
         <div class="email-wrapper">
           <div class="container">
-            <div class="logo">
-              <img src="https://agent.flybeth.com/_nuxt/logo.CJ2BWGNK.png" alt="Flybeth Logo" height="36" style="height: 36px; display: block; margin: 0 auto; border: none; outline: none;" />
-            </div>
+            <div class="top-bar"></div>
             <div class="header">
-              <div class="title-pill"><span>Security Notification</span></div>
+              <img src="${logoUrl}" alt="Flybeth Logo" class="logo" />
+              <div class="hero-pill"><span>Official Notification</span></div>
               <h1 class="title">${title}</h1>
             </div>
-            <div class="content">
+            <div class="body-content">
               ${content}
             </div>
             <div class="footer">
-              <div class="footer-brand">Flybeth Travel</div>
+              <div class="footer-brand">FLYBETH GLOBAL LLC</div>
               <div class="footer-text">
-                &copy; ${new Date().getFullYear()} • Elevating Every Journey.<br>
-                Premium Travel Experience.
+                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077.<br>
+                <strong>Toll Free:</strong> +1 844 FLYBETH (359-2384) • <strong>Email:</strong> Hello@flybeth.com<br>
+                &copy; ${new Date().getFullYear()} • Elevating Every Journey together.
               </div>
             </div>
           </div>

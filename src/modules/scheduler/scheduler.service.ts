@@ -80,9 +80,9 @@ export class SchedulerService {
   async sendUserReminders() {
     try {
       this.logger.log("Starting daily user engagement reminders...");
-      
-      const usersResponse = await this.usersService.findAll({ 
-        role: "customer" 
+
+      const usersResponse = await this.usersService.findAll({
+        role: "customer",
       } as any);
       const users = usersResponse.data;
 
@@ -100,8 +100,8 @@ export class SchedulerService {
                   style="background: #0D1DAD; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
                  Explore Flights
                </a>
-             </div>`
-          )
+             </div>`,
+          ),
         );
       }
 

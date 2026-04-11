@@ -1,0 +1,5 @@
+{
+  "stay": { "checkIn": "2026-04-03", "checkOut": "" },
+  "occupancies": [ { "rooms": 1, "adults": 2, "children": 0 } ],
+  "geolocation": { "latitude": 51.5074, "longitude": -0.1278, "radius": 20, "unit": "km" }
+}
