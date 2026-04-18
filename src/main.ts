@@ -68,7 +68,10 @@ async function bootstrap() {
 
   // CORS - Aggressive settings to allow all origins with credentials
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => {
+      // Aggressive explicit reflection to bypass CORS blocks completely
+      callback(null, true);
+    },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
     allowedHeaders: [
