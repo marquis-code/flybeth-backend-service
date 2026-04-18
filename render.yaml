@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: flybeth-backend
+    env: node
+    plan: starter
+    buildCommand: ./render-build.sh
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+    healthCheckPath: /api/v1/health # Update if you have a health check endpoint
