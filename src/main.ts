@@ -66,27 +66,18 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
+  // REBUILD TRIGGER: 1776514692963 - Aggressive Cache Clear
   // CORS - Aggressive settings to allow all origins with credentials
   app.enableCors({
     origin: (origin, callback) => {
       // Unconditionally mirror the exact string origin of the requesting client
-      // If there is no origin (e.g. server-side/Postman), default to true.
+      // If there is no origin (e.g. server-side/Postman/Mobile App), default to true.
       if (!origin) return callback(null, true);
-      return callback(null, origin);
+      callback(null, origin);
     },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
-    allowedHeaders: [
-      "Content-Type",
-      "Accept",
-      "Authorization",
-      "X-Tenant-ID",
-      "X-Requested-With",
-      "x-captcha-token",
-      "Cache-Control",
-      "Pragma",
-      "Expires"
-    ],
+    allowedHeaders: "Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Tenant-ID, x-captcha-token, Cache-Control, Pragma, Expires, x-nuxt-upgrade-edge",
     exposedHeaders: ["set-cookie"],
     preflightContinue: false,
     optionsSuccessStatus: 204,
