@@ -24,7 +24,7 @@ export class DuffelProvider implements AirlineAdapter {
   private getHeaders(): Record<string, string> {
     return {
       Authorization: `Bearer ${this.accessToken}`,
-      "Duffel-Version": "v2",
+      "Duffel-Version": "v1",
       Accept: "application/json",
       "Content-Type": "application/json",
       "Accept-Encoding": "gzip",
@@ -80,6 +80,10 @@ export class DuffelProvider implements AirlineAdapter {
 
       if (query.maxConnections !== undefined) {
         requestBody.data.max_connections = query.maxConnections;
+      }
+
+      if (query.customerId) {
+        requestBody.data.customer_id = query.customerId;
       }
 
       const response = await fetch(`${this.baseUrl}/air/offer_requests`, {
@@ -299,7 +303,246 @@ export class DuffelProvider implements AirlineAdapter {
   }
 
   /**
-   * Book a flight via Duffel Orders API
+   * Create a customer record in Duffel Identity
+   */
+  async createCustomer(userData: any): Promise<any> {
+    this.logger.log(`Creating Duffel identity customer for ${userData.email}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/identity/customer_users`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          data: {
+            email: userData.email,
+            given_name: userData.firstName,
+            family_name: userData.lastName,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(`Duffel identity customer creation failed (${response.status}): ${errorBody}`);
+        return null;
+      }
+
+      const data = await response.json();
+      this.logger.log(`Successfully created/fetched Duffel customer: ${data.data?.id}`);
+      return data.data;
+    } catch (error) {
+      this.logger.error(`Duffel create identity customer error: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Create a component client key for an identity customer
+   */
+  async createClientKey(customerId: string): Promise<any> {
+    this.logger.log(`Creating Duffel component client key for customer ${customerId}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/identity/component_client_keys`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          data: { 
+            customer_user_id: customerId 
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel client key creation failed: ${error}`);
+        return null;
+      }
+
+      const data = await response.json();
+      const clientKey = data.data?.client_key || data.data?.component_client_key;
+      
+      if (!clientKey) {
+        this.logger.warn(`Duffel response did not contain a client key: ${JSON.stringify(data)}`);
+      }
+
+      return { 
+        client_key: clientKey 
+      };
+    } catch (error) {
+      this.logger.error(`Duffel create client key error: ${error.message}`);
+      return null;
+    }
+  }
+
+  /**
+   * Create a card in Duffel's PCI vault
+   */
+  async createCard(cardData: any): Promise<any> {
+    this.logger.log(`Creating Duffel card for ${cardData.name}`);
+    try {
+      const response = await fetch("https://api.duffel.cards/payments/cards", {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ data: cardData }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel card creation failed: ${error}`);
+        throw new Error(`Card creation failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      this.logger.error(`Duffel create card error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a 3DS session for a simplified or corporate payment
+   */
+  async create3DSSession(sessionData: any): Promise<any> {
+    this.logger.log(`Creating Duffel 3DS session for card ${sessionData.card_id}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/payments/three_d_secure_sessions`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ data: sessionData }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel 3DS session failed: ${error}`);
+        throw new Error(`3DS session failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.data;
+    } catch (error) {
+      this.logger.error(`Duffel create 3DS session error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a hold order (Reserve now, pay later)
+   */
+  async createHoldOrder(
+    offerId: string,
+    passengers: any[],
+  ): Promise<{ pnr: string; orderId: string; expiresAt: string }> {
+    this.logger.log(`Creating Duffel hold order ${offerId}`);
+    try {
+      const requestBody = {
+        data: {
+          type: "hold",
+          selected_offers: [offerId],
+          passengers: this.mapPassengersForBooking(passengers),
+        },
+      };
+
+      const response = await fetch(`${this.baseUrl}/air/orders`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel hold order failed: ${error}`);
+        throw new Error(`Hold order failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const order = data.data;
+
+      return {
+        pnr: order.booking_reference || order.id,
+        orderId: order.id,
+        expiresAt: order.payment_required_by,
+      };
+    } catch (error) {
+      this.logger.error(`Duffel create hold order error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Pay for a previously created hold order
+   */
+  async payForOrder(
+    orderId: string,
+    payment: any,
+  ): Promise<{ success: boolean; ticketNumbers?: string[] }> {
+    this.logger.log(`Paying for Duffel order ${orderId}`);
+    try {
+      const response = await fetch(`${this.baseUrl}/air/orders/${orderId}/actions/pay`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          data: {
+            payment: {
+              type: payment.type || "balance",
+              currency: payment.currency,
+              amount: String(payment.amount),
+              ...(payment.cardId ? { card_id: payment.cardId } : {}),
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel payment failed: ${error}`);
+        return { success: false };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        ticketNumbers: data.data.documents?.map((d: any) => d.unique_identifier) || [],
+      };
+    } catch (error) {
+      this.logger.error(`Duffel pay order error: ${error.message}`);
+      return { success: false };
+    }
+  }
+
+  /**
+   * Internal helper to map our passenger format to Duffel's booking format
+   */
+  private mapPassengersForBooking(passengers: any[]): any[] {
+    return passengers.map((p, i) => {
+      const countryCode = p.phoneCountryCode?.replace("+", "") || "234";
+      const cleanPhone = p.phone?.replace(/[\s-()]/g, "") || "";
+
+      let formattedPhone = cleanPhone;
+      if (!formattedPhone.startsWith("+")) {
+        if (formattedPhone.startsWith(countryCode)) {
+          formattedPhone = "+" + formattedPhone;
+        } else if (formattedPhone.startsWith("0")) {
+          formattedPhone = "+" + countryCode + formattedPhone.substring(1);
+        } else {
+          formattedPhone = "+" + countryCode + formattedPhone;
+        }
+      }
+
+      return {
+        id: p.duffelPassengerId || `pas_${i}`, // fallback if not provided
+        title: (p.title || "mr").toLowerCase(),
+        gender: (p.gender?.charAt(0) || "m").toLowerCase() === "m" ? "m" : "f",
+        given_name: p.firstName,
+        family_name: p.lastName,
+        born_on: p.dateOfBirth,
+        email: p.email,
+        phone_number: formattedPhone,
+      };
+    });
+  }
+
+  /**
+   * Book a flight via Duffel Orders API (Instant)
    */
   async bookFlight(
     offerId: string,
@@ -307,71 +550,24 @@ export class DuffelProvider implements AirlineAdapter {
     payment?: any,
     offer?: any,
   ): Promise<{ pnr: string; orderId: string; ticketNumbers?: string[] }> {
-    this.logger.log(
-      `Booking Duffel flight ${offerId} for ${passengers.length} passengers. Offer provided: ${!!offer}`,
-    );
-    if (offer) {
-      this.logger.log(
-        `Offer rawOffer passengers count: ${offer.rawOffer?.passengers?.length}`,
-      );
-    }
+    this.logger.log(`Booking Duffel flight ${offerId}`);
 
     try {
-      // First check if offer is still valid
-      const offerDetails = await this.getOfferDetails(offerId);
-      if (!offerDetails) {
-        throw new Error("Offer not found or expired");
-      }
-
       const requestBody: any = {
         data: {
           type: "instant",
           selected_offers: [offerId],
-          passengers: passengers.map((p, i) => {
-            // Use the actual passenger ID assigned by Duffel in the offer
-            const offerPassenger = offer?.rawOffer?.passengers?.[i];
-
-            const countryCode = p.phoneCountryCode?.replace("+", "") || "234";
-            const cleanPhone = p.phone?.replace(/[\s-()]/g, "") || "";
-
-            let formattedPhone = cleanPhone;
-            if (!formattedPhone.startsWith("+")) {
-              // If it starts with the country code already, just prepends +
-              if (formattedPhone.startsWith(countryCode)) {
-                formattedPhone = "+" + formattedPhone;
-              } else if (formattedPhone.startsWith("0")) {
-                formattedPhone =
-                  "+" + countryCode + formattedPhone.substring(1);
-              } else {
-                formattedPhone = "+" + countryCode + formattedPhone;
-              }
-            }
-
-            return {
-              id: offerPassenger?.id || `pas_${i}`,
-              title: (p.title || "mr").toLowerCase(),
-              gender:
-                (p.gender?.charAt(0) || "m").toLowerCase() === "m" ? "m" : "f",
-              given_name: p.firstName,
-              family_name: p.lastName,
-              born_on: p.dateOfBirth,
-              email: p.email,
-              phone_number: formattedPhone,
-            };
-          }),
+          passengers: this.mapPassengersForBooking(passengers),
           payments: [
             {
-              type: "balance",
-              currency: offerDetails.currency,
-              amount: String(offerDetails.price),
+              type: payment?.type || "balance",
+              currency: payment?.currency || offer?.currency || "USD",
+              amount: String(payment?.amount || offer?.price || "0"),
+              ...(payment?.cardId ? { card_id: payment.cardId } : {}),
             },
           ],
         },
       };
-
-      this.logger.log(
-        `Duffel Booking Request Payload: ${JSON.stringify(requestBody)}`,
-      );
 
       const response = await fetch(`${this.baseUrl}/air/orders`, {
         method: "POST",
@@ -382,9 +578,7 @@ export class DuffelProvider implements AirlineAdapter {
 
       if (!response.ok) {
         const errorBody = await response.text();
-        this.logger.error(
-          `Duffel booking failed: ${response.status} ${errorBody}`,
-        );
+        this.logger.error(`Duffel booking failed: ${response.status} ${errorBody}`);
         throw new Error(`Duffel booking failed: ${response.status}`);
       }
 
@@ -394,11 +588,10 @@ export class DuffelProvider implements AirlineAdapter {
       return {
         pnr: order.booking_reference || order.id,
         orderId: order.id,
-        ticketNumbers:
-          order.documents?.map((d: any) => d.unique_identifier) || [],
+        ticketNumbers: order.documents?.map((d: any) => d.unique_identifier) || [],
       };
     } catch (error) {
-      this.logger.error(`Duffel booking error: ${error.message}`, error.stack);
+      this.logger.error(`Duffel booking error: ${error.message}`);
       throw error;
     }
   }
@@ -406,59 +599,32 @@ export class DuffelProvider implements AirlineAdapter {
   /**
    * Cancel a booking via Duffel Order Cancellations API
    */
-  async cancelBooking(
-    orderId: string,
-  ): Promise<{ success: boolean; refundAmount?: number }> {
+  async cancelBooking(orderId: string): Promise<{ success: boolean; refundAmount?: number }> {
     this.logger.log(`Cancelling Duffel order ${orderId}`);
-
     try {
-      // First create a cancellation quote
-      const quoteResponse = await fetch(
-        `${this.baseUrl}/air/order_cancellations`,
-        {
-          method: "POST",
-          headers: this.getHeaders(),
-          body: JSON.stringify({
-            data: { order_id: orderId },
-          }),
-          signal: AbortSignal.timeout(30000),
-        },
-      );
+      const quoteResponse = await fetch(`${this.baseUrl}/air/order_cancellations`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({ data: { order_id: orderId } }),
+      });
 
-      if (!quoteResponse.ok) {
-        throw new Error(
-          `Duffel cancellation quote failed: ${quoteResponse.status}`,
-        );
-      }
-
+      if (!quoteResponse.ok) return { success: false };
       const quoteData = await quoteResponse.json();
       const cancellation = quoteData.data;
 
-      // Confirm the cancellation
       const confirmResponse = await fetch(
         `${this.baseUrl}/air/order_cancellations/${cancellation.id}/actions/confirm`,
-        {
-          method: "POST",
-          headers: this.getHeaders(),
-          signal: AbortSignal.timeout(30000),
-        },
+        { method: "POST", headers: this.getHeaders() },
       );
 
-      if (!confirmResponse.ok) {
-        throw new Error(
-          `Duffel cancellation confirm failed: ${confirmResponse.status}`,
-        );
-      }
-
       return {
-        success: true,
-        refundAmount: cancellation.refund_amount
-          ? parseFloat(cancellation.refund_amount)
-          : undefined,
+        success: confirmResponse.ok,
+        refundAmount: cancellation.refund_amount ? parseFloat(cancellation.refund_amount) : undefined,
       };
     } catch (error) {
-      this.logger.error(`Duffel cancel error: ${error.message}`, error.stack);
+      this.logger.error(`Duffel cancel error: ${error.message}`);
       return { success: false };
     }
   }
 }
+

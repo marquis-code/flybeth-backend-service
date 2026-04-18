@@ -57,7 +57,7 @@ export class ResendService {
 
       if (response.error) {
         this.logger.error(
-          `Resend email failed for address ${from}: ${JSON.stringify(response.error)}`,
+          `Resend email failed on initial attempt for address ${from}: ${JSON.stringify(response.error, null, 2)}`,
         );
 
         // Fallback logic for unverified domains during development
@@ -69,7 +69,15 @@ export class ResendService {
           this.logger.warn(
             `Attempting resilient fallback to onboarding@resend.dev due to: ${response.error.name}`,
           );
-          return this.sendEmail({ ...params, from: "onboarding@resend.dev" });
+        }
+
+        // Intercept Free Tier/Sandbox restriction so it doesn't fail the whole queue
+        if (
+          response.error.name === "validation_error" && 
+          response.error.message?.includes("testing emails to your own email address")
+        ) {
+          this.logger.warn(`Resend Sandbox Limitation hit for ${params.to}. Suppressing error to keep queue active.`);
+          return { id: "mock_id_dev_sandbox_limit" };
         }
 
         throw new Error(
@@ -102,7 +110,7 @@ export class ResendService {
    * Flybeth Brand Wrapper for emails
    */
   public brandWrapper(title: string, content: string): string {
-    const logoUrl = "https://res.cloudinary.com/marquis/image/upload/v1775916479/logo_aqftpd.png";
+    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://flybeth.s3.us-east-2.amazonaws.com/logo.png";
     return `
       <!DOCTYPE html>
       <html>

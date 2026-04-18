@@ -11,6 +11,7 @@ export interface FlightSearchQuery {
   class?: string; // economy, business, premium_economy, first
   maxConnections?: number;
   userRole?: string;
+  customerId?: string;
 }
 
 export interface FlightSegment {
@@ -83,4 +84,16 @@ export interface AirlineAdapter {
     returnDate: string,
   ): Promise<any>;
   getFlightInspiration?(origin: string, departureDate?: string): Promise<any[]>;
+  createCustomer?(userData: any): Promise<any>;
+  createClientKey?(customerId: string): Promise<any>;
+  createHoldOrder?(
+    offerId: string,
+    passengers: any[],
+  ): Promise<{ pnr: string; orderId: string; expiresAt: string }>;
+  payForOrder?(
+    orderId: string,
+    payment: any,
+  ): Promise<{ success: boolean; ticketNumbers?: string[] }>;
+  createCard?(cardData: any): Promise<any>;
+  create3DSSession?(sessionData: any): Promise<any>;
 }

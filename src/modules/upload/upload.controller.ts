@@ -7,6 +7,7 @@ import {
   UseInterceptors,
   UploadedFile,
   Query,
+  Body,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import {
@@ -30,9 +31,13 @@ export class UploadController {
   @ApiOperation({ summary: "Upload an image" })
   uploadImage(
     @UploadedFile() file: Express.Multer.File,
-    @Query("folder") folder?: string,
+    @Body("folder") bodyFolder?: string,
+    @Query("folder") queryFolder?: string,
+    @Body("label") label?: string,
+    @Body("category") category?: string,
   ) {
-    return this.uploadService.uploadImage(file, folder);
+    const folder = queryFolder || bodyFolder || "general";
+    return this.uploadService.uploadImage(file, folder, { label, category });
   }
 
   @Post("document")
@@ -41,9 +46,13 @@ export class UploadController {
   @ApiOperation({ summary: "Upload a document (PDF, DOC)" })
   uploadDocument(
     @UploadedFile() file: Express.Multer.File,
-    @Query("folder") folder?: string,
+    @Body("folder") bodyFolder?: string,
+    @Query("folder") queryFolder?: string,
+    @Body("label") label?: string,
+    @Body("category") category?: string,
   ) {
-    return this.uploadService.uploadDocument(file, folder);
+    const folder = queryFolder || bodyFolder || "documents";
+    return this.uploadService.uploadDocument(file, folder, { label, category });
   }
 
   @Delete(":publicId")

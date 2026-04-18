@@ -59,6 +59,9 @@ import { QueueModule } from "./modules/queue/queue.module";
 import { FraudModule } from "./modules/fraud/fraud.module";
 import { SystemConfigModule } from "./modules/system-config/system-config.module";
 import { AccessControlModule } from "./modules/access-control/access-control.module";
+import { MarketingModule } from "./modules/marketing/marketing.module";
+import { FinanceModule } from "./modules/finance/finance.module";
+import { ItinerariesModule } from "./modules/itineraries/itineraries.module";
 
 @Module({
   imports: [
@@ -124,6 +127,9 @@ import { AccessControlModule } from "./modules/access-control/access-control.mod
     FraudModule,
     SystemConfigModule,
     AccessControlModule,
+    MarketingModule,
+    FinanceModule,
+    ItinerariesModule,
 
     // Infrastructure
     QueueModule,

@@ -43,6 +43,7 @@ export class SeedService implements OnModuleInit {
     await this.seedAdminUser();
     await this.seedAgentUser();
     await this.seedCustomerUser();
+    await this.seedTestUser();
   }
 
   private async seedPermissions() {
@@ -523,13 +524,13 @@ export class SeedService implements OnModuleInit {
     
     if (existingAdmin) {
       this.logger.log(`Admin user ${email} already exists. Updating password.`);
-      const hashedPassword = await hashPassword("Admin@123");
+      const hashedPassword = await hashPassword("Miles1999@");
       await this.userModel.updateOne({ _id: existingAdmin._id }, { password: hashedPassword });
       return;
     }
 
     const adminRole = await this.roleModel.findOne({ name: Role.SUPER_ADMIN }).exec();
-    const hashedPassword = await hashPassword("Admin@123");
+    const hashedPassword = await hashPassword("Miles1999@");
 
     const admin = new this.userModel({
       email,
@@ -582,5 +583,41 @@ export class SeedService implements OnModuleInit {
 
     await user.save();
     this.logger.log("Seeded default customer user: user@flybeth.com");
+  }
+
+  private async seedTestUser() {
+    const email = "markeyz.code@gmail.com";
+    const existingUser = await this.userModel.findOne({ email }).exec();
+    
+    if (existingUser) {
+      this.logger.log(`Test user ${email} already exists. Updating password.`);
+      const hashedPassword = await hashPassword("Miles1999@");
+      await this.userModel.updateOne({ _id: existingUser._id }, { password: hashedPassword, isVerified: true, isActive: true });
+      return;
+    }
+
+    const customerRole = await this.roleModel.findOne({ name: Role.CUSTOMER }).exec();
+    const hashedPassword = await hashPassword("Miles1999@");
+
+    const user = new this.userModel({
+      email,
+      password: hashedPassword,
+      firstName: "Markeyz",
+      lastName: "Code",
+      phone: "+2348000000003",
+      role: customerRole?._id,
+      isVerified: true,
+      isActive: true,
+      firstLogin: false,
+      preferences: {
+        currency: "USD",
+        language: "en",
+        emailNotifications: true,
+        pushNotifications: true,
+      },
+    });
+
+    await user.save();
+    this.logger.log(`Seeded test customer user: ${email}`);
   }
 }

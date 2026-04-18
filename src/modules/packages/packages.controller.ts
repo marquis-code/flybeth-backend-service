@@ -26,4 +26,10 @@ export class PackagesController {
   findOne(@Param("id") id: string) {
     return this.packagesService.findById(id);
   }
+
+  @Roles(Role.AGENT, Role.TENANT_ADMIN, Role.SUPER_ADMIN)
+  @Post(":id")
+  update(@Param("id") id: string, @Body() updatePackageDto: any) {
+    return this.packagesService.update(id, updatePackageDto);
+  }
 }

@@ -44,6 +44,22 @@ export class Passenger {
 
   @Prop({ type: { airline: String, number: String } })
   frequentFlyer: { airline: string; number: string };
+
+  @Prop()
+  profilePicture: string;
+
+  @Prop({
+    type: [
+      {
+        name: { type: String, required: true },
+        url: { type: String, required: true },
+        type: { type: String },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  documents: Array<{ name: string; url: string; type: string; uploadedAt: Date }>;
 }
 
 export const PassengerSchema = SchemaFactory.createForClass(Passenger);

@@ -1,28 +1,25 @@
-// src/modules/chat/chat.module.ts
 import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
-import { ChatGateway } from "./chat.gateway";
 import { ChatService } from "./chat.service";
+import { ChatController } from "./chat.controller";
+import { ChatGateway } from "./chat.gateway";
+import { AutoResponseService } from "./auto-response.service";
+import { ChatRoom, ChatRoomSchema } from "./schemas/chat-room.schema";
 import { ChatMessage, ChatMessageSchema } from "./schemas/chat-message.schema";
-import { AuthModule } from "../auth/auth.module";
+import { User, UserSchema } from "../users/schemas/user.schema";
 import { JwtModule } from "@nestjs/jwt";
-import { ConfigModule, ConfigService } from "@nestjs/config";
 
 @Module({
   imports: [
     MongooseModule.forFeature([
+      { name: ChatRoom.name, schema: ChatRoomSchema },
       { name: ChatMessage.name, schema: ChatMessageSchema },
+      { name: User.name, schema: UserSchema },
     ]),
-    AuthModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>("JWT_SECRET"),
-      }),
-      inject: [ConfigService],
-    }),
+    JwtModule,
   ],
-  providers: [ChatGateway, ChatService],
-  exports: [ChatService],
+  controllers: [ChatController],
+  providers: [ChatService, ChatGateway, AutoResponseService],
+  exports: [ChatService, ChatGateway, AutoResponseService],
 })
 export class ChatModule {}

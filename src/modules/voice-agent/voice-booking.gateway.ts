@@ -19,7 +19,6 @@ import { JwtService } from "@nestjs/jwt";
     origin: "*",
   },
   namespace: "voice-booking",
-  path: "/socket.io",
   transports: ["websocket", "polling"],
 })
 export class VoiceBookingGateway

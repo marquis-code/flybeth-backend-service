@@ -175,4 +175,44 @@ export class AnalyticsService {
     await this.cacheManager.set(cacheKey, routes, 600000);
     return routes;
   }
+  async getAgentStats(tenantId: string) {
+    const cacheKey = `analytics:agent:${tenantId}`;
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
+
+    const [bookingStats, revenueStats] = await Promise.all([
+      this.bookingModel.aggregate([
+        { $match: { tenant: new Types.ObjectId(tenantId) } },
+        { 
+          $group: { 
+            _id: null, 
+            totalBookings: { $sum: 1 },
+            activeBookings: { 
+              $sum: { $cond: [{ $in: ["$status", ["pending", "confirmed", "ticketed"]] }, 1, 0] } 
+            }
+          } 
+        }
+      ]).exec(),
+      this.bookingModel.aggregate([
+        { $match: { tenant: new Types.ObjectId(tenantId), status: "ticketed" } },
+        { 
+          $group: { 
+            _id: null, 
+            totalRevenue: { $sum: "$pricing.totalAmount" }
+          } 
+        }
+      ]).exec()
+    ]);
+
+    const result = {
+      totalRevenue: revenueStats[0]?.totalRevenue || 0,
+      activeBookings: bookingStats[0]?.activeBookings || 0,
+      totalBookings: bookingStats[0]?.totalBookings || 0,
+      growth: 12.5, // Mock growth for UI
+      yield: 8.2 // Mock yield for UI
+    };
+
+    await this.cacheManager.set(cacheKey, result, 300000);
+    return result;
+  }
 }

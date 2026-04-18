@@ -184,6 +184,50 @@ export class FlightsIntegrationService {
     return adapter.cancelBooking(orderId);
   }
 
+  async createCustomer(provider: string, userData: any) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.createCustomer) return null;
+    return adapter.createCustomer(userData);
+  }
+
+  async createClientKey(provider: string, customerId: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.createClientKey) return null;
+    return adapter.createClientKey(customerId);
+  }
+
+  async createHoldOrder(provider: string, offerId: string, passengers: any[]) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.createHoldOrder) {
+      throw new Error(`Provider ${provider} does not support hold orders`);
+    }
+    return adapter.createHoldOrder(offerId, passengers);
+  }
+
+  async payForOrder(provider: string, orderId: string, payment: any) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.payForOrder) {
+      throw new Error(`Provider ${provider} does not support paying for orders`);
+    }
+    return adapter.payForOrder(orderId, payment);
+  }
+
+  async createCard(provider: string, cardData: any) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.createCard) {
+      throw new Error(`Provider ${provider} does not support card creation`);
+    }
+    return adapter.createCard(cardData);
+  }
+
+  async create3DSSession(provider: string, sessionData: any) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.create3DSSession) {
+      throw new Error(`Provider ${provider} does not support 3DS sessions`);
+    }
+    return adapter.create3DSSession(sessionData);
+  }
+
   /**
    * Search for locations (cities/airports) across providers
    */

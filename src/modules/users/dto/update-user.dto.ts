@@ -50,6 +50,20 @@ export class UpdateUserDto {
   @IsOptional()
   @IsBoolean()
   pushNotifications?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  twoFactorEnabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  agencyName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  agentProfile?: Record<string, any>;
 }
 
 export class UpdateUserRoleDto {

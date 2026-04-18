@@ -1,25 +1,41 @@
 // src/modules/upload/upload.service.ts
 import { Injectable, BadRequestException, Logger } from "@nestjs/common";
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import { ConfigService } from "@nestjs/config";
-import * as streamifier from "streamifier";
 
 @Injectable()
 export class UploadService {
   private readonly logger = new Logger(UploadService.name);
+  private readonly s3Client: S3Client;
+  private readonly bucketName: string;
+  private readonly region: string;
 
   constructor(private configService: ConfigService) {
-    cloudinary.config({
-      cloud_name: this.configService.get("CLOUDINARY_CLOUD_NAME"),
-      api_key: this.configService.get("CLOUDINARY_API_KEY"),
-      api_secret: this.configService.get("CLOUDINARY_API_SECRET"),
+    this.region = this.configService.get<string>("AWS_REGION", "us-east-2");
+    this.bucketName = this.configService.get<string>("AWS_S3_BUCKET_NAME", "flybeth");
+    
+    const accessKeyId = this.configService.get<string>("AWS_ACCESS_KEY_ID");
+    const secretAccessKey = this.configService.get<string>("AWS_SECRET_ACCESS_KEY");
+
+    if (!accessKeyId || !secretAccessKey) {
+      this.logger.error("AWS credentials are missing. S3 uploads will fail.");
+    }
+
+    this.s3Client = new S3Client({
+      region: this.region,
+      credentials: {
+        accessKeyId: accessKeyId || "",
+        secretAccessKey: secretAccessKey || "",
+      },
     });
   }
 
   async uploadImage(
     file: Express.Multer.File,
     folder: string = "general",
-  ): Promise<{ url: string; publicId: string; width: number; height: number }> {
+    metadata?: { label?: string; category?: string },
+  ): Promise<{ url: string; publicId: string }> {
     if (!file) throw new BadRequestException("No file provided");
 
     const allowedTypes = [
@@ -41,34 +57,13 @@ export class UploadService {
       throw new BadRequestException("File size exceeds 25MB limit");
     }
 
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `flight-booking/${folder}`,
-          resource_type: "auto",
-        },
-        (error, result: UploadApiResponse) => {
-          if (error) {
-            this.logger.error(`Upload failed: ${error.message}`);
-            reject(new BadRequestException("File upload failed"));
-          } else {
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-              width: result.width,
-              height: result.height,
-            });
-          }
-        },
-      );
-
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
-    });
+    return this.uploadToS3(file, folder, metadata);
   }
 
   async uploadDocument(
     file: Express.Multer.File,
     folder: string = "documents",
+    metadata?: { label?: string; category?: string },
   ): Promise<{ url: string; publicId: string }> {
     if (!file) throw new BadRequestException("No file provided");
 
@@ -91,57 +86,81 @@ export class UploadService {
       throw new BadRequestException("File size exceeds 25MB limit");
     }
 
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `flight-booking/${folder}`,
-          resource_type: "auto",
-        },
-        (error, result: UploadApiResponse) => {
-          if (error) {
-            this.logger.error(`Document upload failed: ${error.message}`);
-            reject(new BadRequestException("Document upload failed"));
-          } else {
-            resolve({
-              url: result.secure_url,
-              publicId: result.public_id,
-            });
-          }
-        },
-      );
+    return this.uploadToS3(file, folder, metadata);
+  }
 
-      streamifier.createReadStream(file.buffer).pipe(uploadStream);
-    });
+  private async uploadToS3(
+    file: Express.Multer.File,
+    folder: string,
+    metadata?: { label?: string; category?: string },
+  ): Promise<{ url: string; publicId: string }> {
+    const filename = `${Date.now()}-${file.originalname.replace(/\s+/g, "-")}`;
+    const key = `flight-booking/${folder}/${filename}`;
+
+    const s3Metadata: Record<string, string> = {};
+    if (metadata?.label) s3Metadata.label = metadata.label;
+    if (metadata?.category) s3Metadata.category = metadata.category;
+
+    try {
+      const upload = new Upload({
+        client: this.s3Client,
+        params: {
+          Bucket: this.bucketName,
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          Metadata: s3Metadata,
+        },
+      });
+
+      await upload.done();
+
+      // Construct the URL. If the bucket is not public, you'd need signed URLs.
+      // Assuming public bucket based on Cloudinary replacement.
+      const url = `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${key}`;
+
+      return {
+        url,
+        publicId: key,
+      };
+    } catch (error: any) {
+      this.logger.error(`S3 Upload failed: ${error.message}`);
+      throw new BadRequestException("File upload failed");
+    }
   }
 
   async deleteFile(publicId: string): Promise<void> {
     try {
-      await cloudinary.uploader.destroy(publicId);
-      this.logger.log(`File deleted: ${publicId}`);
+      const command = new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: publicId,
+      });
+      await this.s3Client.send(command);
+      this.logger.log(`File deleted from S3: ${publicId}`);
     } catch (error: any) {
-      this.logger.error(`Delete failed: ${error.message}`);
+      this.logger.error(`S3 Delete failed: ${error.message}`);
       throw new BadRequestException("File deletion failed");
     }
   }
 
   async listFiles(folder?: string): Promise<any[]> {
     try {
-      const result = await cloudinary.api.resources({
-        type: "upload",
-        prefix: folder ? `flight-booking/${folder}` : "flight-booking/",
-        max_results: 500,
+      const prefix = folder ? `flight-booking/${folder}/` : "flight-booking/";
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        Prefix: prefix,
       });
 
-      return result.resources.map((resource: any) => ({
-        publicId: resource.public_id,
-        url: resource.secure_url,
-        format: resource.format,
-        size: resource.bytes,
-        createdAt: resource.created_at,
-        resourceType: resource.resource_type,
+      const result = await this.s3Client.send(command);
+
+      return (result.Contents || []).map((item: any) => ({
+        publicId: item.Key,
+        url: `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${item.Key}`,
+        size: item.Size,
+        createdAt: item.LastModified,
       }));
     } catch (error: any) {
-      this.logger.error(`Failed to list files: ${error.message}`);
+      this.logger.error(`S3 List failed: ${error.message}`);
       throw new BadRequestException("Failed to fetch storage items");
     }
   }

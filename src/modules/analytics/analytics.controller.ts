@@ -40,4 +40,11 @@ export class AnalyticsController {
   ) {
     return this.analyticsService.getPopularRoutes(limit, tenantId);
   }
+
+  @Get("agent")
+  @Roles(Role.AGENT, Role.TENANT_ADMIN)
+  @ApiOperation({ summary: "Get high-level agent dashboard stats" })
+  getAgentStats(@Query("tenantId") tenantId: string) {
+    return this.analyticsService.getAgentStats(tenantId);
+  }
 }

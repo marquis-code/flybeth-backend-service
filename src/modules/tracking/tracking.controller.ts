@@ -26,6 +26,7 @@ export class TrackingController {
       body.metadata,
       req.ip,
       req.headers["user-agent"],
+      body.roomId,
     );
   }
 

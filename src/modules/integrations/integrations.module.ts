@@ -1,7 +1,8 @@
 // src/modules/integrations/integrations.module.ts
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ConfigModule } from "@nestjs/config";
+import { UsersModule } from "../users/users.module";
 
 // Schemas
 import {
@@ -30,9 +31,11 @@ import { HotelbedsHelperService } from "./providers/hotelbeds-helper.service";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
+import { DuffelIdentityService } from "./duffel-identity.service";
 // Controller
 import { ProviderConfigController } from "./provider-config.controller";
 import { MarketInsightsController } from "./market-insights.controller";
+import { DuffelIdentityController } from "./duffel-identity.controller";
 
 @Module({
   imports: [
@@ -43,8 +46,9 @@ import { MarketInsightsController } from "./market-insights.controller";
         schema: FlightProviderConfigSchema,
       },
     ]),
+    forwardRef(() => UsersModule),
   ],
-  controllers: [ProviderConfigController, MarketInsightsController],
+  controllers: [ProviderConfigController, MarketInsightsController, DuffelIdentityController],
   providers: [
     // Config
     ProviderConfigService,
@@ -56,6 +60,7 @@ import { MarketInsightsController } from "./market-insights.controller";
     // Flight providers
     AmadeusProvider,
     DuffelProvider,
+    DuffelIdentityService,
 
     // Stays providers
     DuffelStaysProvider,
@@ -87,6 +92,7 @@ import { MarketInsightsController } from "./market-insights.controller";
     AmadeusMarketInsightsService,
     ProviderConfigService,
     AmadeusHelperService,
+    DuffelIdentityService,
   ],
 })
 export class IntegrationsModule {}

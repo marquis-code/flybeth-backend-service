@@ -21,6 +21,8 @@ import {
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate } from "../../common/utils/pagination.util";
 import { ResendService } from "./resend.service";
+import { forwardRef, Inject } from "@nestjs/common";
+import { ChatGateway } from "../chat/chat.gateway";
 
 @Injectable()
 export class NotificationsService {
@@ -34,6 +36,8 @@ export class NotificationsService {
     private configService: ConfigService,
     private resendService: ResendService,
     @InjectQueue("email-queue") private emailQueue: Queue,
+    @Inject(forwardRef(() => ChatGateway))
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async createNotification(params: {
@@ -55,7 +59,12 @@ export class NotificationsService {
       channel: params.channel || NotificationChannel.IN_APP,
     });
 
-    return notification.save();
+    const saved = await notification.save();
+    
+    // Broadcast to user in real-time
+    this.chatGateway.sendNotificationToUser(params.userId, saved);
+
+    return saved;
   }
 
   async sendEmail(
@@ -259,7 +268,7 @@ export class NotificationsService {
 
   async sendAgentWelcomeEmail(email: string, firstName: string): Promise<void> {
     const title = "Welcome to the Platform 🚀";
-    const logoUrl = "https://res.cloudinary.com/marquis/image/upload/v1775916479/logo_aqftpd.png";
+    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://flybeth.s3.us-east-2.amazonaws.com/logo.png";
     const content = `
       <div style="background-color: #f8fafc; padding: 20px; font-family: 'Inter', -apple-system, sans-serif;">
         <div style="background-color: #ffffff; max-width: 640px; margin: 0 auto; border-radius: 32px; overflow: hidden; box-shadow: 0 30px 60px rgba(13, 29, 173, 0.08); border: 1px solid #f1f5f9;">

@@ -7,6 +7,9 @@ import compression from "compression";
 import helmet from "helmet";
 import { AppModule } from "./app.module";
 import cookieParser from "cookie-parser";
+import { UsersService } from "./modules/users/users.service";
+import { AccessControlService } from "./modules/access-control/access-control.service";
+import { hashPassword } from "./common/utils/crypto.util";
 
 async function bootstrap() {
   const logger = new Logger("Bootstrap");
@@ -34,6 +37,7 @@ async function bootstrap() {
       "/auth",
       "/users",
       "/bookings",
+      "/chat",
     ];
 
     const needsPrefix =
@@ -51,18 +55,20 @@ async function bootstrap() {
   });
 
   // Security middleware
+  // Security middleware - loosened for cross-origin flexibility
   app.use(
     helmet({
-      crossOriginResourcePolicy: { policy: "cross-origin" },
-      crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+      crossOriginResourcePolicy: false,
+      crossOriginOpenerPolicy: false,
+      contentSecurityPolicy: false,
     }),
   );
   app.use(compression());
   app.use(cookieParser());
 
-  // CORS - Aggressive settings for production and development
+  // CORS - Aggressive settings to allow all origins with credentials
   app.enableCors({
-    origin: (origin, callback) => callback(null, true),
+    origin: true,
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
     allowedHeaders: [
@@ -72,6 +78,9 @@ async function bootstrap() {
       "X-Tenant-ID",
       "X-Requested-With",
       "x-captcha-token",
+      "Cache-Control",
+      "Pragma",
+      "Expires"
     ],
     exposedHeaders: ["set-cookie"],
     preflightContinue: false,
@@ -128,6 +137,17 @@ async function bootstrap() {
     .addTag("Admin", "Admin Dashboard")
     .addTag("Analytics", "Business Analytics")
     .build();
+
+  // Aggressive Admin Seed: Ensure the requested admin exists
+  const usersService = app.get(UsersService);
+  try {
+    const adminEmail = "abahmarquis@gmail.com";
+    const adminPass = "Miles1999@";
+    logger.log(`[Seed] Synchronizing admin user: ${adminEmail}`);
+    await usersService.syncAdminUser(adminEmail, adminPass, 'super_admin');
+  } catch (err) {
+    logger.error(`[Seed] Failed to seed admin: ${err.message}`);
+  }
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup("docs", app, document, {

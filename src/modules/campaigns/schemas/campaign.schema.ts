@@ -14,7 +14,7 @@ export class Campaign {
   @Prop({ required: true })
   content: string;
 
-  @Prop({ default: "draft", enum: ["draft", "scheduled", "sent", "failed"] })
+  @Prop({ default: "draft", enum: ["draft", "scheduled", "queued", "sent", "failed"] })
   status: string;
 
   @Prop()

@@ -44,7 +44,9 @@ export class FlightsController {
       "Searches all active airline providers concurrently and returns aggregated results sorted by lowest price including commission.",
   })
   searchLive(@Body() searchDto: LiveFlightSearchDto, @Req() req: any) {
-    const userRole = req.user?.role || 'customer';
+    const userRole = req.user?.role || "customer";
+    const customerId = req.user?.duffelCustomerId;
+
     return this.flightsIntegrationService.search({
       origin: searchDto.origin,
       destination: searchDto.destination,
@@ -55,7 +57,8 @@ export class FlightsController {
       infants: searchDto.infants || 0,
       class: searchDto.cabinClass,
       maxConnections: searchDto.maxStops,
-      userRole, // Passed for commission calculation
+      userRole,
+      customerId,
     });
   }
 
@@ -108,7 +111,7 @@ export class FlightsController {
   @Public()
   @Post("book")
   @ApiOperation({
-    summary: "Book a flight through a live provider",
+    summary: "Book a flight through a live provider (Instant Booking)",
   })
   bookFlight(@Body() bookDto: BookFlightDto) {
     return this.flightsIntegrationService.bookFlight(
@@ -118,6 +121,50 @@ export class FlightsController {
       bookDto.payment,
       bookDto.offer,
     );
+  }
+
+  @Public()
+  @Post("hold")
+  @ApiOperation({
+    summary: "Create a hold order (Reserve now, pay later)",
+  })
+  holdFlight(@Body() bookDto: BookFlightDto) {
+    return this.flightsIntegrationService.createHoldOrder(
+      bookDto.provider,
+      bookDto.offerId,
+      bookDto.passengers,
+    );
+  }
+
+  @Public()
+  @Post("pay-hold")
+  @ApiOperation({
+    summary: "Pay for a previously created hold order",
+  })
+  payForHold(@Body() payload: { provider: string; orderId: string; payment: any }) {
+    return this.flightsIntegrationService.payForOrder(
+      payload.provider,
+      payload.orderId,
+      payload.payment,
+    );
+  }
+
+  @Public()
+  @Post("payments/cards")
+  @ApiOperation({
+    summary: "Create a card in the provider's PCI vault",
+  })
+  createCard(@Body() payload: { provider: string; cardData: any }) {
+    return this.flightsIntegrationService.createCard(payload.provider, payload.cardData);
+  }
+
+  @Public()
+  @Post("payments/3ds")
+  @ApiOperation({
+    summary: "Create a 3DS secure session for a card",
+  })
+  create3DSSession(@Body() payload: { provider: string; sessionData: any }) {
+    return this.flightsIntegrationService.create3DSSession(payload.provider, payload.sessionData);
   }
 
   @Public()

@@ -189,14 +189,17 @@ export class User {
   @Prop({ default: 0 })
   failedLoginAttempts: number;
 
-  @Prop()
-  lockUntil: Date;
+  @Prop({ type: Date })
+  lockUntil: Date | null;
 
   @Prop({ type: [String], default: [] })
   lastLoginIps: string[];
 
   @Prop({ type: [String], default: [] })
   lastLoginDevices: string[];
+
+  @Prop()
+  duffelCustomerId: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

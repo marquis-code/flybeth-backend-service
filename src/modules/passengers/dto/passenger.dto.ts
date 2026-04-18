@@ -61,6 +61,15 @@ export class CreatePassengerDto {
   @IsOptional()
   @IsEnum(["adult", "child", "infant"])
   type?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  profilePicture?: string;
+
+  @ApiPropertyOptional({ type: [Object] })
+  @IsOptional()
+  documents?: any[];
 }
 
 export class UpdatePassengerDto extends CreatePassengerDto {}

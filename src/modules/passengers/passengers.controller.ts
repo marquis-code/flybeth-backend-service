@@ -32,6 +32,12 @@ export class PassengersController {
     return this.passengersService.findByUser(userId);
   }
 
+  @Get("stats")
+  @ApiOperation({ summary: "Get saved traveler statistics" })
+  getStats(@CurrentUser("_id") userId: string) {
+    return this.passengersService.getStats(userId);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get traveler by ID" })
   findOne(@Param("id", MongoIdValidationPipe) id: string) {

@@ -51,4 +51,15 @@ export class PassengersService {
       .exec();
     if (!result) throw new NotFoundException("Passenger not found");
   }
+
+  async getStats(userId: string) {
+    const passengers = await this.passengerModel.find({ user: userId }).exec();
+    
+    return {
+      total: passengers.length,
+      adults: passengers.filter(p => p.type === 'adult').length,
+      children: passengers.filter(p => p.type === 'child').length,
+      infants: passengers.filter(p => p.type === 'infant').length,
+    };
+  }
 }

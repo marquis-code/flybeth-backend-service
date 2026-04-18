@@ -9,7 +9,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { User, UserDocument } from "./schemas/user.schema";
 import { NotificationsService } from "../notifications/notifications.service";
-import { AgentStatus } from "../../common/constants/roles.constant";
+import { AgentStatus, Role } from "../../common/constants/roles.constant";
 import {
   UpdateUserDto,
   UpdateUserRoleDto,
@@ -88,10 +88,18 @@ export class UsersService {
   async findAll(
     paginationDto: PaginationDto,
     queryDto?: UserQueryDto,
+    currentUser?: any
   ): Promise<PaginatedResult<UserDocument>> {
     const query: any = {};
 
-    if (queryDto?.tenant) query.tenant = queryDto.tenant;
+    // Auto-isolate by tenant for non-SUPER_ADMINS
+    if (currentUser && currentUser.role?.name !== Role.SUPER_ADMIN) {
+       if (currentUser.tenant) {
+          query.tenant = currentUser.tenant._id || currentUser.tenant;
+       }
+    } else if (queryDto?.tenant) {
+       query.tenant = queryDto.tenant;
+    }
     
     if (queryDto?.role) {
        if (typeof queryDto.role === 'string') {
@@ -148,6 +156,18 @@ export class UsersService {
     if (updateUserDto.pushNotifications !== undefined) {
       updateData["preferences.pushNotifications"] =
         updateUserDto.pushNotifications;
+    }
+    if (updateUserDto.twoFactorEnabled !== undefined) {
+      updateData.twoFactorEnabled = updateUserDto.twoFactorEnabled;
+    }
+    if (updateUserDto.agencyName) updateData.agencyName = updateUserDto.agencyName;
+    if (updateUserDto.agentProfile) {
+      const keys = ['registrationNumber', 'country', 'businessAddress', 'website', 'whatsappNumber', 'billingAddress'];
+      for (const k of keys) {
+        if (updateUserDto.agentProfile[k] !== undefined) {
+          updateData[`agentProfile.${k}`] = updateUserDto.agentProfile[k];
+        }
+      }
     }
 
     const user = await this.userModel
@@ -280,12 +300,12 @@ export class UsersService {
 
     // Success
     await this.userModel.findByIdAndUpdate(user._id, {
-      $set: { isVerified: true },
+      $set: { isVerified: true, firstLogin: false },
       $unset: { otp: 1, otpExpiry: 1 }
     }).exec();
 
     this.logger.log(`[OTP-STRICT] SUCCESS: ${normalizedEmail}`);
-    return user;
+    return this.findByEmail(normalizedEmail);
   }
 
   async setResetToken(email: string, token: string): Promise<void> {
@@ -385,5 +405,79 @@ export class UsersService {
     }
 
     return updatedUser;
+  }
+
+  async saveDuffelCustomerId(userId: string, customerId: string): Promise<UserDocument> {
+    const user = await this.userModel.findByIdAndUpdate(userId, { duffelCustomerId: customerId }, { new: true }).exec();
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+    return user;
+  }
+
+  async findAdmins(): Promise<UserDocument[]> {
+    // Resolve admin-level role IDs
+    const superAdminRole = await this.accessControlService.findRoleByName('super_admin');
+    const tenantAdminRole = await this.accessControlService.findRoleByName('tenant_admin');
+    const staffRole = await this.accessControlService.findRoleByName('staff');
+
+    const adminRoleIds = [
+      superAdminRole?._id,
+      tenantAdminRole?._id,
+      staffRole?._id
+    ].filter(id => !!id);
+
+    return this.userModel.find({
+      role: { $in: adminRoleIds },
+      isActive: true
+    })
+    .select('firstName lastName avatar role email')
+    .limit(10)
+    .exec();
+  }
+
+  async syncAdminUser(email: string, password?: string, roleName?: string): Promise<void> {
+    this.logger.log(`[SyncAdmin] Start for ${email}`);
+    const user = await this.userModel.findOne({ email: email.toLowerCase() });
+    const updateData: any = { 
+      isActive: true, 
+      isVerified: true,
+      failedLoginAttempts: 0,
+      lockUntil: null
+    };
+    
+    if (password) {
+      updateData.password = await hashPassword(password);
+      this.logger.debug(`[SyncAdmin] Password update scheduled for ${email}`);
+    }
+    
+    if (roleName) {
+      const role = await this.accessControlService.findRoleByName(roleName);
+      if (role) {
+        updateData.role = role._id;
+        this.logger.debug(`[SyncAdmin] Role assigned: ${roleName} (${role._id})`);
+      } else {
+        this.logger.warn(`[SyncAdmin] Role NOT found: ${roleName}`);
+      }
+    }
+
+    if (user) {
+      this.logger.log(`[SyncAdmin] Updating existing user: ${user._id}`);
+      await this.userModel.findByIdAndUpdate(user._id, { $set: updateData });
+    } else if (roleName && password) {
+      this.logger.log(`[SyncAdmin] Creating new admin user: ${email}`);
+      await this.create({
+        email,
+        password,
+        firstName: "Admin",
+        lastName: "User",
+        role: roleName,
+        isActive: true,
+        isVerified: true,
+        failedLoginAttempts: 0,
+        lockUntil: null
+      });
+    }
+    this.logger.log(`[SyncAdmin] Completed synchronization for ${email}`);
   }
 }

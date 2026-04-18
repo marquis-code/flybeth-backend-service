@@ -58,4 +58,12 @@ export class PackagesService {
     if (!pkg) throw new NotFoundException("Package not found");
     return pkg as unknown as PackageDocument;
   }
+
+  async update(id: string, data: any): Promise<PackageDocument> {
+    const updated = await this.packageModel
+        .findByIdAndUpdate(id, { $set: data }, { new: true })
+        .exec();
+    if (!updated) throw new NotFoundException('Package not found');
+    return updated as unknown as PackageDocument;
+  }
 }

@@ -2,6 +2,7 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Body,
   Param,
@@ -30,6 +31,21 @@ import { MongoIdValidationPipe } from "../../common/pipes/mongo-id-validation.pi
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @Post()
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT)
+  @ApiOperation({ summary: "Create a new user (Admin/Agent only)" })
+  create(@Body() createUserDto: any, @CurrentUser("tenant") tenantId: string) {
+    if (tenantId) createUserDto.tenant = tenantId;
+    return this.usersService.create({ ...createUserDto, isVerified: true, firstLogin: false });
+  }
+
+  @Get("admins")
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT, Role.STAFF)
+  @ApiOperation({ summary: "Get all administrative users for support" })
+  findAdmins() {
+    return this.usersService.findAdmins();
+  }
+
   @Get("me")
   @ApiOperation({ summary: "Get current authenticated user profile" })
   getProfile(@CurrentUser("_id") userId: string) {
@@ -46,13 +62,14 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
-  @ApiOperation({ summary: "List all users (Admin only)" })
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT)
+  @ApiOperation({ summary: "List all users (Admin/Agent only)" })
   findAll(
     @Query() paginationDto: PaginationDto,
     @Query() queryDto: UserQueryDto,
+    @CurrentUser() user: any,
   ) {
-    return this.usersService.findAll(paginationDto, queryDto);
+    return this.usersService.findAll(paginationDto, queryDto, user);
   }
 
   @Get(":id")

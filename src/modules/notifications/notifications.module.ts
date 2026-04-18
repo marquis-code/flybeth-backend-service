@@ -15,6 +15,9 @@ import { ResendService } from "./resend.service";
 import { BullModule } from "@nestjs/bull";
 import { EmailProcessor } from "./email.processor";
 
+import { forwardRef } from "@nestjs/common";
+import { ChatModule } from "../chat/chat.module";
+
 @Global()
 @Module({
   imports: [
@@ -25,6 +28,7 @@ import { EmailProcessor } from "./email.processor";
     BullModule.registerQueue({
       name: "email-queue",
     }),
+    forwardRef(() => ChatModule),
   ],
   controllers: [NotificationsController],
   providers: [NotificationsService, ResendService, EmailProcessor],
