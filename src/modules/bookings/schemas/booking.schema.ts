@@ -111,6 +111,15 @@ export class BookingPricing {
   @Prop({ required: true, default: "USD" })
   currency: string;
 
+  @Prop({ default: 0 })
+  agentServiceFee: number;
+
+  @Prop({ default: 0 })
+  adultMarkup: number;
+
+  @Prop({ default: 0 })
+  insuranceAmount: number;
+
   @Prop()
   originalCurrency: string;
 
@@ -212,6 +221,12 @@ export class Booking {
 
   @Prop({ default: false })
   reminderSent: boolean;
+
+  @Prop({ enum: ['pay_now', 'on_hold'], default: 'pay_now' })
+  paymentModel: string;
+
+  @Prop({ default: false })
+  hasInsurance: boolean;
 
   // Security & Fraud tracking
   @Prop()

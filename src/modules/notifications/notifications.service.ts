@@ -72,6 +72,7 @@ export class NotificationsService {
     subject: string,
     html: string,
     variables?: Record<string, any>,
+    attachments?: Array<{ filename: string; content: Buffer }>,
   ): Promise<void> {
     try {
       await this.emailQueue.add(
@@ -81,6 +82,7 @@ export class NotificationsService {
           subject,
           html,
           variables,
+          attachments,
         },
         {
           attempts: 3,

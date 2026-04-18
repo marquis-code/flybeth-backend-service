@@ -22,6 +22,7 @@ import { PackagesService } from "../packages/packages.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { FraudService } from "../fraud/fraud.service";
 import { SystemConfigService } from "../system-config/system-config.service";
+import { InvoiceService } from "./invoice.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
 import { generatePNR } from "../../common/utils/crypto.util";
@@ -45,6 +46,7 @@ export class BookingsService {
     private notificationsService: NotificationsService,
     private fraudService: FraudService,
     private configService: SystemConfigService,
+    private invoiceService: InvoiceService,
   ) {}
 
   async create(
@@ -245,7 +247,12 @@ export class BookingsService {
         0,
       ) || 0);
 
-    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup - discount;
+    const agentServiceFee = createBookingDto.agentServiceFee || 0;
+    const adultMarkup = createBookingDto.adultMarkup || 0;
+    const hasInsurance = createBookingDto.hasInsurance || false;
+    const insuranceAmount = hasInsurance ? 25 * totalPassengers : 0; // Fixed $25 per passenger for demo
+
+    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (createBookingDto.flights?.[0]?.passengerIds?.length || 1)) + insuranceAmount - discount;
 
     const booking = new this.bookingModel({
       pnr: pnr.toUpperCase(),
@@ -266,12 +273,19 @@ export class BookingsService {
         taxes: totalTaxes,
         fees: 0,
         tenantMarkup,
+        agentServiceFee,
+        adultMarkup,
+        insuranceAmount,
         discount,
         totalAmount,
         currency: createBookingDto.currency || "USD",
       },
-      payment: { status: PaymentStatus.PENDING },
-      status: BookingStatus.PENDING,
+      payment: { 
+        status: createBookingDto.paymentModel === 'on_hold' ? PaymentStatus.PENDING : PaymentStatus.PENDING 
+      },
+      status: createBookingDto.paymentModel === 'on_hold' ? BookingStatus.PENDING : BookingStatus.PENDING,
+      paymentModel: createBookingDto.paymentModel || 'pay_now',
+      hasInsurance,
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 min expiry
       totalPassengers,
       isRoundTrip: createBookingDto.isRoundTrip || false,
@@ -283,6 +297,12 @@ export class BookingsService {
     });
 
     const saved = await booking.save();
+    const populated = await this.findById(saved._id.toString());
+
+    // Send notifications
+    this.sendAgentBookingNotifications(populated).catch(err => {
+        this.logger.error(`Failed to send booking notifications for ${populated.pnr}: ${err.message}`);
+    });
 
     // Calculate risk score asynchronously (but we'll wait or use a hook)
     this.fraudService.calculateRiskScore(saved._id.toString()).catch((err) => {
@@ -593,5 +613,50 @@ export class BookingsService {
       },
       tenantId: params.tenantId,
     });
+  }
+
+  private async sendAgentBookingNotifications(booking: BookingDocument) {
+    const adminEmail = this.configService.get("ADMIN_EMAIL") || "admin@flybeth.com";
+    const agentEmail = (booking.user as any).email;
+    const agentName = (booking.user as any).firstName;
+
+    // Generate PDF Invoice
+    const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking);
+
+    // 1. Notify Admin
+    const adminSubject = `New Agent Booking: ${booking.pnr}`;
+    const adminHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>New Booking Alert</h2>
+            <p><strong>Agent:</strong> ${agentName} (${agentEmail})</p>
+            <p><strong>PNR:</strong> ${booking.pnr}</p>
+            <p><strong>Total Amount:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
+            <p><strong>Payment Model:</strong> ${booking.paymentModel}</p>
+            <hr />
+            <p>Log in to the admin dashboard to view full details.</p>
+        </div>
+    `;
+    await this.notificationsService.sendEmail(adminEmail, adminSubject, adminHtml);
+
+    // 2. Notify Agent with Invoice
+    const agentSubject = `Booking Received: ${booking.pnr} - Flybeth Agent`;
+    const agentHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Booking Confirmation</h2>
+            <p>Hi ${agentName},</p>
+            <p>Your booking <strong>${booking.pnr}</strong> has been successfully received. We have attached the invoice for your records.</p>
+            <p><strong>Status:</strong> ${booking.status.toUpperCase()}</p>
+            <p><strong>Total:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
+            <br />
+            <p>Thank you for partnering with Flybeth!</p>
+        </div>
+    `;
+    await this.notificationsService.sendEmail(
+        agentEmail, 
+        agentSubject, 
+        agentHtml, 
+        {}, 
+        [{ filename: `Invoice_${booking.pnr}.pdf`, content: pdfBuffer }]
+    );
   }
 }

@@ -162,7 +162,7 @@ export class UsersService {
     }
     if (updateUserDto.agencyName) updateData.agencyName = updateUserDto.agencyName;
     if (updateUserDto.agentProfile) {
-      const keys = ['registrationNumber', 'country', 'businessAddress', 'website', 'whatsappNumber', 'billingAddress'];
+      const keys = ['registrationNumber', 'country', 'businessAddress', 'website', 'whatsappNumber', 'billingAddress', 'agencyLogo'];
       for (const k of keys) {
         if (updateUserDto.agentProfile[k] !== undefined) {
           updateData[`agentProfile.${k}`] = updateUserDto.agentProfile[k];

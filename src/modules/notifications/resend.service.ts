@@ -29,6 +29,7 @@ export class ResendService {
     from?: string;
     text?: string;
     variables?: Record<string, any>;
+    attachments?: Array<{ filename: string; content: any }>;
   }): Promise<any> {
     try {
       const from = params.from || this.defaultFrom;
@@ -53,6 +54,7 @@ export class ResendService {
         subject: finalSubject,
         html: finalHtml,
         text: finalText,
+        attachments: params.attachments,
       });
 
       if (response.error) {

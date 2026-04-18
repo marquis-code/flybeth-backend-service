@@ -187,6 +187,26 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   userAgent?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  agentServiceFee?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  adultMarkup?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  hasInsurance?: boolean;
+
+  @ApiPropertyOptional({ enum: ['pay_now', 'on_hold'] })
+  @IsOptional()
+  @IsString()
+  paymentModel?: string;
 }
 
 export class CancelBookingDto {

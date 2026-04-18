@@ -13,6 +13,8 @@ import { PackagesModule } from "../packages/packages.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { FraudModule } from "../fraud/fraud.module";
 
+import { InvoiceService } from "./invoice.service";
+
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
@@ -26,7 +28,7 @@ import { FraudModule } from "../fraud/fraud.module";
     FraudModule,
   ],
   controllers: [BookingsController],
-  providers: [BookingsService],
+  providers: [BookingsService, InvoiceService],
   exports: [BookingsService],
 })
 export class BookingsModule {}
