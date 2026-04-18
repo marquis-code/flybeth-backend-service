@@ -85,12 +85,14 @@ export class AgentProfile {
   @Prop()
   kycFeedback: string;
 
-  // Payment & Billing
   @Prop({ type: Object })
   bankAccountDetails: Record<string, any>;
 
   @Prop()
   billingAddress: string;
+
+  @Prop()
+  agencyLogo: string;
 }
 
 @Schema({ timestamps: true, collection: "users" })

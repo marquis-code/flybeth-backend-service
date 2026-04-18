@@ -107,41 +107,41 @@ export class NotificationsService {
   }): Promise<void> {
     const title = "Your Journey is Confirmed! ✈️";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&q=80&w=800" alt="Flight" style="width: 100%; height: 260px; object-fit: cover; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.1);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&q=80&w=1200" alt="Flight" style="width: 100%; height: 280px; object-fit: cover; border-radius: 24px; margin-bottom: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.15);" />
       </div>
 
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${params.firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">The world is waiting for you! We are excited to firmly confirm that your flight booking has been successfully processed and definitively ticketed.</p>
+      <p style="font-size: 19px; color: #1e293b; font-weight: 500;">Hi <strong>${params.firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">The world is waiting for you! We are delighted to confirm that your flight booking has been successfully processed and ticketed.</p>
       
-      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 24px; padding: 40px; margin: 40px 0; position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8);">
-        <div style="position: absolute; top: 0; right: 0; width: 140px; height: 140px; background: #FF3D00; opacity: 0.04; border-radius: 0 0 0 100%;"></div>
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 32px; padding: 45px; margin: 40px 0; position: relative; overflow: hidden; box-shadow: inset 0 2px 4px rgba(255,255,255,0.8);">
+        <div style="position: absolute; top: 0; right: 0; width: 160px; height: 160px; background: #0D1DAD; opacity: 0.03; border-radius: 0 0 0 100%;"></div>
         
-        <div style="margin-bottom: 30px;">
-          <h3 style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.25em; margin: 0 0 10px 0; font-weight: 800;">Booking Reference (PNR)</h3>
-          <p style="color: #0D1DAD; font-size: 48px; font-weight: 900; margin: 0; font-family: 'Inter', sans-serif; letter-spacing: -2px; text-shadow: 2px 2px 0px rgba(13,29,173,0.1);">${params.pnr}</p>
+        <div style="margin-bottom: 35px;">
+          <h3 style="color: #64748b; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3em; margin: 0 0 15px 0; font-weight: 800;">Booking Reference (PNR)</h3>
+          <p style="color: #0D1DAD; font-size: 56px; font-weight: 900; margin: 0; letter-spacing: -2px; text-shadow: 2px 2px 0px rgba(13,29,173,0.05);">${params.pnr}</p>
         </div>
         
-        <div style="border-top: 1px dashed #cbd5e1; padding-top: 30px; display: grid; gap: 25px;">
+        <div style="border-top: 1px dashed #cbd5e1; padding-top: 35px; display: grid; gap: 30px;">
           <div>
-            <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 800;">Flight Route Overview</p>
-            <p style="margin: 0; color: #1e293b; font-size: 18px; font-weight: 700;">${params.flightDetails}</p>
+            <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800;">Flight Route Overview</p>
+            <p style="margin: 0; color: #1e293b; font-size: 20px; font-weight: 700;">${params.flightDetails}</p>
           </div>
           <div>
-            <p style="margin: 0 0 8px 0; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 800;">Total Settlement Paid</p>
-            <p style="margin: 0; color: #FF3D00; font-size: 26px; font-weight: 900;">${params.currency} ${params.totalAmount.toLocaleString()}</p>
+            <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800;">Total Settlement Paid</p>
+            <p style="margin: 0; color: #FF3D00; font-size: 28px; font-weight: 900;">${params.currency} ${params.totalAmount.toLocaleString()}</p>
           </div>
         </div>
       </div>
       
       <div class="action-area" style="text-align: center;">
-        <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" class="btn" style="background: linear-gradient(135deg, #FF3D00 0%, #cc3100 100%);">Access Digital Boarding Dashboard</a>
+        <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" class="btn">View Boarding Pass</a>
       </div>
 
-      <div style="background: #fffaf0; border-radius: 16px; padding: 25px; border: 1px solid #ffedd5; margin-top: 40px; display: flex; gap: 15px; align-items: start;">
-        <span style="font-size: 24px;">💡</span>
-        <p style="margin: 0; font-size: 14px; color: #9a3412; line-height: 1.6;">
-          <strong>Pro Travel Tip:</strong> Ensure you have all necessary travel documents and visas ready for your destination. We strongly recommend arriving at the airport at least 3 hours prior to international departures. Safe travels!
+      <div style="background: #fffafb; border-radius: 20px; padding: 30px; border: 1px solid #fee2e2; margin-top: 45px; display: flex; gap: 20px; align-items: start;">
+        <span style="font-size: 28px;">✨</span>
+        <p style="margin: 0; font-size: 15px; color: #7f1d1d; line-height: 1.7;">
+          <strong>Traveler Wisdom:</strong> Please verify all passport requirements for your destination. We recommend arriving at the airport at least 3 hours prior to international departures.
         </p>
       </div>
     `;
@@ -156,36 +156,36 @@ export class NotificationsService {
   async sendWelcomeEmail(email: string, firstName: string): Promise<void> {
     const title = "Welcome to a New Era of Travel! 🌍";
     const content = `
-      <div style="text-align: center; margin-bottom: 35px;">
-        <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&q=80&w=800" alt="Travel" style="width: 100%; height: 260px; object-fit: cover; border-radius: 24px; margin-bottom: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&q=80&w=1200" alt="Travel" style="width: 100%; height: 300px; object-fit: cover; border-radius: 32px; margin-bottom: 35px; box-shadow: 0 25px 50px rgba(0,0,0,0.12);" />
       </div>
 
-      <p style="font-size: 18px; color: #1e293b; font-weight: 600;">Hi ${firstName},</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.7;">We're absolutely delighted to welcome you to the Flybeth family! Our mission is to make every journey feel effortless, premium, and truly unforgettable.</p>
+      <p style="font-size: 19px; color: #1e293b; font-weight: 600;">Hi ${firstName},</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">We're delighted to welcome you to the Flybeth family! Our mission is to make every journey feel effortless, premium, and truly unforgettable.</p>
       
-      <div style="margin: 45px 0; background-color: #f8fafc; border-radius: 24px; padding: 15px; border: 1px solid #f1f5f9;">
-        <div style="padding: 24px; margin-bottom: 15px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: start; gap: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-          <div style="width: 54px; height: 54px; background: #eff6ff; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px;">💎</div>
-          <div style="margin-left: 15px; flex-grow: 1;">
-            <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Elite Booking Inventory</p>
-            <p style="margin: 6px 0 0 0; color: #475569; font-size: 15px; line-height: 1.6;">Unlock massive global rates for flights and luxury accommodation seamlessly synced to your account.</p>
+      <div style="margin: 50px 0; background-color: #f8fafc; border-radius: 32px; padding: 20px; border: 1px solid #f1f5f9;">
+        <div style="padding: 30px; margin-bottom: 20px; background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; display: flex; align-items: start; gap: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+          <div style="width: 60px; height: 60px; background: rgba(13, 29, 173, 0.05); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 28px;">💎</div>
+          <div style="flex-grow: 1;">
+            <p style="margin: 0; color: #0D1DAD; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.15em;">Elite Inventory</p>
+            <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px; line-height: 1.6;">Unlock global rates for flights and luxury accommodation seamlessly synced to your account.</p>
           </div>
         </div>
         
-        <div style="padding: 24px; background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; display: flex; align-items: start; gap: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-          <div style="width: 54px; height: 54px; background: #fff5f5; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px;">⚡</div>
-          <div style="margin-left: 15px; flex-grow: 1;">
-            <p style="margin: 0; color: #FF3D00; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Seamless Intelligence</p>
-            <p style="margin: 6px 0 0 0; color: #475569; font-size: 15px; line-height: 1.6;">Manage your entire travel ecosystem from a single visually stunning dashboard customized just for you.</p>
+        <div style="padding: 30px; background: #ffffff; border-radius: 20px; border: 1px solid #e2e8f0; display: flex; align-items: start; gap: 20px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);">
+          <div style="width: 60px; height: 60px; background: rgba(255, 61, 0, 0.05); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 28px;">⚡</div>
+          <div style="flex-grow: 1;">
+            <p style="margin: 0; color: #FF3D00; font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.15em;">Seamless Design</p>
+            <p style="margin: 8px 0 0 0; color: #475569; font-size: 15px; line-height: 1.6;">Manage your entire travel ecosystem from a visually stunning dashboard customized just for you.</p>
           </div>
         </div>
       </div>
 
-      <div class="action-area" style="margin-top: 55px; text-align: center;">
-        <a href="${this.configService.get("CLIENT_URL")}/search" class="btn" style="background: #0f172a; padding: 22px 45px; border-radius: 100px;">Explore Your First Destination</a>
+      <div class="action-area" style="text-align: center;">
+        <a href="${this.configService.get("CLIENT_URL")}/search" class="btn">Discover Your Next Destination</a>
       </div>
       
-      <p style="text-align: center; font-size: 14px; color: #94a3b8; margin-top: 40px; font-weight: 500;">
+      <p style="text-align: center; font-size: 14px; color: #94a3b8; margin-top: 45px; font-weight: 500;">
         Thank you for choosing Flybeth. We can't wait to see where you go next!
       </p>
     `;
@@ -201,24 +201,24 @@ export class NotificationsService {
     firstName: string,
     otp: string,
   ): Promise<void> {
-    const title = "Zero-Trust Verification Code 🛡️";
+    const title = "Security Verification Code 🛡️";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&q=80&w=800" alt="Security" style="width: 100%; height: 180px; object-fit: cover; border-radius: 20px; margin-bottom: 25px;" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?auto=format&fit=crop&q=80&w=1200" alt="Security" style="width: 100%; height: 200px; object-fit: cover; border-radius: 24px; margin-bottom: 25px;" />
       </div>
       
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">For your absolute security and compliance tracking, please copy the following one-time password (OTP) to securely complete your digital authentication sequence to <strong>Flybeth</strong>.</p>
+      <p style="font-size: 19px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">To secure your digital session, please use the following one-time password (OTP) to complete your authentication to <strong>Flybeth</strong>.</p>
       
-      <div class="otp-card" style="background: url('https://www.transparenttextures.com/patterns/cubes.png') #f8fafc; padding: 50px 30px; text-align: center; border-radius: 24px; border: 2px dashed #0D1DAD; margin: 40px 0;">
-        <span class="otp-label" style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.25em; display: block; margin-bottom: 15px;">Secure Authentication Digest</span>
-        <span class="otp-code" style="font-size: 64px; font-weight: 900; letter-spacing: 12px; color: #0D1DAD; font-family: monospace;">${otp}</span>
+      <div style="background: #f8fafc; padding: 60px 30px; text-align: center; border-radius: 32px; border: 2px dashed #0D1DAD; margin: 45px 0;">
+        <span style="font-size: 12px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.3em; display: block; margin-bottom: 25px;">Secure Verification Digest</span>
+        <span style="font-size: 64px; font-weight: 900; letter-spacing: 16px; color: #0D1DAD; font-family: 'Outfit', monospace;">${otp}</span>
       </div>
       
-      <div style="background: #fff5f5; border-radius: 16px; padding: 25px; border: 1px solid #fee2e2; display: flex; gap: 15px; align-items: start;">
-        <span style="font-size: 24px;">🚨</span>
-        <p style="margin: 0; font-size: 14px; color: #b91c1c; line-height: 1.6;">
-          <strong>Security Note:</strong> This protocol code automatically destructs in 10 minutes. <strong>Never</strong> share this PIN with anyone remotely, including Flybeth staff. We will never explicitly ask for it.
+      <div style="background: #fff1f2; border-radius: 20px; padding: 30px; border: 1px solid #fecdd3; display: flex; gap: 20px; align-items: start;">
+        <span style="font-size: 28px;">🚨</span>
+        <p style="margin: 0; font-size: 15px; color: #9f1239; line-height: 1.7;">
+          <strong>Security Protocol:</strong> This code expires in 10 minutes. <strong>Never</strong> share this PIN with anyone, including Flybeth technicians.
         </p>
       </div>
     `;
@@ -234,30 +234,30 @@ export class NotificationsService {
     firstName: string,
     token: string,
   ): Promise<void> {
-    const title = "Password Reset Request";
+    const title = "Authentication Guard 🔒";
     const resetUrl = `${this.configService.get("CLIENT_URL")}/auth/reset-password?token=${token}`;
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="width: 80px; height: 80px; background: #fff1f2; border-radius: 100px; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto;">🔒</div>
+      <div style="text-align: center; margin-bottom: 40px;">
+        <div style="width: 100px; height: 100px; background: rgba(13, 29, 173, 0.05); border-radius: 100px; display: inline-flex; align-items: center; justify-content: center; font-size: 48px; margin: 0 auto;">🔒</div>
       </div>
 
-      <p>Hi ${firstName},</p>
-      <p>We received a request to reset the password for your Flybeth account. If you made this request, please click the button below to set a new password.</p>
+      <p style="font-size: 19px; color: #1e293b; font-weight: 600;">Hi ${firstName},</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">We received a request to reset the password for your Flybeth account. To proceed with setting a new credential, please click the secure link below.</p>
       
-      <div class="action-area" style="margin: 40px 0;">
+      <div class="action-area" style="text-align: center;">
         <a href="${resetUrl}" class="btn">Reset My Password</a>
       </div>
       
-      <p style="font-size: 14px; color: #64748b; line-height: 1.6;">
-        If the button above doesn't work, copy and paste this link into your browser:<br>
-        <span style="color: #0D1DAD; word-break: break-all; font-size: 12px;">${resetUrl}</span>
-      </p>
+      <div style="background: #f8fafc; padding: 25px; border-radius: 20px; border: 1px solid #e2e8f0; margin-top: 40px;">
+        <p style="margin: 0 0 10px 0; font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">Trouble with the button?</p>
+        <p style="margin: 0; font-size: 13px; color: #0D1DAD; word-break: break-all; font-family: monospace;">${resetUrl}</p>
+      </div>
 
-      <div class="divider"></div>
-      
-      <p style="font-size: 13px; color: #94a3b8;">
-        <strong>Didn't request this?</strong> If you didn't ask to reset your password, you can safely ignore this email. Your password will remain unchanged.
-      </p>
+      <div style="margin-top: 40px; padding-top: 30px; border-top: 1px solid #f1f5f9; text-align: center;">
+        <p style="font-size: 13px; color: #94a3b8; line-height: 1.6;">
+          <strong>Security Note:</strong> If you did not request this, please ignore this message. Your account remains protected and no action is required.
+        </p>
+      </div>
     `;
     await this.sendEmail(
       email,
@@ -267,77 +267,77 @@ export class NotificationsService {
   }
 
   async sendAgentWelcomeEmail(email: string, firstName: string): Promise<void> {
-    const title = "Welcome to the Platform 🚀";
-    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://flybeth.s3.us-east-2.amazonaws.com/logo.png";
+    const title = "Welcome to the Inner Circle 🚀";
+    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://flybeth.s3.us-east-2.amazonaws.com/flight-booking/general/logo.png";
     const content = `
-      <div style="background-color: #f8fafc; padding: 20px; font-family: 'Inter', -apple-system, sans-serif;">
-        <div style="background-color: #ffffff; max-width: 640px; margin: 0 auto; border-radius: 32px; overflow: hidden; box-shadow: 0 30px 60px rgba(13, 29, 173, 0.08); border: 1px solid #f1f5f9;">
+      <div style="background-color: #f8fafc; padding: 25px; border-radius: 40px;">
+        <div style="background-color: #ffffff; max-width: 640px; margin: 0 auto; border-radius: 32px; overflow: hidden; box-shadow: 0 40px 80px rgba(13, 29, 173, 0.1); border: 1px solid #f1f5f9;">
           
           <!-- Large Cover Image -->
-          <div style="width: 100%; height: 260px; background: url('https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&q=80&w=800') center/cover;"></div>
+          <div style="width: 100%; height: 280px; background: url('https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&q=80&w=1200') center/cover;"></div>
 
-          <!-- Header Logo -->
-          <div style="text-align: center; margin-top: -35px;">
-            <div style="background: white; padding: 15px 30px; display: inline-block; border-radius: 100px; box-shadow: 0 10px 20px rgba(0,0,0,0.05);">
-              <img src="${logoUrl}" alt="Flybeth" style="height: 35px; width: auto; vertical-align: middle;" />
+          <!-- Header Logo Overlay -->
+          <div style="text-align: center; margin-top: -45px;">
+            <div style="background: white; padding: 20px 40px; display: inline-block; border-radius: 100px; box-shadow: 0 15px 40px rgba(0,0,0,0.08);">
+              <img src="${logoUrl}" alt="Flybeth" style="height: 40px; width: auto; vertical-align: middle;" />
             </div>
           </div>
 
-          <div style="padding: 50px 50px; background: #ffffff;">
+          <div style="padding: 60px 60px; background: #ffffff;">
             
-            <h1 style="color: #0f172a; font-size: 28px; font-weight: 900; margin: 0 0 30px 0; letter-spacing: -0.5px; text-align: center;">
-              Welcome to the Flybeth Inner Circle 🤝
+            <h1 style="color: #0f172a; font-size: 32px; font-weight: 800; margin: 0 0 35px 0; letter-spacing: -1px; text-align: center;">
+              Unrivaled Partnership Awaits 🤝
             </h1>
 
-            <p style="font-size: 17px; line-height: 2; color: #334155; margin-top: 0; margin-bottom: 25px;">
+            <p style="font-size: 18px; line-height: 2; color: #334155; margin-top: 0; margin-bottom: 25px;">
               Dearest <strong>${firstName}</strong>,
             </p>
             
             <p style="font-size: 17px; line-height: 1.9; color: #475569; margin-bottom: 25px;">
-              I am absolutely overjoyed to personally welcome your agency to the Flybeth commercial network! You aren't just an agent to us—you are the beating heart of modern travel, the bridge between explorers and the world.
+              I am thrilled to personally welcome your agency to the Flybeth Global Network. You are the bridge between explorers and the world, and we are here to amplify your brilliance.
             </p>
             
-            <p style="font-size: 17px; line-height: 1.9; color: #475569; margin-bottom: 40px;">
-              We've poured our souls into building an ecosystem that doesn't just work, but feels like sheer magic. The value you bring to your clients is extraordinary, and we want to empower you with B2B tools that instantly match your brilliance.
+            <p style="font-size: 17px; line-height: 1.9; color: #475569; margin-bottom: 45px;">
+              Our ecosystem is built for speed, precision, and profit. We recognize the immense value you bring, and we've built the tools to match it.
             </p>
 
-            <!-- Magic Awaits You Section -->
-            <div style="margin: 50px 0; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 24px; padding: 45px 35px; position: relative; border: 1px solid #e2e8f0;">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <span style="background: #0D1DAD; color: #ffffff; padding: 8px 24px; border-radius: 100px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em;">
-                  ✨ Instant Agent Mechanics
+            <!-- Agent Mechanics Section -->
+            <div style="margin: 55px 0; background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 32px; padding: 50px 40px; position: relative; border: 1px solid #e2e8f0;">
+              <div style="text-align: center; margin-bottom: 35px;">
+                <span style="background: #0D1DAD; color: #ffffff; padding: 10px 24px; border-radius: 100px; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;">
+                  ✨ Commercial Advantage
                 </span>
               </div>
 
               <div style="display: grid; gap: 30px;">
-                <div style="background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                  <h4 style="margin: 0 0 10px 0; color: #0D1DAD; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 24px; background: #eff6ff; padding: 10px; border-radius: 12px;">📊</span> Wholesale GDS Routing
+                <div style="background: white; padding: 30px; border-radius: 24px; box-shadow: 0 10px 20px rgba(0,0,0,0.02); border: 1px solid #f1f5f9;">
+                  <h4 style="margin: 0 0 15px 0; color: #0D1DAD; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 26px;">📊</span> Wholesale GDS Routing
                   </h4>
-                  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #64748b;">
-                    Massive underlying flight APIs. Auto-advancing logic, negotiated airfares, and huge mark-up potentials.
+                  <p style="margin: 0; font-size: 15px; line-height: 1.8; color: #64748b;">
+                    Access institutional flight APIs with automated mark-up logic and negotiated global airfares.
                   </p>
                 </div>
 
-                <div style="background: white; padding: 25px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                  <h4 style="margin: 0 0 10px 0; color: #FF3D00; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
-                    <span style="font-size: 24px; background: #fff5f5; padding: 10px; border-radius: 12px;">💰</span> Automated Commissions
+                <div style="background: white; padding: 30px; border-radius: 24px; box-shadow: 0 10px 20px rgba(0,0,0,0.02); border: 1px solid #f1f5f9;">
+                  <h4 style="margin: 0 0 15px 0; color: #FF3D00; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 15px;">
+                    <span style="font-size: 26px;">💰</span> Automated Clearing
                   </h4>
-                  <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #64748b;">
-                    Transparent clearing structures that deposit directly to your verified payout institution automatically.
+                  <p style="margin: 0; font-size: 15px; line-height: 1.8; color: #64748b;">
+                    Transparent commission structures with direct settlement to your verified payout institution.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div style="text-align: center; margin-top: 50px; padding-top: 40px; border-top: 1px solid #f1f5f9;">
-              <p style="margin: 0 0 15px 0; font-family: 'Georgia', serif; font-style: italic; font-size: 22px; color: #475569;">
+            <div style="text-align: center; margin-top: 60px; padding-top: 50px; border-top: 1px solid #f1f5f9;">
+              <p style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-style: italic; font-size: 22px; color: #475569;">
                 With boundless love and excitement,
               </p>
-              <p style="margin: 0; font-weight: 900; font-size: 20px; color: #1e293b; letter-spacing: -0.5px;">
+              <p style="margin: 0; font-weight: 900; font-size: 22px; color: #1e293b; letter-spacing: -1px;">
                 Oluremi Oshinkoya
               </p>
-              <p style="margin: 5px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em;">
+              <p style="margin: 8px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em;">
                 Founder & CEO, Flybeth
               </p>
             </div>
@@ -356,20 +356,20 @@ export class NotificationsService {
   ): Promise<void> {
     const title = "Application Under Review ⏳";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=800" alt="Review" style="width: 100%; height: 200px; object-fit: cover; border-radius: 20px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=1200" alt="Review" style="width: 100%; height: 220px; object-fit: cover; border-radius: 24px; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
       </div>
       
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">Thank you for registering your agency with Flybeth. We have successfully secured your onboarding pipeline data and compliance documents.</p>
+      <p style="font-size: 19px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">Thank you for registering your agency. We have successfully secured your onboarding pipeline data and compliance documents.</p>
       
-      <div style="background: #fffaf0; border-left: 4px solid #FF3D00; padding: 25px; margin: 35px 0; border-radius: 0 16px 16px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-        <p style="color: #FF3D00; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; margin: 0 0 10px 0;">Internal Compliance Next Steps</p>
-        <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.6;">Our global compliance team is strictly reviewing your provided legal documentation to finalize your Tier allocation. This process legally mandates 24-48 hours. We will notify you here the exact second you are cleared for commercial operations.</p>
+      <div style="background: #fffaf0; border-left: 6px solid #FF3D00; padding: 35px; margin: 40px 0; border-radius: 0 24px 24px 0; box-shadow: 0 10px 20px rgba(0,0,0,0.02);">
+        <p style="color: #FF3D00; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 12px 0;">Internal Compliance Queue</p>
+        <p style="margin: 0; color: #475569; font-size: 16px; line-height: 1.8;">Our global compliance team is strictly reviewing your provided legal documentation to finalize your Tier allocation. This process typically mandates 24-48 hours. We will notify you here the exact second you are cleared for commercial operations.</p>
       </div>
 
-      <div class="action-area" style="text-align: center; margin-top: 40px;">
-        <a href="http://agent.flybeth.com/auth/login" class="btn" style="background: #0f172a;">Track Application Status</a>
+      <div class="action-area" style="text-align: center;">
+        <a href="http://agent.flybeth.com/auth/login" class="btn">Track Application Status</a>
       </div>
     `;
     await this.sendEmail(
@@ -386,17 +386,17 @@ export class NotificationsService {
   ): Promise<void> {
     const title = "Compliance Verified ✅";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=800" alt="Success" style="width: 100%; height: 180px; object-fit: cover; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=1200" alt="Success" style="width: 100%; height: 200px; object-fit: cover; border-radius: 24px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
       </div>
 
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">Excellent progression! Our compliance division has firmly authenticated and <strong>safely approved</strong> your submitted <strong>${documentType}</strong>.</p>
+      <p style="font-size: 19px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">Excellent progression! Our compliance division has firmly authenticated and <strong>safely approved</strong> your submitted <strong>${documentType}</strong>.</p>
       
-      <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 16px; padding: 25px; margin: 30px 0; display: flex; gap: 15px; align-items: start;">
-        <span style="font-size: 24px;">🛡️</span>
-        <p style="margin: 0; color: #065f46; font-size: 15px; line-height: 1.6;">
-          Your document identity matrices have been cleared and persistently lodged inside our secure vaults. This moves you substantially closer to unrestricted transactional capabilities.
+      <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 24px; padding: 35px; margin: 40px 0; display: flex; gap: 20px; align-items: start;">
+        <span style="font-size: 28px;">🛡️</span>
+        <p style="margin: 0; color: #065f46; font-size: 16px; line-height: 1.8;">
+          Your identity matrices have been cleared and persistently lodged inside our secure vaults. This moves you substantially closer to unrestricted transactional capabilities.
         </p>
       </div>
     `;
@@ -415,20 +415,20 @@ export class NotificationsService {
   ): Promise<void> {
     const title = "Document Flagged ⚠️";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1618044733300-9472054094ee?auto=format&fit=crop&q=80&w=800" alt="Warning" style="width: 100%; height: 180px; object-fit: cover; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1618044733300-9472054094ee?auto=format&fit=crop&q=80&w=1200" alt="Warning" style="width: 100%; height: 200px; object-fit: cover; border-radius: 24px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
       </div>
 
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">During a routine legal authenticity sweep, our compliance system flagged your submitted <strong>${documentType}</strong>. To proceed, we need an immediate correction.</p>
+      <p style="font-size: 19px; color: #1e293b;">Hi <strong>${firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">During a routine legal sweep, our compliance system flagged your submitted <strong>${documentType}</strong>. To proceed, we require a rapid correction.</p>
       
-      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 20px; padding: 30px; margin: 30px 0;">
-        <h4 style="color: #be123c; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 800;">Direct Assessor Feedback</h4>
-        <p style="margin: 0; color: #881337; font-size: 16px; font-weight: 500; line-height: 1.6; font-style: italic;">"${feedback}"</p>
+      <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 24px; padding: 35px; margin: 40px 0;">
+        <h4 style="color: #be123c; margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800;">Internal Assessor Feedback</h4>
+        <p style="margin: 0; color: #881337; font-size: 17px; font-weight: 500; line-height: 1.8; font-style: italic;">"${feedback}"</p>
       </div>
 
-      <div class="action-area" style="margin-top: 40px; text-align: center;">
-        <a href="http://agent.flybeth.com/kyc" class="btn" style="background: #be123c;">Over-ride With New Document Now</a>
+      <div class="action-area" style="text-align: center;">
+        <a href="http://agent.flybeth.com/kyc" class="btn" style="background: #be123c;">Submit Correction Now</a>
       </div>
     `;
     await this.sendEmail(
@@ -442,23 +442,23 @@ export class NotificationsService {
     email: string,
     firstName: string,
   ): Promise<void> {
-    const title = "Global Deployment Authorized 🚀";
+    const title = "Deployment Authorized 🚀";
     const content = `
-      <div style="text-align: center; margin-bottom: 40px;">
-        <img src="https://images.unsplash.com/photo-1551041777-ed277b8eafc2?auto=format&fit=crop&q=80&w=800" alt="Launch" style="width: 100%; height: 260px; object-fit: cover; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.1);" />
+      <div style="text-align: center; margin-bottom: 45px;">
+        <img src="https://images.unsplash.com/photo-1551041777-ed277b8eafc2?auto=format&fit=crop&q=80&w=1200" alt="Launch" style="width: 100%; height: 300px; object-fit: cover; border-radius: 32px; box-shadow: 0 25px 50px rgba(0,0,0,0.15);" />
       </div>
 
-      <p style="font-size: 19px; color: #1e293b; font-weight: 700;">Congratulations <strong>${firstName}</strong>!</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.7;">Your B2B compliance architecture has been rigorously analyzed and passed our entire clearing house. <strong>Your agency is now live out into production!</strong></p>
+      <p style="font-size: 20px; color: #1e293b; font-weight: 700;">Congratulations <strong>${firstName}</strong>!</p>
+      <p style="font-size: 17px; color: #475569; line-height: 1.8;">Your partnership architecture has been rigorously analyzed and passed our global clearing house. <strong>Your agency is now live!</strong></p>
       
-      <div style="background: #f8fafc; border: 2px dashed #0D1DAD; border-radius: 20px; padding: 30px; margin: 40px 0; text-align: center;">
-        <p style="color: #64748b; font-weight: 800; margin: 0 0 15px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em;">Platform Credentials</p>
-        <p style="color: #0D1DAD; font-weight: 900; font-size: 20px; margin: 0 0 8px 0; font-family: monospace;">${email}</p>
-        <p style="color: #94a3b8; font-size: 13px; margin: 0;">Secured with the global key assigned during onboarding.</p>
+      <div style="background: #f8fafc; border: 2px dashed #0D1DAD; border-radius: 32px; padding: 40px; margin: 45px 0; text-align: center;">
+        <p style="color: #64748b; font-weight: 800; margin: 0 0 20px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.25em;">Secure Access Key</p>
+        <p style="color: #0D1DAD; font-weight: 900; font-size: 22px; margin: 0 0 10px 0; font-family: monospace;">${email}</p>
+        <p style="color: #94a3b8; font-size: 14px; margin: 0;">Access initialized with your registered security credentials.</p>
       </div>
       
-      <div class="action-area" style="text-align: center; margin: 45px 0;">
-        <a href="http://agent.flybeth.com/auth/login" class="btn" style="padding: 22px 50px; font-size: 17px; background: #0f172a;">Boot Up The Dashboard</a>
+      <div class="action-area" style="text-align: center;">
+        <a href="http://agent.flybeth.com/auth/login" class="btn">Initialize Dashboard</a>
       </div>
     `;
     await this.sendEmail(
@@ -475,22 +475,22 @@ export class NotificationsService {
     itemName: string;
     url: string;
   }): Promise<void> {
-    const title = "Cart Expires Imminently ⏳";
+    const title = "Incomplete Journey ⏳";
     const content = `
-      <div style="text-align: center; margin-bottom: 30px;">
-        <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=800" alt="Nature" style="width: 100%; height: 200px; object-fit: cover; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
+      <div style="text-align: center; margin-bottom: 40px;">
+        <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&q=80&w=1200" alt="Travel" style="width: 100%; height: 220px; object-fit: cover; border-radius: 24px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.05);" />
       </div>
 
-      <p style="font-size: 18px; color: #1e293b;">Hi <strong>${params.firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569; line-height: 1.6;">Our global routing engine noticed you abandoned your impending ${params.itemType} checkout to <strong>${params.itemName}</strong>.</p>
+      <p style="font-size: 19px; color: #1e293b;">Hi <strong>${params.firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">Our engine noticed you paused your selection to <strong>${params.itemName}</strong>. Don't let your perfect trip slip away.</p>
       
-      <div style="background: #fff5f5; border: 2px dashed #FF3D00; border-radius: 16px; padding: 25px; margin: 30px 0; text-align: center;">
-        <p style="color: #FF3D00; font-weight: 800; margin: 0 0 5px 0; font-size: 12px; text-transform: uppercase;">Aviation algorithms update hourly</p>
-        <p style="color: #991b1b; font-size: 16px; font-weight: 600; margin: 0;">We forcefully secured the pricing rate for a brief window. Secure it fundamentally now.</p>
+      <div style="background: rgba(255, 61, 0, 0.03); border: 2px dashed #FF3D00; border-radius: 24px; padding: 35px; margin: 40px 0; text-align: center;">
+        <p style="color: #FF3D00; font-weight: 800; margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;">Dynamic Pricing Alert</p>
+        <p style="color: #1e293b; font-size: 17px; font-weight: 600; margin: 0;">We've temporarily locked this rate for you. Secure it Fundamental now before it resets.</p>
       </div>
       
       <div class="action-area" style="text-align: center;">
-        <a href="${params.url}" class="btn" style="background: linear-gradient(135deg, #FF3D00 0%, #aa2800 100%);">Resume Booking Safely</a>
+        <a href="${params.url}" class="btn">Resume My Booking</a>
       </div>
     `;
     await this.sendEmail(
@@ -510,26 +510,26 @@ export class NotificationsService {
   }): Promise<void> {
     const title = "Clearing Successful 💳";
     const content = `
-      <p style="font-size: 18px; color: #1e293b;">Dear <strong>${params.firstName}</strong>,</p>
-      <p style="font-size: 16px; color: #475569;">We have securely cleared your payment request protocol.</p>
+      <p style="font-size: 19px; color: #1e293b;">Dear <strong>${params.firstName}</strong>,</p>
+      <p style="font-size: 16px; color: #475569; line-height: 1.8;">We have securely cleared your payment request. Your transaction details are recorded below for your records.</p>
       
-      <div style="background: #f8fafc; border-radius: 20px; padding: 35px; margin: 30px 0; border: 1px solid #e2e8f0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
-        <table style="width: 100%; font-size: 15px; border-collapse: collapse;">
+      <div style="background: #f8fafc; border-radius: 32px; padding: 45px; margin: 40px 0; border: 1px solid #e2e8f0; box-shadow: 0 10px 20px rgba(0,0,0,0.02);">
+        <table style="width: 100%; font-size: 16px; border-collapse: collapse;">
           <tr>
-            <td style="padding: 12px 0; color: #64748b; font-weight: 600;">Gross Authorized</td>
-            <td style="padding: 12px 0; text-align: right; color: #0D1DAD; font-weight: 900; font-size: 18px;">${params.currency} ${params.amount.toLocaleString()}</td>
+            <td style="padding: 15px 0; color: #64748b; font-weight: 600;">Authorized Amount</td>
+            <td style="padding: 15px 0; text-align: right; color: #0D1DAD; font-weight: 900; font-size: 20px;">${params.currency} ${params.amount.toLocaleString()}</td>
           </tr>
           <tr>
-            <td style="padding: 12px 0; color: #64748b; font-weight: 600;">Clearing Gateway Ref</td>
-            <td style="padding: 12px 0; text-align: right; color: #1e293b; font-family: monospace; font-weight: 700; font-size: 13px;">${params.reference}</td>
+            <td style="padding: 15px 0; color: #64748b; font-weight: 600;">Transaction Ref</td>
+            <td style="padding: 15px 0; text-align: right; color: #1e293b; font-family: monospace; font-weight: 700; font-size: 14px;">${params.reference}</td>
           </tr>
           <tr>
-            <td style="padding: 12px 0; color: #64748b; font-weight: 600;">Database PNR Bind</td>
-            <td style="padding: 12px 0; text-align: right; color: #1e293b; font-weight: 700; letter-spacing: 2px;">${params.pnr}</td>
+            <td style="padding: 15px 0; color: #64748b; font-weight: 600;">Booking ID (PNR)</td>
+            <td style="padding: 15px 0; text-align: right; color: #1e293b; font-weight: 700; letter-spacing: 2px;">${params.pnr}</td>
           </tr>
           <tr style="border-top: 2px dashed #cbd5e1;">
-            <td style="padding: 12px 0; color: #64748b; padding-top: 20px; font-weight: 600;">Ledger Timestamp</td>
-            <td style="padding: 12px 0; text-align: right; color: #1e293b; padding-top: 20px; font-weight: 700;">${new Date().toLocaleString()}</td>
+            <td style="padding: 25px 0 0; color: #64748b; font-weight: 600;">Timestamp</td>
+            <td style="padding: 25px 0 0; text-align: right; color: #1e293b; font-weight: 700;">${new Date().toLocaleString()}</td>
           </tr>
         </table>
       </div>
@@ -659,28 +659,26 @@ export class NotificationsService {
         name: "Booking Capture (Initial)",
         subject: "Complete your booking to {{destination}} ✈️",
         htmlContent: `
-                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-                    <h1 style="color: #FF3D00;">Hi {{firstName}}! 👋</h1>
-                    <p>We've saved your progress for your trip to <strong>{{destination}}</strong>.</p>
-                    <p>Prices change fast, so don't wait too long!</p>
-                    <div style="margin: 30px 0;">
-                        <a href="{{checkoutUrl}}" style="background: #FF3D00; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Continue Booking</a>
+                <div style="font-family: 'Outfit', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
+                    <h1 style="color: #0D1DAD; font-size: 28px; font-weight: 800; letter-spacing: -1px;">Hi {{firstName}}! 👋</h1>
+                    <p style="font-size: 16px; line-height: 1.8; color: #475569;">We've saved your progress for your trip to <strong>{{destination}}</strong>. Don't let your perfect itinerary slip away!</p>
+                    <div style="margin: 40px 0;">
+                        <a href="{{checkoutUrl}}" class="btn">Complete Your Booking</a>
                     </div>
-                    <p style="font-size: 12px; color: #64748b;">If you didn't start this booking, please ignore this email.</p>
+                    <p style="font-size: 12px; color: #94a3b8;">Prices change as supply evolves, so we recommend finalizing soon.</p>
                 </div>`,
         availableVariables: ["firstName", "destination", "checkoutUrl"],
       },
       {
         slug: "payment-reminder",
         name: "Payment Reminder",
-        subject: "Almost there! Complete your payment for {{pnr}}",
+        subject: "Secure your ticket for {{pnr}} 💳",
         htmlContent: `
-                <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
-                    <h2 style="color: #0f172a;">One last step, {{firstName}}! 💳</h2>
-                    <p>Your booking <strong>{{pnr}}</strong> is currently pending payment.</p>
-                    <p>Secure your ticket now before the airline releases the seat.</p>
-                    <div style="margin: 30px 0;">
-                        <a href="{{paymentUrl}}" style="background: #0f172a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Pay Now</a>
+                <div style="font-family: 'Outfit', sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;">
+                    <h2 style="color: #0f172a; font-size: 28px; font-weight: 800; letter-spacing: -1px;">One last step, {{firstName}}!</h2>
+                    <p style="font-size: 16px; line-height: 1.8; color: #475569;">Your booking <strong>{{pnr}}</strong> is currently pending final clearing and settlement.</p>
+                    <div style="margin: 40px 0;">
+                        <a href="{{paymentUrl}}" class="btn">Secure Ticket Now</a>
                     </div>
                 </div>`,
         availableVariables: ["firstName", "pnr", "paymentUrl"],

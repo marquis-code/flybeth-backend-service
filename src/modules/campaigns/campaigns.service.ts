@@ -98,37 +98,53 @@ export class CampaignsService {
 
       const htmlTemplate = `
         <!DOCTYPE html>
-        <html>
+        <html lang="en">
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-             body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-             .wrapper { padding: 40px 20px; }
-             .container { background-color: #ffffff; max-width: 600px; margin: 0 auto; padding: 40px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; }
-             .content { font-size: 16px; line-height: 1.8; color: #334155; }
-             .content p { margin-top: 0; margin-bottom: 20px; }
-             .content img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 24px auto; }
-             .content h1, .content h2, .content h3 { color: #0f172a; margin-top: 32px; margin-bottom: 16px; font-weight: 700; line-height: 1.3; }
-             .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid #f1f5f9; }
-             .footer { text-align: center; margin-top: 40px; padding-top: 24px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #94a3b8; line-height: 1.5; }
-             .logo { font-size: 24px; font-weight: 900; color: #0D1DAD; letter-spacing: -1px; text-transform: uppercase; }
-             .logo span { color: #FF3D00; }
+             @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
+             body { 
+               margin: 0; 
+               padding: 0; 
+               background-color: #f8fafc; 
+               font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+               color: #334155;
+             }
+             .wrapper { padding: 50px 20px; text-align: center; }
+             .container { 
+               background-color: #ffffff; 
+               max-width: 640px; 
+               margin: 0 auto; 
+               padding: 50px; 
+               border-radius: 32px; 
+               box-shadow: 0 40px 80px rgba(13, 29, 173, 0.08); 
+               border: 1px solid rgba(226, 232, 240, 0.8);
+               text-align: left;
+             }
+             .header { text-align: center; margin-bottom: 40px; padding-bottom: 30px; border-bottom: 1px solid #f1f5f9; }
+             .logo { height: 40px; width: auto; display: block; margin: 0 auto; }
+             .content { font-size: 17px; line-height: 1.8; color: #475569; }
+             .content h1 { color: #0f172a; font-size: 32px; font-weight: 800; margin-bottom: 24px; letter-spacing: -1px; }
+             .content p { margin-bottom: 24px; }
+             .content img { max-width: 100%; height: auto; border-radius: 20px; display: block; margin: 30px auto; box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+             .footer { text-align: center; margin-top: 50px; padding-top: 30px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #94a3b8; line-height: 1.8; font-weight: 500; }
+             .footer-brand { color: #0D1DAD; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
           </style>
         </head>
         <body>
           <div class="wrapper">
             <div class="container">
               <div class="header">
-                <img src="https://agent.flybeth.com/_nuxt/logo.CJ2BWGNK.png" alt="Flybeth Logo" height="32" style="height: 32px; display: block; margin: 0 auto; border: none; outline: none;" />
+                <img src="https://flybeth.s3.us-east-2.amazonaws.com/flight-booking/general/logo.png" alt="Flybeth" class="logo" />
               </div>
               <div class="content">
                 ${userContent}
               </div>
               <div class="footer">
+                <div class="footer-brand">Flybeth Global</div>
                 &copy; ${new Date().getFullYear()} Flybeth Travel. All rights reserved.<br>
-                You are receiving this because you are part of our community.
+                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
               </div>
             </div>
           </div>

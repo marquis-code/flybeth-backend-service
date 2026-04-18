@@ -27,6 +27,8 @@ import {
   ResendOtpDto,
 } from "./dto/auth.dto";
 import { comparePassword, generateOTP } from "../../common/utils/crypto.util";
+import { FirebaseAdminService } from "./firebase-admin.service";
+import { SocialLoginDto } from "./dto/auth.dto";
 
 import { v4 as uuidv4 } from "uuid";
 
@@ -42,6 +44,7 @@ export class AuthService {
     @InjectModel(Invitation.name)
     private invitationModel: Model<InvitationDocument>,
     private tenantsService: TenantsService,
+    private firebaseAdminService: FirebaseAdminService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -131,6 +134,10 @@ export class AuthService {
       tenantId = tenant._id.toString();
     }
 
+    if ((registerDto.role === Role.AGENT || !registerDto.role) && !registerDto.agencyLogo) {
+      throw new BadRequestException("Agency logo is required for agent registration");
+    }
+
     const user = await this.usersService.create({
       email: registerDto.email,
       password: registerDto.password,
@@ -162,6 +169,7 @@ export class AuthService {
               ein: registerDto.ein,
               bankAccountDetails: registerDto.bankAccountDetails,
               billingAddress: registerDto.billingAddress,
+              agencyLogo: registerDto.agencyLogo,
             } as any)
           : undefined,
       lastIp: registerDto.ipAddress,
@@ -308,6 +316,79 @@ export class AuthService {
       email: user.email,
       message: "Verification code sent to your email",
     };
+  }
+
+  async socialLogin(socialLoginDto: SocialLoginDto) {
+    try {
+      const decodedToken = await this.firebaseAdminService.verifyIdToken(
+        socialLoginDto.token,
+      );
+      const email = decodedToken.email;
+      if (!email) {
+        throw new BadRequestException("Social login failed: Email not provided by identity provider");
+      }
+      const firstName = decodedToken.name?.split(" ")[0] || "User";
+      const lastName = decodedToken.name?.split(" ").slice(1).join(" ") || "";
+
+      let user = await this.usersService.findByEmail(email);
+
+      if (!user) {
+        // Create a new user if not exists
+        user = await this.usersService.create({
+          email,
+          firstName,
+          lastName,
+          role: Role.CUSTOMER, // Default role for social login
+          isVerified: true, // Social logins are verified by default
+          password: uuidv4(), // Random password for security
+        });
+        
+        await this.notificationsService.sendWelcomeEmail(user.email, user.firstName);
+      }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException("Account is deactivated");
+      }
+
+      // Update last login and IP
+      await this.usersService.updateLastLogin(user._id.toString());
+      if (socialLoginDto.ipAddress) {
+        await (this.usersService as any).userModel.findByIdAndUpdate(user._id, {
+          lastIp: socialLoginDto.ipAddress,
+        });
+      }
+
+      // Generate tokens
+      const tokens = await this.generateTokens(
+        user._id.toString(),
+        user.email,
+        user.role,
+      );
+
+      // Store refresh token
+      await this.usersService.updateRefreshToken(
+        user._id.toString(),
+        tokens.refreshToken,
+      );
+
+      return {
+        message: "Social login successful",
+        user: {
+          id: user._id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          isVerified: user.isVerified,
+          tenant: user.tenant,
+          preferences: user.preferences,
+        },
+        ...tokens,
+      };
+    } catch (error) {
+      this.logger.error(`Social login failed: ${error.message}`);
+      throw new UnauthorizedException("Invalid social authentication token");
+    }
   }
 
   async refreshToken(userId: string) {

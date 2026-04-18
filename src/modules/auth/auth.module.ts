@@ -11,6 +11,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { InvitationModule } from "../admin/invitation.module";
 import { TenantsModule } from "../tenants/tenants.module";
 import { jwtConfig } from "../../config/jwt.config";
+import { FirebaseAdminService } from "./firebase-admin.service";
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { jwtConfig } from "../../config/jwt.config";
     TenantsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
-  exports: [AuthService],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, FirebaseAdminService],
+  exports: [AuthService, FirebaseAdminService],
 })
 export class AuthModule {}

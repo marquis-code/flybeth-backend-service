@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsEnum,
   IsObject,
+  IsNotEmpty,
 } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Role } from "../../../common/constants/roles.constant";
@@ -129,6 +130,11 @@ export class RegisterDto {
   @IsString()
   billingAddress?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  agencyLogo?: string;
+
   @ApiPropertyOptional({
     description: "Invitation token for administrative roles",
   })
@@ -201,4 +207,16 @@ export class ResendOtpDto {
   @IsEmail()
   @IsString()
   email: string;
+}
+
+export class SocialLoginDto {
+  @ApiProperty({ example: "firebase_id_token_here" })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiProperty({ example: "127.0.0.1", required: false })
+  @IsString()
+  @IsOptional()
+  ipAddress?: string;
 }

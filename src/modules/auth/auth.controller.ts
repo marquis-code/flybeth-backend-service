@@ -20,6 +20,7 @@ import {
   VerifyOtpDto,
   RefreshTokenDto,
   ResendOtpDto,
+  SocialLoginDto,
 } from "./dto/auth.dto";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -77,6 +78,24 @@ export class AuthController {
   @ApiOperation({ summary: "Login with email and password" })
   login(@Body() loginDto: LoginDto) {
     return this.authService.login(loginDto);
+  }
+
+  @Public()
+  @Post("social-login")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Login with social provider (Firebase)" })
+  async socialLogin(
+    @Body() socialLoginDto: SocialLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.socialLogin(socialLoginDto);
+    if (result.accessToken && result.refreshToken) {
+      this.setTokenCookies(res, {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+    }
+    return result;
   }
 
   @Public()
