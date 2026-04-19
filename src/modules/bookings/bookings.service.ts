@@ -22,6 +22,7 @@ import { PackagesService } from "../packages/packages.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { FraudService } from "../fraud/fraud.service";
 import { SystemConfigService } from "../system-config/system-config.service";
+import { ConfigService } from "@nestjs/config";
 import { InvoiceService } from "./invoice.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
@@ -46,6 +47,7 @@ export class BookingsService {
     private notificationsService: NotificationsService,
     private fraudService: FraudService,
     private configService: SystemConfigService,
+    private nestConfigService: ConfigService,
     private invoiceService: InvoiceService,
   ) {}
 
@@ -616,7 +618,7 @@ export class BookingsService {
   }
 
   private async sendAgentBookingNotifications(booking: BookingDocument) {
-    const adminEmail = this.configService.get("ADMIN_EMAIL") || "admin@flybeth.com";
+    const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "admin@flybeth.com";
     const agentEmail = (booking.user as any).email;
     const agentName = (booking.user as any).firstName;
 

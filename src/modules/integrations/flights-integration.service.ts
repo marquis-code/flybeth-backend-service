@@ -220,6 +220,14 @@ export class FlightsIntegrationService {
     return adapter.createCard(cardData);
   }
 
+  async deleteCard(provider: string, cardId: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter?.deleteCard) {
+      throw new Error(`Provider ${provider} does not support card deletion`);
+    }
+    return adapter.deleteCard(cardId);
+  }
+
   async create3DSSession(provider: string, sessionData: any) {
     const adapter = this.adapters.get(provider);
     if (!adapter?.create3DSSession) {

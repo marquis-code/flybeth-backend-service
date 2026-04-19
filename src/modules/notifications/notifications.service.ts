@@ -38,7 +38,7 @@ export class NotificationsService {
     @InjectQueue("email-queue") private emailQueue: Queue,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
-  ) {}
+  ) { }
 
   async createNotification(params: {
     userId: string;
@@ -60,7 +60,7 @@ export class NotificationsService {
     });
 
     const saved = await notification.save();
-    
+
     // Broadcast to user in real-time
     this.chatGateway.sendNotificationToUser(params.userId, saved);
 
@@ -333,7 +333,7 @@ export class NotificationsService {
             </div>
 
             <div style="text-align: center; margin-top: 60px; padding-top: 50px; border-top: 1px solid #f1f5f9;">
-              <p style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-style: italic; font-size: 22px; color: #475569;">
+              <p style="margin: 0 0 20px 0; font-family: 'Georgia', serif; font-style: ; font-size: 22px; color: #475569;">
                 With boundless love and excitement,
               </p>
               <p style="margin: 0; font-weight: 900; font-size: 22px; color: #1e293b; letter-spacing: -1px;">
@@ -426,7 +426,7 @@ export class NotificationsService {
       
       <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 24px; padding: 35px; margin: 40px 0;">
         <h4 style="color: #be123c; margin: 0 0 12px 0; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 800;">Internal Assessor Feedback</h4>
-        <p style="margin: 0; color: #881337; font-size: 17px; font-weight: 500; line-height: 1.8; font-style: italic;">"${feedback}"</p>
+        <p style="margin: 0; color: #881337; font-size: 17px; font-weight: 500; line-height: 1.8; font-style: ;">"${feedback}"</p>
       </div>
 
       <div class="action-area" style="text-align: center;">

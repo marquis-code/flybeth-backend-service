@@ -62,6 +62,7 @@ import { AccessControlModule } from "./modules/access-control/access-control.mod
 import { MarketingModule } from "./modules/marketing/marketing.module";
 import { FinanceModule } from "./modules/finance/finance.module";
 import { ItinerariesModule } from "./modules/itineraries/itineraries.module";
+import { SupportModule } from "./modules/support/support.module";
 
 @Module({
   imports: [
@@ -130,6 +131,7 @@ import { ItinerariesModule } from "./modules/itineraries/itineraries.module";
     MarketingModule,
     FinanceModule,
     ItinerariesModule,
+    SupportModule,
 
     // Infrastructure
     QueueModule,

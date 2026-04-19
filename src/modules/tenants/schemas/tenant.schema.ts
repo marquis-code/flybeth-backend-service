@@ -24,6 +24,38 @@ export class TenantSettings {
 
   @Prop({ default: true })
   allowB2B: boolean;
+
+  // Visual Branding
+  @Prop({ default: '#0D1DAD' })
+  primaryColor: string;
+
+  @Prop({ default: '#10b981' })
+  accentColor: string;
+
+  @Prop({ default: '#0f172a' })
+  secondaryColor: string;
+
+  @Prop({ default: 'Sora' })
+  fontFamily: string;
+
+  @Prop()
+  favicon: string;
+
+  @Prop({ type: Object })
+  socialLinks: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+    youtube?: string;
+  };
+
+  @Prop({ type: Object })
+  footerConfig: {
+    description?: string;
+    copyrightText?: string;
+    showNewsletter?: boolean;
+  };
 }
 
 @Schema({ timestamps: true })

@@ -1,6 +1,6 @@
 // src/modules/bookings/invoice.service.ts
 import { Injectable, Logger } from "@nestjs/common";
-import * as PDFDocument from "pdfkit";
+import PDFDocument from "pdfkit";
 import { BookingDocument } from "./schemas/booking.schema";
 import { Writable } from "stream";
 

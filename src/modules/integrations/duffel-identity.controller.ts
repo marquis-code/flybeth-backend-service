@@ -1,5 +1,5 @@
 // src/modules/integrations/duffel-identity.controller.ts
-import { Controller, Post, UseGuards, Req } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Req } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { DuffelIdentityService } from "./duffel-identity.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
@@ -14,11 +14,11 @@ export class DuffelIdentityController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: "Setup Duffel identity for the logged-in user",
-    description: "Creates a Duffel Customer if it doesn't exist and returns a Client Key for frontend components.",
+    description: "Creates a Duffel Customer if it doesn't exist and returns a Client Key for frontend components. Now accepts explicit payload.",
   })
-  async setupIdentity(@Req() req: any) {
+  async setupIdentity(@Req() req: any, @Body() body: any) {
     const userId = req.user.id;
-    const result = await this.duffelIdentityService.ensureIdentity(userId);
+    const result = await this.duffelIdentityService.ensureIdentity(userId, body?.data);
     return { success: true, ...result };
   }
 }

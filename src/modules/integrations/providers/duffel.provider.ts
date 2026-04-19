@@ -24,7 +24,7 @@ export class DuffelProvider implements AirlineAdapter {
   private getHeaders(): Record<string, string> {
     return {
       Authorization: `Bearer ${this.accessToken}`,
-      "Duffel-Version": "v1",
+      "Duffel-Version": "v2",
       Accept: "application/json",
       "Content-Type": "application/json",
       "Accept-Encoding": "gzip",
@@ -42,11 +42,13 @@ export class DuffelProvider implements AirlineAdapter {
     try {
       // Build passengers array
       const passengers: any[] = [];
+      
+      // Duffel recommends using ages for all passenger types for more accurate pricing
       for (let i = 0; i < (query.adults || 1); i++) {
         passengers.push({ type: "adult" });
       }
       for (let i = 0; i < (query.children || 0); i++) {
-        passengers.push({ age: 10 }); // Using age rather than type per Duffel recommendation
+        passengers.push({ age: 10 }); 
       }
       for (let i = 0; i < (query.infants || 0); i++) {
         passengers.push({ age: 1 });
@@ -96,8 +98,10 @@ export class DuffelProvider implements AirlineAdapter {
       if (!response.ok) {
         const errorBody = await response.text();
         this.logger.error(
-          `Duffel search failed: ${response.status} ${errorBody}`,
+          `Duffel search failed (${response.status}): ${errorBody}`,
         );
+        // Throwing error allows the aggregation service to log it properly, 
+        // though returning [] is safer for overall search availability
         return [];
       }
 
@@ -308,7 +312,8 @@ export class DuffelProvider implements AirlineAdapter {
   async createCustomer(userData: any): Promise<any> {
     this.logger.log(`Creating Duffel identity customer for ${userData.email}`);
     try {
-      const response = await fetch(`${this.baseUrl}/identity/customer_users`, {
+      // Reverting to /identity/customer/users as confirmed by user testing
+      const response = await fetch(`${this.baseUrl}/identity/customer/users`, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({
@@ -316,17 +321,32 @@ export class DuffelProvider implements AirlineAdapter {
             email: userData.email,
             given_name: userData.firstName,
             family_name: userData.lastName,
+            phone_number: userData.phone,
           },
         }),
       });
 
+      const responseBody = await response.text();
+      let parsedBody: any;
+      try { parsedBody = JSON.parse(responseBody); } catch (e) { /* not json */ }
+
       if (!response.ok) {
-        const errorBody = await response.text();
-        this.logger.error(`Duffel identity customer creation failed (${response.status}): ${errorBody}`);
+        // Handle Conflict (User already exists)
+        if (response.status === 409) {
+          this.logger.warn(`Duffel identity customer already exists for ${userData.email}. Attempting to use existing record.`);
+          // Sometimes Duffel returns the existing record in a 409 error metadata
+          const existingId = parsedBody?.errors?.[0]?.meta?.id || parsedBody?.data?.id;
+          if (existingId) return { id: existingId };
+          
+          // If we can't find it in the error, we might need to search, but for now we'll throw a specific hint
+          this.logger.error(`Conflict detected but no ID recovered: ${responseBody}`);
+        }
+
+        this.logger.error(`Duffel identity customer creation failed (${response.status}): ${responseBody}`);
         return null;
       }
 
-      const data = await response.json();
+      const data = parsedBody || await response.json();
       this.logger.log(`Successfully created/fetched Duffel customer: ${data.data?.id}`);
       return data.data;
     } catch (error) {
@@ -341,7 +361,7 @@ export class DuffelProvider implements AirlineAdapter {
   async createClientKey(customerId: string): Promise<any> {
     this.logger.log(`Creating Duffel component client key for customer ${customerId}`);
     try {
-      const response = await fetch(`${this.baseUrl}/identity/component_client_keys`, {
+      const response = await fetch(`${this.baseUrl}/identity/sessions`, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({
@@ -377,12 +397,21 @@ export class DuffelProvider implements AirlineAdapter {
    * Create a card in Duffel's PCI vault
    */
   async createCard(cardData: any): Promise<any> {
-    this.logger.log(`Creating Duffel card for ${cardData.name}`);
+    this.logger.log(`Creating Duffel card for ${cardData.name} (Multi-use: ${cardData.multi_use})`);
     try {
       const response = await fetch("https://api.duffel.cards/payments/cards", {
         method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify({ data: cardData }),
+        headers: {
+          "Authorization": `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          // The Cards API often uses a different versioning or no version header 
+          // to avoid conflicts with the main /air API.
+        },
+        body: JSON.stringify({ data: {
+          ...cardData,
+          cvc: cardData.cvc || cardData.cvv 
+        }}),
       });
 
       if (!response.ok) {
@@ -395,6 +424,30 @@ export class DuffelProvider implements AirlineAdapter {
       return data.data;
     } catch (error) {
       this.logger.error(`Duffel create card error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a card from Duffel's PCI vault
+   */
+  async deleteCard(cardId: string): Promise<any> {
+    this.logger.log(`Deleting Duffel card ${cardId}`);
+    try {
+      const response = await fetch(`https://api.duffel.cards/payments/cards/${cardId}`, {
+        method: "DELETE",
+        headers: this.getHeaders(),
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        this.logger.error(`Duffel card deletion failed: ${error}`);
+        throw new Error(`Card deletion failed: ${response.status}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Duffel delete card error: ${error.message}`);
       throw error;
     }
   }

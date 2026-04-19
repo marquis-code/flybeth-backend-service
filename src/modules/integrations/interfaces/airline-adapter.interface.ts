@@ -95,5 +95,6 @@ export interface AirlineAdapter {
     payment: any,
   ): Promise<{ success: boolean; ticketNumbers?: string[] }>;
   createCard?(cardData: any): Promise<any>;
+  deleteCard?(cardId: string): Promise<any>;
   create3DSSession?(sessionData: any): Promise<any>;
 }

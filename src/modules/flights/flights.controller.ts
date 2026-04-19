@@ -168,6 +168,15 @@ export class FlightsController {
   }
 
   @Public()
+  @Delete("payments/cards/:id")
+  @ApiOperation({
+    summary: "Delete a card from the provider's PCI vault",
+  })
+  deleteCard(@Param("id") id: string, @Query("provider") provider: string) {
+    return this.flightsIntegrationService.deleteCard(provider, id);
+  }
+
+  @Public()
   @Post("cancel")
   @ApiOperation({
     summary: "Cancel a flight booking through a live provider",
