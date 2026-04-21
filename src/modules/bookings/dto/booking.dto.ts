@@ -153,7 +153,28 @@ class BookingContactDto {
   state?: string;
 }
 
+class BookingPricingDto {
+  @ApiProperty()
+  @IsNumber()
+  baseFare: number;
+
+  @ApiProperty()
+  @IsNumber()
+  taxes: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  fees?: number;
+}
+
 export class CreateBookingDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BookingPricingDto)
+  pricing?: BookingPricingDto;
+
   @ApiPropertyOptional({ type: [BookingFlightDto] })
   @IsOptional()
   @IsArray()
