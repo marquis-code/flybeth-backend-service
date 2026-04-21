@@ -22,6 +22,12 @@ export class Passenger {
   gender: string;
 
   @Prop()
+  title: string;
+
+  @Prop()
+  duffelPassengerId: string;
+
+  @Prop()
   nationality: string;
 
   @Prop()

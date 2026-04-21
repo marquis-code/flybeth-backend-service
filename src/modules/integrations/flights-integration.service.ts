@@ -124,7 +124,30 @@ export class FlightsIntegrationService {
       this.logger.warn(`No getOfferDetails for provider: ${provider}`);
       return null;
     }
-    return adapter.getOfferDetails(offerId);
+    const result = await adapter.getOfferDetails(offerId);
+    if (result && provider === 'duffel') {
+       await this.applyAncillaryMargins(result);
+    }
+    return result;
+  }
+
+  /**
+   * Internal helper to apply platform margins to Duffel available services (Baggage, etc.)
+   */
+  private async applyAncillaryMargins(result: FlightSearchResult) {
+    if (!result.rawOffer?.available_services) return;
+    
+    const sysConfig = await this.providerConfigService.getGlobalConfig();
+    const margin = 1 + (sysConfig?.ancillaryMargin || 15) / 100;
+
+    result.rawOffer.available_services.forEach((service: any) => {
+        if (service.total_amount) {
+            const originalPrice = parseFloat(service.total_amount);
+            service.original_amount = service.total_amount;
+            service.total_amount = (originalPrice * margin).toFixed(2);
+            service.margin_applied = true;
+        }
+    });
   }
 
   /**
@@ -136,12 +159,13 @@ export class FlightsIntegrationService {
     passengers: any[],
     payment?: any,
     offer?: any,
+    services?: any[],
   ) {
     const adapter = this.adapters.get(provider);
     if (!adapter) {
       throw new Error(`Unknown provider: ${provider}`);
     }
-    return adapter.bookFlight(offerId, passengers, payment, offer);
+    return adapter.bookFlight(offerId, passengers, payment, offer, services);
   }
 
   /**
@@ -156,21 +180,74 @@ export class FlightsIntegrationService {
       this.logger.warn(`Provider ${provider} does not support pricing`);
       return { data: { flightOffers: [offer] } }; // Fallback
     }
-    return adapter.priceOffer(offer);
+    const result = await adapter.priceOffer(offer);
+    if (result?.data?.flightOffers?.[0] && provider === 'duffel') {
+       // Wrap in search result format for helper
+       const tempResult = { rawOffer: result.data.flightOffers[0] } as any;
+       await this.applyAncillaryMargins(tempResult);
+    }
+    return result;
   }
 
   /**
-   * Get seatmap through the correct provider
+   * Get seatmap through the correct provider and apply our margin
    */
   async getSeatmap(flightOffer: any, provider: string) {
-    const adapter = this.adapters.get(provider);
+    let activeProvider = provider;
+
+    // Infer provider if missing – very useful for direct API calls or frontend misses
+    if (!activeProvider && flightOffer) {
+      if (flightOffer.slices) activeProvider = 'duffel';
+      else if (flightOffer.itineraries) activeProvider = 'amadeus';
+    }
+
+    const adapter = this.adapters.get(activeProvider);
     if (!adapter) {
-      throw new Error(`Unknown provider: ${provider}`);
+      throw new Error(`Unknown provider: ${activeProvider}`);
     }
     if (!adapter.getSeatmap) {
-      throw new Error(`Provider ${provider} does not support seatmaps`);
+      throw new Error(`Provider ${activeProvider} does not support seatmaps`);
     }
-    return adapter.getSeatmap(flightOffer);
+
+    let seatmapResponse;
+    try {
+      seatmapResponse = await adapter.getSeatmap(flightOffer);
+    } catch (error) {
+      this.logger.warn(`Seatmap retrieval failed for ${activeProvider}: ${error.message}`);
+      return { data: [] };
+    }
+    
+    // Apply margin if it's Duffel (or other providers)
+    // Seatmaps from Duffel have cabins -> rows -> sections -> elements
+    // Elements of type 'seat' have a 'total_amount' if they are bookable services
+    
+    const sysConfig = await this.providerConfigService.getGlobalConfig();
+    const margin = 1 + (sysConfig?.ancillaryMargin || 15) / 100;
+
+    if (activeProvider === 'duffel' && seatmapResponse?.data) {
+      seatmapResponse.data.forEach((map: any) => {
+        map.cabins?.forEach((cabin: any) => {
+          cabin.rows?.forEach((row: any) => {
+            row.sections?.forEach((section: any) => {
+              section.elements?.forEach((element: any) => {
+                if (element.type === 'seat' && element.available_services) {
+                  element.available_services.forEach((service: any) => {
+                    if (service.total_amount) {
+                      const originalPrice = parseFloat(service.total_amount);
+                      service.original_amount = service.total_amount;
+                      service.total_amount = (originalPrice * margin).toFixed(2);
+                      service.margin_applied = true;
+                    }
+                  });
+                }
+              });
+            });
+          });
+        });
+      });
+    }
+
+    return seatmapResponse;
   }
 
   /**

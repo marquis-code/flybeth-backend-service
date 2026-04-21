@@ -7,11 +7,13 @@ import {
   ExchangeRate,
   ExchangeRateSchema,
 } from "./schemas/exchange-rate.schema";
+import { Currency, CurrencySchema } from "./schemas/currency.schema";
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: ExchangeRate.name, schema: ExchangeRateSchema },
+      { name: Currency.name, schema: CurrencySchema },
     ]),
   ],
   controllers: [CurrencyController],

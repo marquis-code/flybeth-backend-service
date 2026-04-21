@@ -19,11 +19,15 @@ export class InitializePaymentDto {
 
   @ApiPropertyOptional({
     description: "Force specific provider",
-    enum: ["stripe", "paystack"],
+    enum: ["stripe", "paystack", "wallet"],
   })
   @IsOptional()
-  @IsEnum(["stripe", "paystack"])
+  @IsEnum(["stripe", "paystack", "wallet"])
   provider?: string;
+
+  @ApiPropertyOptional({ description: "Additional metadata" })
+  @IsOptional()
+  metadata?: Record<string, any>;
 }
 
 export class RefundPaymentDto {

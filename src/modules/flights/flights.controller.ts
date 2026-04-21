@@ -120,6 +120,7 @@ export class FlightsController {
       bookDto.passengers,
       bookDto.payment,
       bookDto.offer,
+      bookDto.services,
     );
   }
 

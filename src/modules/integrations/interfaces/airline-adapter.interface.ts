@@ -57,6 +57,11 @@ export interface FlightSearchResult {
   };
   baggageIncluded?: string;
   totalEmissionsKg?: number;
+  paymentRequirements?: {
+    requiresInstantPayment: boolean;
+    priceGuaranteeExpiresAt?: string;
+    paymentRequiredBy?: string;
+  };
   rawOffer?: any;
 }
 
@@ -71,6 +76,7 @@ export interface AirlineAdapter {
     passengers: any[],
     payment?: any,
     offer?: any,
+    services?: any[],
   ): Promise<{ pnr: string; orderId: string; ticketNumbers?: string[] }>;
   cancelBooking(
     orderId: string,

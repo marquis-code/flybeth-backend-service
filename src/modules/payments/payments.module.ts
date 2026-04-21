@@ -8,6 +8,7 @@ import { PaystackProvider } from "./providers/paystack.provider";
 import { Payment, PaymentSchema } from "./schemas/payment.schema";
 import { BankAccount, BankAccountSchema } from "./schemas/bank-account.schema";
 import { BookingsModule } from "../bookings/bookings.module";
+import { FinanceModule } from "../finance/finance.module";
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { BookingsModule } from "../bookings/bookings.module";
       { name: BankAccount.name, schema: BankAccountSchema },
     ]),
     BookingsModule,
+    FinanceModule,
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, StripeProvider, PaystackProvider],

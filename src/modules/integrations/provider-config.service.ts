@@ -30,6 +30,10 @@ export class ProviderConfigService {
     return config;
   }
 
+  async getGlobalConfig(): Promise<any> {
+    return this.systemConfigService.getConfig();
+  }
+
   /**
    * Update provider configuration
    */

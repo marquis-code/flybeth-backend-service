@@ -23,6 +23,7 @@ import {
   PAYSTACK_CURRENCIES,
 } from "../../common/constants/roles.constant";
 import { generateReference } from "../../common/utils/crypto.util";
+import { WalletService } from "../finance/wallet.service";
 
 @Injectable()
 export class PaymentsService {
@@ -35,6 +36,7 @@ export class PaymentsService {
     private stripeProvider: StripeProvider,
     private paystackProvider: PaystackProvider,
     private bookingsService: BookingsService,
+    private walletService: WalletService,
   ) {}
 
   /**
@@ -47,6 +49,7 @@ export class PaymentsService {
   ): PaymentProvider {
     if (forcedProvider) {
       if (forcedProvider === "manual") return PaymentProvider.MANUAL;
+      if (forcedProvider === "wallet") return PaymentProvider.WALLET;
       return forcedProvider === "paystack"
         ? PaymentProvider.PAYSTACK
         : PaymentProvider.STRIPE;
@@ -120,6 +123,21 @@ export class PaymentsService {
         callbackUrl: dto.callbackUrl,
         metadata: { bookingId: dto.bookingId },
       });
+    } else if (provider === PaymentProvider.WALLET) {
+       if (!userId) throw new BadRequestException("User ID is required for wallet payments");
+       
+       // Verify Wallet PIN if provided in metadata (for extra security)
+       if (dto.metadata?.pin) {
+         const isPinValid = await this.walletService.verifyPin(userId, dto.metadata.pin);
+         if (!isPinValid) throw new BadRequestException("Invalid Wallet PIN");
+       }
+
+       await this.walletService.debit(userId, amount, `Payment for booking ${booking.pnr}`, bookingId);
+       providerResponse = {
+         status: "success",
+         message: "Payment processed via Flybeth Wallet",
+         reference,
+       };
     } else {
       // Manual Payment Flow
       providerResponse = {
@@ -148,6 +166,10 @@ export class PaymentsService {
     });
 
     await payment.save();
+
+    if (provider === PaymentProvider.WALLET) {
+      await this.processSuccessfulPayment(bookingId, reference, PaymentProvider.WALLET);
+    }
 
     this.logger.log(
       `Payment initialized: ${reference} via ${provider} for ${dto.currency} ${amount}`,
@@ -207,7 +229,17 @@ export class PaymentsService {
         case "checkout.session.completed":
         case "payment_intent.succeeded": {
           const sessionData = event.data.object as any;
-          const bookingId = sessionData.metadata?.bookingId;
+          const metadata = sessionData.metadata;
+
+          if (metadata?.type === 'wallet_topup') {
+             const userId = metadata.userId;
+             const amount = sessionData.amount_total / 100;
+             await this.walletService.credit(userId, amount, `Wallet top-up via Stripe`, { sessionId: sessionData.id });
+             this.logger.log(`Wallet topped up: User ${userId}, Amount ${amount}`);
+             break;
+          }
+
+          const bookingId = metadata?.bookingId;
 
           if (bookingId) {
             await this.processSuccessfulPayment(
@@ -394,5 +426,15 @@ export class PaymentsService {
 
   async verifyBankAccount(account_number: string, bank_code: string) {
     return this.paystackProvider.resolveAccount(account_number, bank_code);
+  }
+
+  async initializeTopUp(userId: string, data: { amount: number, currency: string, email: string, callbackUrl: string }) {
+     return this.stripeProvider.createTopUpSession({
+        userId,
+        customerEmail: data.email,
+        amount: data.amount,
+        currency: data.currency,
+        callbackUrl: data.callbackUrl
+     });
   }
 }

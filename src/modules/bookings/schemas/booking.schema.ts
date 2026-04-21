@@ -10,14 +10,20 @@ export type BookingDocument = Booking & Document;
 
 @Schema({ _id: false })
 export class BookingFlight {
-  @Prop({ type: Types.ObjectId, ref: "Flight", required: true })
-  flight: Types.ObjectId;
+  @Prop({ type: String, required: false })
+  flight: string;
 
   @Prop({ required: true })
   class: string;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: "Passenger" }], default: [] })
   passengers: Types.ObjectId[];
+
+  @Prop()
+  offerId: string;
+
+  @Prop()
+  provider: string;
 }
 
 @Schema({ _id: false })
@@ -246,6 +252,9 @@ export class Booking {
 
   @Prop()
   termsAcceptedAt: Date;
+
+  @Prop()
+  remoteOrderId: string;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

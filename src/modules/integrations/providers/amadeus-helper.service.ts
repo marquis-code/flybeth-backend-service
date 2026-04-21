@@ -136,6 +136,7 @@ export class AmadeusHelperService {
 
   /**
    * Predict the trip purpose (Business or Leisure) from a flight
+   * NOTE: This API has been decommissioned by Amadeus (410 GONE)
    */
   async predictTripPurpose(
     origin: string,
@@ -143,6 +144,9 @@ export class AmadeusHelperService {
     departureDate: string,
     returnDate: string,
   ): Promise<any> {
+    // API is decommissioned - returning null to avoid 410 errors in logs
+    return null;
+    /*
     try {
       const token = await this.getAccessToken();
       const params = new URLSearchParams({
@@ -163,6 +167,10 @@ export class AmadeusHelperService {
       );
 
       if (!response.ok) {
+        if (response.status === 410) {
+           this.logger.debug("Amadeus trip purpose API is decommissioned (410)");
+           return null;
+        }
         const errText = await response.text();
         this.logger.error(
           `Amadeus trip purpose prediction failed: ${response.status} ${errText}`,
@@ -178,6 +186,7 @@ export class AmadeusHelperService {
       );
       return null;
     }
+    */
   }
 
   /**

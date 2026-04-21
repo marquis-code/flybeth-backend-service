@@ -193,6 +193,8 @@ ${!userId ? "\nIMPORTANT: The user is currently NOT LOGGED IN. If they try to bo
               flightId: selectedFlight._id || selectedFlight.offerId,
               class: selectedFlight.class || "economy",
               passengerIds: [],
+              offerId: selectedFlight.offerId,
+              provider: selectedFlight.provider || "duffel",
             },
           ],
           contactDetails: {

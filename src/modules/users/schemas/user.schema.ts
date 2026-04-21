@@ -202,6 +202,12 @@ export class User {
 
   @Prop()
   duffelCustomerId: string;
+
+  @Prop({ default: 0 })
+  walletBalance: number;
+
+  @Prop({ select: false })
+  walletPin: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

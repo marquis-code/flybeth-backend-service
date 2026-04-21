@@ -306,6 +306,7 @@ export class AmadeusProvider implements AirlineAdapter {
     passengers: any[],
     payment?: any,
     offer?: any,
+    services?: any[],
   ): Promise<{ pnr: string; orderId: string; ticketNumbers?: string[] }> {
     this.logger.log(
       `Booking flight ${offerId} on Amadeus for ${passengers.length} passengers`,

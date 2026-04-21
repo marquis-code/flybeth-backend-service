@@ -33,6 +33,10 @@ export class PassengersService {
     return passenger as unknown as PassengerDocument;
   }
 
+  async findByIds(ids: string[]): Promise<PassengerDocument[]> {
+    return this.passengerModel.find({ _id: { $in: ids } }).lean().exec() as unknown as Promise<PassengerDocument[]>;
+  }
+
   async update(
     id: string,
     userId: string,

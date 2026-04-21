@@ -51,6 +51,7 @@ export enum PaymentProvider {
   STRIPE = "stripe",
   PAYSTACK = "paystack",
   MANUAL = "manual",
+  WALLET = "wallet",
 }
 
 export enum FlightStatus {

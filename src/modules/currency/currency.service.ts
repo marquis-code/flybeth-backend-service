@@ -1,114 +1,62 @@
 // src/modules/currency/currency.service.ts
-import { Injectable, Inject, Logger } from "@nestjs/common";
+import { Injectable, Inject, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
-import { ConfigService } from "@nestjs/config";
-import axios from "axios";
-import {
-  ExchangeRate,
-  ExchangeRateDocument,
-} from "./schemas/exchange-rate.schema";
-import { SUPPORTED_CURRENCIES } from "../../common/constants/roles.constant";
+import { Currency, CurrencyDocument } from "./schemas/currency.schema";
 
 @Injectable()
-export class CurrencyService {
+export class CurrencyService implements OnModuleInit {
   private readonly logger = new Logger(CurrencyService.name);
   private readonly CACHE_TTL = 3600000; // 1 hour
 
   constructor(
-    @InjectModel(ExchangeRate.name)
-    private exchangeRateModel: Model<ExchangeRateDocument>,
+    @InjectModel(Currency.name)
+    private currencyModel: Model<CurrencyDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private configService: ConfigService,
   ) {}
 
-  async getExchangeRates(
-    baseCurrency: string = "USD",
-  ): Promise<Record<string, number>> {
-    const cacheKey = `exchange:rates:${baseCurrency}`;
-    const cached =
-      await this.cacheManager.get<Record<string, number>>(cacheKey);
-    if (cached) return cached;
-
-    try {
-      const apiKey = this.configService.get<string>("EXCHANGE_RATE_API_KEY");
-      const apiUrl = this.configService.get<string>("EXCHANGE_RATE_API_URL");
-
-      const response = await axios.get(
-        `${apiUrl}/${apiKey}/latest/${baseCurrency}`,
-      );
-
-      if (response.data.result === "success") {
-        const rates = response.data.conversion_rates;
-
-        // Store in DB
-        await this.exchangeRateModel.create({
-          baseCurrency,
-          rates,
-          fetchedAt: new Date(),
-        });
-
-        // Cache
-        await this.cacheManager.set(cacheKey, rates, this.CACHE_TTL);
-
-        this.logger.log(`Exchange rates updated for ${baseCurrency}`);
-        return rates;
-      }
-    } catch (error) {
-      this.logger.error(`Failed to fetch exchange rates: ${error.message}`);
-
-      // Fallback to last stored rates
-      const lastRate = await this.exchangeRateModel
-        .findOne({ baseCurrency })
-        .sort({ fetchedAt: -1 })
-        .lean()
-        .exec();
-
-      if (lastRate) {
-        const ratesObject = lastRate.rates;
-        await this.cacheManager.set(cacheKey, ratesObject, this.CACHE_TTL);
-        return ratesObject;
-      }
+  async onModuleInit() {
+    // Seed initial currencies if DB is empty
+    const count = await this.currencyModel.countDocuments();
+    if (count === 0) {
+      await this.seedCurrencies();
     }
-
-    // Default fallback rates
-    return this.getDefaultRates(baseCurrency);
   }
 
-  async convert(
-    amount: number,
-    fromCurrency: string,
-    toCurrency: string,
-  ): Promise<{
-    convertedAmount: number;
-    exchangeRate: number;
-    fromCurrency: string;
-    toCurrency: string;
-  }> {
+  async getExchangeRates(baseCurrency: string = "USD"): Promise<Record<string, number>> {
+    const cacheKey = `internal:exchange:rates:${baseCurrency}`;
+    const cached = await this.cacheManager.get<Record<string, number>>(cacheKey);
+    if (cached) return cached;
+
+    const currencies = await this.currencyModel.find({ isActive: true }).exec();
+    const base = currencies.find((c) => c.code === baseCurrency);
+    const baseRateToBase = base ? base.rateToBase : 1;
+
+    const rates: Record<string, number> = {};
+    currencies.forEach((c) => {
+      // Internal Rate Calculation with Margin (Revenue Generation)
+      const marketRate = c.rateToBase / baseRateToBase;
+      const marginMultiplier = 1 + (c.marginPercentage / 100);
+      rates[c.code] = parseFloat((marketRate * marginMultiplier).toFixed(4));
+    });
+
+    await this.cacheManager.set(cacheKey, rates, this.CACHE_TTL);
+    return rates;
+  }
+
+  async convert(amount: number, fromCurrency: string, toCurrency: string): Promise<any> {
     if (fromCurrency === toCurrency) {
-      return {
-        convertedAmount: amount,
-        exchangeRate: 1,
-        fromCurrency,
-        toCurrency,
-      };
+      return { convertedAmount: amount, exchangeRate: 1, fromCurrency, toCurrency };
     }
 
     const rates = await this.getExchangeRates(fromCurrency);
     const rate = rates[toCurrency];
 
     if (!rate) {
-      this.logger.warn(
-        `Exchange rate not found for ${fromCurrency} → ${toCurrency}`,
-      );
-      return {
-        convertedAmount: amount,
-        exchangeRate: 1,
-        fromCurrency,
-        toCurrency,
-      };
+      this.logger.warn(`Exchange rate not found for ${fromCurrency} → ${toCurrency}`);
+      return { convertedAmount: amount, exchangeRate: 1, fromCurrency, toCurrency };
     }
 
     return {
@@ -119,57 +67,38 @@ export class CurrencyService {
     };
   }
 
-  getSupportedCurrencies(): { code: string; name: string; symbol: string }[] {
-    const currencyInfo: Record<string, { name: string; symbol: string }> = {
-      USD: { name: "US Dollar", symbol: "$" },
-      EUR: { name: "Euro", symbol: "€" },
-      GBP: { name: "British Pound", symbol: "£" },
-      NGN: { name: "Nigerian Naira", symbol: "₦" },
-      GHS: { name: "Ghanaian Cedi", symbol: "GH₵" },
-      ZAR: { name: "South African Rand", symbol: "R" },
-      KES: { name: "Kenyan Shilling", symbol: "KSh" },
-      CAD: { name: "Canadian Dollar", symbol: "CA$" },
-      AUD: { name: "Australian Dollar", symbol: "A$" },
-      JPY: { name: "Japanese Yen", symbol: "¥" },
-      CNY: { name: "Chinese Yuan", symbol: "¥" },
-      INR: { name: "Indian Rupee", symbol: "₹" },
-      AED: { name: "UAE Dirham", symbol: "د.إ" },
-      SAR: { name: "Saudi Riyal", symbol: "﷼" },
-    };
-
-    return SUPPORTED_CURRENCIES.map((code) => ({
-      code,
-      name: currencyInfo[code]?.name || code,
-      symbol: currencyInfo[code]?.symbol || code,
-    }));
+  async getSupportedCurrencies() {
+    return this.currencyModel.find({ isActive: true }).sort({ code: 1 }).exec();
   }
 
-  private getDefaultRates(baseCurrency: string): Record<string, number> {
-    // Fallback rates relative to USD
-    const usdRates: Record<string, number> = {
-      USD: 1,
-      EUR: 0.92,
-      GBP: 0.79,
-      NGN: 1550,
-      GHS: 15.5,
-      ZAR: 18.5,
-      KES: 153,
-      CAD: 1.36,
-      AUD: 1.53,
-      JPY: 149.5,
-      CNY: 7.24,
-      INR: 83.1,
-      AED: 3.67,
-      SAR: 3.75,
-    };
+  // Admin Methods
+  async getAllCurrencies() {
+    return this.currencyModel.find().sort({ code: 1 }).exec();
+  }
 
-    if (baseCurrency === "USD") return usdRates;
+  async updateCurrency(code: string, update: any) {
+    const currency = await this.currencyModel.findOneAndUpdate({ code }, { $set: update }, { new: true }).exec();
+    await this.cacheManager.reset(); // Aggressively clear cache on update
+    return currency;
+  }
 
-    const baseRate = usdRates[baseCurrency] || 1;
-    const rates: Record<string, number> = {};
-    for (const [code, rate] of Object.entries(usdRates)) {
-      rates[code] = Math.round((rate / baseRate) * 10000) / 10000;
-    }
-    return rates;
+  async createCurrency(data: any) {
+    const currency = await this.currencyModel.create(data);
+    await this.cacheManager.reset();
+    return currency;
+  }
+
+  private async seedCurrencies() {
+    const initial = [
+      { code: "USD", name: "US Dollar", symbol: "$", rateToBase: 1, marginPercentage: 0 },
+      { code: "EUR", name: "Euro", symbol: "€", rateToBase: 0.92, marginPercentage: 2 },
+      { code: "GBP", name: "British Pound", symbol: "£", rateToBase: 0.79, marginPercentage: 2 },
+      { code: "NGN", name: "Nigerian Naira", symbol: "₦", rateToBase: 1550, marginPercentage: 5 },
+      { code: "GHS", name: "Ghanaian Cedi", symbol: "GH₵", rateToBase: 15.5, marginPercentage: 5 },
+      { code: "KES", name: "Kenyan Shilling", symbol: "KSh", rateToBase: 153, marginPercentage: 5 },
+      { code: "ZAR", name: "South African Rand", symbol: "R", rateToBase: 18.5, marginPercentage: 5 },
+    ];
+    await this.currencyModel.insertMany(initial);
+    this.logger.log("Seeded initial currencies for internal management");
   }
 }

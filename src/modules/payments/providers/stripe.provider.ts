@@ -64,6 +64,49 @@ export class StripeProvider {
     }
   }
 
+  async createTopUpSession(params: {
+    amount: number;
+    currency: string;
+    userId: string;
+    customerEmail: string;
+    callbackUrl: string;
+  }) {
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: params.customerEmail,
+        line_items: [
+          {
+            price_data: {
+              currency: params.currency.toLowerCase(),
+              product_data: {
+                name: "Flybeth Wallet Top-up",
+                description: "Credit funds to your Flybeth agent wallet",
+              },
+              unit_amount: Math.round(params.amount * 100),
+            },
+            quantity: 1,
+          },
+        ],
+        metadata: {
+          type: "wallet_topup",
+          userId: params.userId,
+        },
+        success_url: `${params.callbackUrl}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${params.callbackUrl}?status=cancelled`,
+      });
+
+      return {
+        sessionId: session.id,
+        url: session.url,
+      };
+    } catch (error) {
+      this.logger.error(`Stripe top-up session creation failed: ${error.message}`);
+      throw error;
+    }
+  }
+
   async createPaymentIntent(params: {
     amount: number;
     currency: string;

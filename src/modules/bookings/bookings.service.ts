@@ -24,6 +24,9 @@ import { FraudService } from "../fraud/fraud.service";
 import { SystemConfigService } from "../system-config/system-config.service";
 import { ConfigService } from "@nestjs/config";
 import { InvoiceService } from "./invoice.service";
+import { WalletService } from "../finance/wallet.service";
+import { FlightsIntegrationService } from "../integrations/flights-integration.service";
+import { PassengersService } from "../passengers/passengers.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate, PaginatedResult } from "../../common/utils/pagination.util";
 import { generatePNR } from "../../common/utils/crypto.util";
@@ -49,6 +52,9 @@ export class BookingsService {
     private configService: SystemConfigService,
     private nestConfigService: ConfigService,
     private invoiceService: InvoiceService,
+    private walletService: WalletService,
+    private integrationService: FlightsIntegrationService,
+    private passengersService: PassengersService,
   ) {}
 
   async create(
@@ -72,6 +78,18 @@ export class BookingsService {
       pnrExists = !!(await this.bookingModel.findOne({ pnr }).exec());
     }
 
+    // 0.5. Process Passenger Details if provided
+    const passengerIds = [...(createBookingDto.flights?.[0]?.passengerIds || [])];
+    if (createBookingDto.passengerDetails?.length) {
+       for (const pDetail of createBookingDto.passengerDetails) {
+          const savedP = await this.passengersService.create(userId, {
+            ...pDetail,
+            type: 'adult', // Default for now
+          });
+          passengerIds.push(savedP._id.toString());
+       }
+    }
+
     let totalBaseFare = 0;
     let totalTaxes = 0;
     const bookingFlights: any[] = [];
@@ -82,41 +100,68 @@ export class BookingsService {
     // 1. Process Flights
     if (createBookingDto.flights) {
       for (const flightDto of createBookingDto.flights) {
-        const flight = await this.flightsService.findById(flightDto.flightId);
-        const flightClass = flight.classes?.find(
-          (c) => c.type === flightDto.class,
-        );
+        let flightPrice = 0;
+        let flightCurrency = 'USD';
 
-        if (!flightClass) {
-          throw new BadRequestException(
-            `Class ${flightDto.class} not available on flight ${flight.flightNumber}`,
+        if (flightDto.provider && flightDto.provider !== 'manual') {
+          // For external providers (Duffel, etc.), we trust the priced offer from the frontend
+          // usually these are re-verified in the secondary hold/booking step
+          flightPrice = createBookingDto.pricing?.baseFare || 0; // Fallback to provided pricing
+          
+          bookingFlights.push({
+            flight: flightDto.flightId, 
+            class: flightDto.class,
+            passengers: passengerIds.map(id => new Types.ObjectId(id)),
+            offerId: flightDto.offerId,
+            provider: flightDto.provider,
+          });
+          
+          // Pricing for external is usually handled by the offer total, 
+          // but we'll add to total if not using the summary pricing
+          if (totalBaseFare === 0) {
+            totalBaseFare = createBookingDto.pricing?.baseFare || 0;
+            totalTaxes = createBookingDto.pricing?.taxes || 0;
+          }
+        } else {
+          // Local database flight
+          const flight = await this.flightsService.findById(flightDto.flightId);
+          const flightClass = flight.classes?.find(
+            (c) => c.type === flightDto.class,
+          );
+
+          if (!flightClass) {
+            throw new BadRequestException(
+              `Class ${flightDto.class} not available on flight ${flight.flightNumber}`,
+            );
+          }
+
+          if (flightClass.seatsAvailable < flightDto.passengerIds.length) {
+            throw new BadRequestException(
+              `Not enough seats available on flight ${flight.flightNumber}`,
+            );
+          }
+
+          totalBaseFare += flightClass.basePrice * flightDto.passengerIds.length;
+          totalTaxes +=
+            flightClass.basePrice * flightDto.passengerIds.length * 0.12; // 12% flight tax
+
+          bookingFlights.push({
+            flight: flightDto.flightId,
+            class: flightDto.class,
+            passengers: passengerIds.map(
+              (id) => new Types.ObjectId(id),
+            ),
+            offerId: flightDto.offerId,
+            provider: flightDto.provider || 'manual',
+          });
+
+          // Reserve seats
+          await this.flightsService.updateSeatAvailability(
+            flightDto.flightId,
+            flightDto.class,
+            passengerIds.length,
           );
         }
-
-        if (flightClass.seatsAvailable < flightDto.passengerIds.length) {
-          throw new BadRequestException(
-            `Not enough seats available on flight ${flight.flightNumber}`,
-          );
-        }
-
-        totalBaseFare += flightClass.basePrice * flightDto.passengerIds.length;
-        totalTaxes +=
-          flightClass.basePrice * flightDto.passengerIds.length * 0.12; // 12% flight tax
-
-        bookingFlights.push({
-          flight: new Types.ObjectId(flightDto.flightId),
-          class: flightDto.class,
-          passengers: flightDto.passengerIds.map(
-            (id) => new Types.ObjectId(id),
-          ),
-        });
-
-        // Reserve seats
-        await this.flightsService.updateSeatAvailability(
-          flightDto.flightId,
-          flightDto.class,
-          flightDto.passengerIds.length,
-        );
       }
     }
 
@@ -299,6 +344,73 @@ export class BookingsService {
     });
 
     const saved = await booking.save();
+
+     // 5. Handle Payment immediately if Wallet
+     if (createBookingDto.paymentProvider === 'wallet') {
+        try {
+          const balance = await this.walletService.getBalance(userId);
+          if (balance < totalAmount) {
+            throw new BadRequestException('Insufficient wallet balance');
+          }
+
+          // Verify PIN if required (handled in payments service usually)
+          await this.walletService.debit(userId, totalAmount, `Booking ${saved.pnr}`, saved._id.toString());
+          
+          // If it's a flight, book it immediately on Duffel
+          if (saved.flights?.length) {
+             const flight = saved.flights[0];
+             if (flight.offerId && flight.provider) {
+                const passengers = await this.passengersService.findByIds(passengerIds);
+                await this.integrationService.bookFlight(
+                  flight.offerId,
+                  flight.provider,
+                  passengers,
+                  { type: 'balance', amount: totalAmount, currency: saved.pricing.currency }
+                );
+             }
+          }
+
+          // Update status to confirmed
+          await this.bookingModel.findByIdAndUpdate(saved._id, {
+            status: BookingStatus.TICKETED,
+            "payment.status": PaymentStatus.SUCCESS,
+            "payment.provider": "wallet",
+            "payment.paidAt": new Date(),
+          });
+        } catch (err) {
+          this.logger.error(`Wallet payment failed for booking ${saved.pnr}: ${err.message}`);
+          // Status remains pending
+        }
+     } 
+     // 5.1 Handle Hold Order Logic
+     else if (createBookingDto.paymentModel === 'on_hold') {
+       try {
+         if (saved.flights?.length) {
+           const flight = saved.flights[0];
+           if (flight.offerId && flight.provider) {
+              const passengers = await this.passengersService.findByIds(passengerIds);
+              const holdResult = await this.integrationService.createHoldOrder(
+                flight.provider,
+                flight.offerId,
+                passengers
+              );
+              
+              // Update local booking with remote reference and expiry
+              await this.bookingModel.findByIdAndUpdate(saved._id, {
+                pnr: holdResult.pnr.toUpperCase(),
+                remoteOrderId: holdResult.orderId,
+                expiresAt: holdResult.expiresAt ? new Date(holdResult.expiresAt) : new Date(Date.now() + 24 * 60 * 60 * 1000), // Default 24h if provider doesn't specify
+                status: BookingStatus.PENDING,
+              });
+              this.logger.log(`Flight held successfully: ${holdResult.pnr} for booking ${saved.pnr}`);
+           }
+         }
+       } catch (err) {
+         this.logger.error(`Failed to create hold order for booking ${saved.pnr}: ${err.message}`);
+         // We keep the local booking as is, it's just not synced with external provider yet
+       }
+     }
+
     const populated = await this.findById(saved._id.toString());
 
     // Send notifications

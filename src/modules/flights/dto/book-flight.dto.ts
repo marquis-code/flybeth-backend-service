@@ -87,6 +87,11 @@ export class BookFlightDto {
   @ApiPropertyOptional()
   @IsOptional()
   payment?: any;
+
+  @ApiPropertyOptional({ type: Array })
+  @IsOptional()
+  @IsArray()
+  services?: { id: string; quantity: number }[];
 }
 
 export class CancelFlightBookingDto {

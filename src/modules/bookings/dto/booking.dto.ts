@@ -73,6 +73,45 @@ class BookingFlightDto {
   @IsArray()
   @IsString({ each: true })
   passengerIds: string[];
+
+  @ApiProperty()
+  @IsString()
+  offerId: string;
+
+  @ApiProperty()
+  @IsString()
+  provider: string;
+}
+
+class DetailedPassengerDto {
+  @ApiProperty()
+  @IsString()
+  firstName: string;
+
+  @ApiProperty()
+  @IsString()
+  lastName: string;
+
+  @ApiProperty()
+  @IsString()
+  email: string;
+
+  @ApiProperty()
+  @IsString()
+  phone: string;
+
+  @ApiProperty()
+  @IsString()
+  dateOfBirth: string;
+
+  @ApiProperty()
+  @IsString()
+  gender: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
 }
 
 class BookingCruiseDto {
@@ -207,6 +246,22 @@ export class CreateBookingDto {
   @IsOptional()
   @IsString()
   paymentModel?: string;
+
+  @ApiPropertyOptional({ enum: ['wallet', 'stripe', 'paystack', 'manual'] })
+  @IsOptional()
+  @IsString()
+  paymentProvider?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  paymentMetadata?: Record<string, any>;
+
+  @ApiPropertyOptional({ type: [DetailedPassengerDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DetailedPassengerDto)
+  passengerDetails?: DetailedPassengerDto[];
 }
 
 export class CancelBookingDto {

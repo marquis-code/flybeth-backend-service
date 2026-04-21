@@ -12,6 +12,10 @@ import { CruisesModule } from "../cruises/cruises.module";
 import { PackagesModule } from "../packages/packages.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { FraudModule } from "../fraud/fraud.module";
+import { IntegrationsModule } from "../integrations/integrations.module";
+import { PassengersModule } from "../passengers/passengers.module";
+import { FinanceModule } from "../finance/finance.module";
+import { SystemConfigModule } from "../system-config/system-config.module";
 
 import { InvoiceService } from "./invoice.service";
 
@@ -26,6 +30,10 @@ import { InvoiceService } from "./invoice.service";
     PackagesModule,
     NotificationsModule,
     FraudModule,
+    IntegrationsModule,
+    PassengersModule,
+    FinanceModule,
+    SystemConfigModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, InvoiceService],

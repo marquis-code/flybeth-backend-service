@@ -19,6 +19,9 @@ export class SystemConfig {
 
   @Prop({ default: 'Flybeth Global' })
   platformName: string;
+
+  @Prop({ default: 15, required: true })
+  ancillaryMargin: number; // Percentage for seats/bags
 }
 
 export const SystemConfigSchema = SchemaFactory.createForClass(SystemConfig);

@@ -118,4 +118,15 @@ export class PaymentsController {
   refund(@Param("paymentId") paymentId: string, @Body() dto: RefundPaymentDto) {
     return this.paymentsService.refund(paymentId, dto);
   }
+  @Post("wallet/topup")
+  @ApiBearerAuth()
+  @Roles(Role.AGENT, Role.CUSTOMER)
+  @ApiOperation({ summary: "Initialize a wallet top-up session" })
+  initializeTopUp(
+    @CurrentUser("_id") userId: string,
+    @CurrentUser("email") email: string,
+    @Body() dto: { amount: number; currency: string; callbackUrl: string },
+  ) {
+    return this.paymentsService.initializeTopUp(userId, { ...dto, email });
+  }
 }

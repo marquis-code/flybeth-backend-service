@@ -1,5 +1,5 @@
 // src/modules/integrations/providers/duffel.provider.ts
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
   AirlineAdapter,
@@ -124,7 +124,7 @@ export class DuffelProvider implements AirlineAdapter {
 
     try {
       const updatedOffer = await this.getOfferDetails(offerId);
-      if (!updatedOffer) throw new Error("Offer not found");
+      if (!updatedOffer) throw new NotFoundException("Flight offer has expired or is no longer available");
 
       return {
         data: {
@@ -132,6 +132,7 @@ export class DuffelProvider implements AirlineAdapter {
         },
       };
     } catch (error) {
+      if (error instanceof NotFoundException) throw error;
       this.logger.error(`Duffel price offer error: ${error.message}`);
       throw error;
     }
@@ -145,11 +146,18 @@ export class DuffelProvider implements AirlineAdapter {
       typeof flightOffer === "string"
         ? flightOffer
         : flightOffer.id || flightOffer.offerId;
-    this.logger.log(`Fetching seatmap for Duffel offer: ${offerId}`);
+    
+    if (!offerId) {
+      this.logger.warn("Duffel seatmap skip: No offerId provided");
+      return { data: [] };
+    }
+
+    const cleanOfferId = offerId.trim();
+    this.logger.log(`Fetching seatmap for Duffel offer: ${cleanOfferId}`);
 
     try {
       const response = await fetch(
-        `${this.baseUrl}/air/seat_maps?offer_id=${offerId}`,
+        `${this.baseUrl}/air/seat_maps?offer_id=${encodeURIComponent(cleanOfferId)}`,
         {
           method: "GET",
           headers: this.getHeaders(),
@@ -157,11 +165,27 @@ export class DuffelProvider implements AirlineAdapter {
         },
       );
 
+      const requestId = response.headers.get("x-request-id");
+
       if (!response.ok) {
         const errorBody = await response.text();
+        
+        // Handle specific 422 "Seat Map Unavailable" gracefully
+        if (response.status === 422 && errorBody.includes("seat_map_unavailable")) {
+          this.logger.warn(`Seat map not available for offer ${cleanOfferId} (Duffel Request ID: ${requestId})`);
+          return { data: [] };
+        }
+
         this.logger.error(
-          `Duffel seatmap failed: ${response.status} ${errorBody}`,
+          `Duffel seatmap failed: ${response.status} (Request ID: ${requestId}) ${errorBody}`,
         );
+        
+        // Don't throw for 404, just return empty data to avoid breaking the UI flow
+        if (response.status === 404) {
+          this.logger.warn(`Offer ${cleanOfferId} not found or expired on Duffel (Request ID: ${requestId})`);
+          return { data: [] };
+        }
+
         throw new Error(`Duffel seatmap failed: ${response.status}`);
       }
 
@@ -169,7 +193,8 @@ export class DuffelProvider implements AirlineAdapter {
       return data;
     } catch (error) {
       this.logger.error(`Duffel seatmap error: ${error.message}`);
-      throw error;
+      // Returning empty data instead of throwing allows the UI to show "No seat map available" gracefully
+      return { data: [] };
     }
   }
 
@@ -178,7 +203,7 @@ export class DuffelProvider implements AirlineAdapter {
    */
   async getOfferDetails(offerId: string): Promise<FlightSearchResult | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/air/offers/${offerId}`, {
+      const response = await fetch(`${this.baseUrl}/air/offers/${offerId}?return_available_services=true`, {
         method: "GET",
         headers: this.getHeaders(),
         signal: AbortSignal.timeout(30000),
@@ -265,6 +290,11 @@ export class DuffelProvider implements AirlineAdapter {
           offer.slices?.[0]?.segments?.[0]?.passengers?.[0]?.cabin_class ||
           "economy",
         expiresAt: offer.expires_at,
+        paymentRequirements: offer.payment_requirements ? {
+          requiresInstantPayment: offer.payment_requirements.requires_instant_payment,
+          priceGuaranteeExpiresAt: offer.payment_requirements.price_guarantee_expires_at,
+          paymentRequiredBy: offer.payment_requirements.payment_required_by,
+        } : undefined,
         conditions: {
           refundable:
             offer.conditions?.refund_before_departure?.allowed === true,
@@ -361,12 +391,12 @@ export class DuffelProvider implements AirlineAdapter {
   async createClientKey(customerId: string): Promise<any> {
     this.logger.log(`Creating Duffel component client key for customer ${customerId}`);
     try {
-      const response = await fetch(`${this.baseUrl}/identity/sessions`, {
+      const response = await fetch(`${this.baseUrl}/air/sessions`, {
         method: "POST",
         headers: this.getHeaders(),
         body: JSON.stringify({
           data: { 
-            customer_user_id: customerId 
+            customer_id: customerId 
           },
         }),
       });
@@ -478,89 +508,6 @@ export class DuffelProvider implements AirlineAdapter {
     }
   }
 
-  /**
-   * Create a hold order (Reserve now, pay later)
-   */
-  async createHoldOrder(
-    offerId: string,
-    passengers: any[],
-  ): Promise<{ pnr: string; orderId: string; expiresAt: string }> {
-    this.logger.log(`Creating Duffel hold order ${offerId}`);
-    try {
-      const requestBody = {
-        data: {
-          type: "hold",
-          selected_offers: [offerId],
-          passengers: this.mapPassengersForBooking(passengers),
-        },
-      };
-
-      const response = await fetch(`${this.baseUrl}/air/orders`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        this.logger.error(`Duffel hold order failed: ${error}`);
-        throw new Error(`Hold order failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const order = data.data;
-
-      return {
-        pnr: order.booking_reference || order.id,
-        orderId: order.id,
-        expiresAt: order.payment_required_by,
-      };
-    } catch (error) {
-      this.logger.error(`Duffel create hold order error: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Pay for a previously created hold order
-   */
-  async payForOrder(
-    orderId: string,
-    payment: any,
-  ): Promise<{ success: boolean; ticketNumbers?: string[] }> {
-    this.logger.log(`Paying for Duffel order ${orderId}`);
-    try {
-      const response = await fetch(`${this.baseUrl}/air/orders/${orderId}/actions/pay`, {
-        method: "POST",
-        headers: this.getHeaders(),
-        body: JSON.stringify({
-          data: {
-            payment: {
-              type: payment.type || "balance",
-              currency: payment.currency,
-              amount: String(payment.amount),
-              ...(payment.cardId ? { card_id: payment.cardId } : {}),
-            },
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        this.logger.error(`Duffel payment failed: ${error}`);
-        return { success: false };
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        ticketNumbers: data.data.documents?.map((d: any) => d.unique_identifier) || [],
-      };
-    } catch (error) {
-      this.logger.error(`Duffel pay order error: ${error.message}`);
-      return { success: false };
-    }
-  }
 
   /**
    * Internal helper to map our passenger format to Duffel's booking format
@@ -602,8 +549,9 @@ export class DuffelProvider implements AirlineAdapter {
     passengers: any[],
     payment?: any,
     offer?: any,
+    services?: any[],
   ): Promise<{ pnr: string; orderId: string; ticketNumbers?: string[] }> {
-    this.logger.log(`Booking Duffel flight ${offerId}`);
+    this.logger.log(`Booking Duffel flight ${offerId} with ${services?.length || 0} services`);
 
     try {
       const requestBody: any = {
@@ -611,6 +559,7 @@ export class DuffelProvider implements AirlineAdapter {
           type: "instant",
           selected_offers: [offerId],
           passengers: this.mapPassengersForBooking(passengers),
+          services: services || [],
           payments: [
             {
               type: payment?.type || "balance",
@@ -676,6 +625,97 @@ export class DuffelProvider implements AirlineAdapter {
       };
     } catch (error) {
       this.logger.error(`Duffel cancel error: ${error.message}`);
+      return { success: false };
+    }
+  }
+
+  /**
+   * Create a hold order via Duffel Orders API
+   */
+  async createHoldOrder(
+    offerId: string,
+    passengers: any[],
+    services?: any[],
+  ): Promise<{ pnr: string; orderId: string; expiresAt: string }> {
+    this.logger.log(`Creating Duffel hold order for ${offerId}`);
+    try {
+      const requestBody: any = {
+        data: {
+          type: "hold",
+          selected_offers: [offerId],
+          passengers: this.mapPassengersForBooking(passengers),
+          services: services || [],
+        },
+      };
+
+      const response = await fetch(`${this.baseUrl}/air/orders`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(130000),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(`Duffel hold order failed: ${response.status} ${errorBody}`);
+        throw new Error(`Duffel hold order failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const order = data.data;
+
+      return {
+        pnr: order.booking_reference || order.id,
+        orderId: order.id,
+        expiresAt: order.payment_status?.payment_required_by,
+      };
+    } catch (error) {
+      this.logger.error(`Duffel hold order error: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Pay for a held order via Duffel Payments API
+   */
+  async payForOrder(
+    orderId: string,
+    payment: any,
+  ): Promise<{ success: boolean; ticketNumbers?: string[] }> {
+    this.logger.log(`Paying for Duffel order ${orderId}`);
+    try {
+      const requestBody = {
+        data: {
+          order_id: orderId,
+          payment: {
+            type: payment.type || "balance",
+            amount: String(payment.amount),
+            currency: payment.currency,
+          },
+        },
+      };
+
+      const response = await fetch(`${this.baseUrl}/air/payments`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(60000),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        this.logger.error(`Duffel payment failed: ${response.status} ${errorBody}`);
+        return { success: false };
+      }
+
+      const data = await response.json();
+      // After payment, the order response usually contains documents
+      // However, we might need to retrieve the order again if not returned here
+      return {
+        success: true,
+      };
+    } catch (error) {
+      this.logger.error(`Duffel payment error: ${error.message}`);
       return { success: false };
     }
   }
