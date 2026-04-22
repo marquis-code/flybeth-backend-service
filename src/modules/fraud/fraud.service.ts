@@ -3,6 +3,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { Booking, BookingDocument } from "../bookings/schemas/booking.schema";
 import { User, UserDocument } from "../users/schemas/user.schema";
+import { TrackingEvent, TrackingEventDocument } from "../tracking/schemas/tracking-event.schema";
 
 @Injectable()
 export class FraudService {
@@ -11,7 +12,60 @@ export class FraudService {
   constructor(
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(TrackingEvent.name) private eventModel: Model<TrackingEventDocument>,
   ) {}
+
+  async getStats() {
+    const [totalBookings, highRiskCount, totalEvents] = await Promise.all([
+      this.bookingModel.countDocuments(),
+      this.bookingModel.countDocuments({ riskScore: { $gte: 70 } }),
+      this.eventModel.countDocuments({ type: 'user_journey' })
+    ]);
+
+    const stats = {
+      riskLevel: highRiskCount > 10 ? 'High' : highRiskCount > 5 ? 'Medium' : 'Low',
+      highRiskBookings: highRiskCount,
+      activeBotThreats: 0, // Calculated below
+      securityScore: Math.max(100 - (highRiskCount * 5), 0),
+      totalEventsAnalyzed: totalEvents
+    };
+
+    // Simple bot threat estimation: IPs with > 20 events in last hour
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const botThreats = await this.eventModel.aggregate([
+      { $match: { createdAt: { $gte: hourAgo } } },
+      { $group: { _id: "$ipAddress", count: { $sum: 1 } } },
+      { $match: { count: { $gt: 20 } } }
+    ]);
+    
+    stats.activeBotThreats = botThreats.length;
+
+    return stats;
+  }
+
+  async getHighRiskBookings() {
+    return this.bookingModel.find({ riskScore: { $gte: 30 } })
+      .sort({ riskScore: -1 })
+      .limit(50)
+      .populate('user', 'firstName lastName email')
+      .exec();
+  }
+
+  async getBotEvents() {
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    return this.eventModel.aggregate([
+      { $match: { createdAt: { $gte: hourAgo } } },
+      { $group: { 
+          _id: "$ipAddress", 
+          eventCount: { $sum: 1 },
+          lastEvent: { $max: "$createdAt" },
+          userAgent: { $first: "$userAgent" }
+        } 
+      },
+      { $match: { eventCount: { $gt: 10 } } },
+      { $sort: { eventCount: -1 } }
+    ]);
+  }
 
   async calculateRiskScore(
     bookingId: string,
@@ -81,5 +135,16 @@ export class FraudService {
     );
 
     return { score: finalScore, signals };
+  }
+
+  async updateBookingFraudStatus(id: string, status: 'approved' | 'rejected') {
+    const riskScore = status === 'approved' ? 0 : 100;
+    const signals = status === 'approved' ? ['Manually approved by admin'] : ['Manually rejected as fraud by admin'];
+    
+    return this.bookingModel.findByIdAndUpdate(id, {
+      riskScore,
+      fraudSignals: signals,
+      notes: `Fraud status updated to ${status} on ${new Date().toISOString()}`
+    }, { new: true });
   }
 }

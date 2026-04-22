@@ -4,6 +4,7 @@ import { SupportController } from './support.controller';
 import { SupportService } from './support.service';
 import { NewsletterSubscription, NewsletterSubscriptionSchema } from './schemas/newsletter.schema';
 import { ContactInquiry, ContactInquirySchema } from './schemas/inquiry.schema';
+import { Tenant, TenantSchema } from '../tenants/schemas/tenant.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -11,6 +12,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     MongooseModule.forFeature([
       { name: NewsletterSubscription.name, schema: NewsletterSubscriptionSchema },
       { name: ContactInquiry.name, schema: ContactInquirySchema },
+      { name: Tenant.name, schema: TenantSchema },
     ]),
     NotificationsModule,
   ],

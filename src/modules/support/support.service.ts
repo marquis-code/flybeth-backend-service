@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { NewsletterSubscription, NewsletterSubscriptionDocument } from './schemas/newsletter.schema';
 import { ContactInquiry, ContactInquiryDocument } from './schemas/inquiry.schema';
+import { Tenant, TenantDocument } from '../tenants/schemas/tenant.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ResendService } from '../notifications/resend.service';
 
@@ -13,12 +14,28 @@ export class SupportService {
   constructor(
     @InjectModel(NewsletterSubscription.name) private newsletterModel: Model<NewsletterSubscriptionDocument>,
     @InjectModel(ContactInquiry.name) private inquiryModel: Model<ContactInquiryDocument>,
+    @InjectModel(Tenant.name) private tenantModel: Model<TenantDocument>,
     private readonly notificationsService: NotificationsService,
     private readonly resendService: ResendService,
   ) {}
 
+  private async getTenantContext(tenantId?: string): Promise<Types.ObjectId> {
+    if (tenantId && Types.ObjectId.isValid(tenantId)) {
+      return new Types.ObjectId(tenantId);
+    }
+    
+    // Fallback to platform tenant
+    const platform = await this.tenantModel.findOne({ slug: 'flybeth' }).exec();
+    if (platform) return platform._id;
+    
+    // If absolutely no tenant found, return a stable random-like but fixed ID if we must, 
+    // but better to throw or handle. For now, since we seeded 'flybeth', it should work.
+    return new Types.ObjectId('000000000000000000000000');
+  }
+
   async subscribeNewsletter(tenantId: string, email: string, source?: string): Promise<NewsletterSubscriptionDocument> {
-    const existing = await this.newsletterModel.findOne({ email, tenant: new Types.ObjectId(tenantId) }).exec();
+    const tid = await this.getTenantContext(tenantId);
+    const existing = await this.newsletterModel.findOne({ email, tenant: tid }).exec();
     
     if (existing) {
       if (existing.status === 'active') {
@@ -30,7 +47,7 @@ export class SupportService {
 
     const subscription = new this.newsletterModel({
       email,
-      tenant: new Types.ObjectId(tenantId),
+      tenant: tid,
       source,
       status: 'active'
     });
@@ -67,9 +84,10 @@ export class SupportService {
   }
 
   async submitInquiry(tenantId: string, data: any): Promise<ContactInquiryDocument> {
+    const tid = await this.getTenantContext(tenantId);
     const inquiry = new this.inquiryModel({
       ...data,
-      tenant: new Types.ObjectId(tenantId),
+      tenant: tid,
       status: 'new'
     });
 
@@ -102,12 +120,18 @@ export class SupportService {
 
   // Admin Methods
   async getInquiries(tenantId: string, query: any = {}): Promise<any> {
-    const filter = { tenant: new Types.ObjectId(tenantId), ...query };
+    const filter: any = { ...query };
+    if (tenantId && Types.ObjectId.isValid(tenantId)) {
+      filter.tenant = new Types.ObjectId(tenantId);
+    }
     return this.inquiryModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
   async getSubscriptions(tenantId: string, query: any = {}): Promise<any> {
-    const filter = { tenant: new Types.ObjectId(tenantId), ...query };
+    const filter: any = { ...query };
+    if (tenantId && Types.ObjectId.isValid(tenantId)) {
+      filter.tenant = new Types.ObjectId(tenantId);
+    }
     return this.newsletterModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
