@@ -63,8 +63,10 @@ import { MarketingModule } from "./modules/marketing/marketing.module";
 import { FinanceModule } from "./modules/finance/finance.module";
 import { ItinerariesModule } from "./modules/itineraries/itineraries.module";
 import { SupportModule } from "./modules/support/support.module";
+import { AppController } from "./app.controller";
 
 @Module({
+  controllers: [AppController],
   imports: [
     // Global Configuration
     ConfigModule.forRoot({
