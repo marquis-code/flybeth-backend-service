@@ -1,32 +1,68 @@
 version: '3.8'
 
 services:
-  api:
-    build: .
-    restart: unless-stopped
+  reverse-proxy:
+    image: traefik:v3.0
+    restart: always
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.version=1.41"
+      - "--entryPoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=hello@flybeth.com"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
     ports:
-      - "${PORT:-3000}:3000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "./letsencrypt:/letsencrypt"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - DOCKER_API_VERSION=1.41
+    networks:
+      - flybeth-net
+
+  backend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    restart: unless-stopped
     env_file:
-      - .env
+      - ./.env
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.backend.rule=Host(`api.flybeth.com`)"
+      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.routers.backend.tls.certresolver=myresolver"
+      - "traefik.http.services.backend.loadbalancer.server.port=3000"
     depends_on:
       - redis
+      - mongodb
     networks:
-      - cloza-net
+      - flybeth-net
 
   redis:
     image: redis:7-alpine
     restart: always
-    command: redis-server --save 20 1 --loglevel warning
-    ports:
-      - "6379:6379"
     volumes:
-      - redis_data:/var/lib/redis/data
+      - redis_data:/data
     networks:
-      - cloza-net
+      - flybeth-net
+
+  mongodb:
+    image: mongo:6
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - flybeth-net
 
 networks:
-  cloza-net:
+  flybeth-net:
     driver: bridge
 
 volumes:
   redis_data:
+  mongo_data:
