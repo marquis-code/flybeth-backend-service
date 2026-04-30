@@ -25,9 +25,7 @@ services:
       - flybeth-net
 
   backend:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    image: ghcr.io/marquis-code/flybeth-backend-service-backend:main
     restart: unless-stopped
     env_file:
       - ./.env
