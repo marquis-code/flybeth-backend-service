@@ -174,7 +174,7 @@ export class Booking {
   @Prop({ required: true, unique: true })
   pnr: string;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: Types.ObjectId, ref: "User", required: false, default: null })
   user: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
@@ -255,6 +255,12 @@ export class Booking {
 
   @Prop()
   remoteOrderId: string;
+
+  @Prop({ default: false })
+  isBatchBooking: boolean;
+
+  @Prop()
+  batchLabel: string;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

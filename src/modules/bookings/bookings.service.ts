@@ -58,7 +58,7 @@ export class BookingsService {
   ) {}
 
   async create(
-    userId: string,
+    userId: string | undefined,
     createBookingDto: CreateBookingDto,
   ): Promise<BookingDocument> {
     // 0. Whitelist Check
@@ -79,14 +79,14 @@ export class BookingsService {
     }
 
     // 0.5. Process Passenger Details if provided
-    const passengerIds = [...(createBookingDto.flights?.[0]?.passengerIds || [])];
+    const additionalPassengerIds: string[] = [];
     if (createBookingDto.passengerDetails?.length) {
        for (const pDetail of createBookingDto.passengerDetails) {
-          const savedP = await this.passengersService.create(userId, {
+          const savedP = await this.passengersService.create(userId as any, {
             ...pDetail,
             type: 'adult', // Default for now
           });
-          passengerIds.push(savedP._id.toString());
+          additionalPassengerIds.push(savedP._id.toString());
        }
     }
 
@@ -108,10 +108,12 @@ export class BookingsService {
           // usually these are re-verified in the secondary hold/booking step
           flightPrice = createBookingDto.pricing?.baseFare || 0; // Fallback to provided pricing
           
+          const currentFlightPassengerIds = [...(flightDto.passengerIds || []), ...additionalPassengerIds];
+          
           bookingFlights.push({
             flight: flightDto.flightId, 
             class: flightDto.class,
-            passengers: passengerIds.map(id => new Types.ObjectId(id)),
+            passengers: currentFlightPassengerIds.map(id => new Types.ObjectId(id)),
             offerId: flightDto.offerId,
             provider: flightDto.provider,
           });
@@ -135,20 +137,22 @@ export class BookingsService {
             );
           }
 
-          if (flightClass.seatsAvailable < flightDto.passengerIds.length) {
+          const currentFlightPassengerIds = [...(flightDto.passengerIds || []), ...additionalPassengerIds];
+
+          if (flightClass.seatsAvailable < currentFlightPassengerIds.length) {
             throw new BadRequestException(
-              `Not enough seats available on flight ${flight.flightNumber}`,
+              `Not enough seats available on flight ${flight.flightNumber}. Requested ${currentFlightPassengerIds.length}, available ${flightClass.seatsAvailable}`,
             );
           }
 
-          totalBaseFare += flightClass.basePrice * flightDto.passengerIds.length;
+          totalBaseFare += flightClass.basePrice * currentFlightPassengerIds.length;
           totalTaxes +=
-            flightClass.basePrice * flightDto.passengerIds.length * 0.12; // 12% flight tax
+            flightClass.basePrice * currentFlightPassengerIds.length * 0.12; // 12% flight tax
 
           bookingFlights.push({
             flight: flightDto.flightId,
             class: flightDto.class,
-            passengers: passengerIds.map(
+            passengers: currentFlightPassengerIds.map(
               (id) => new Types.ObjectId(id),
             ),
             offerId: flightDto.offerId,
@@ -159,7 +163,7 @@ export class BookingsService {
           await this.flightsService.updateSeatAvailability(
             flightDto.flightId,
             flightDto.class,
-            passengerIds.length,
+            currentFlightPassengerIds.length,
           );
         }
       }
@@ -285,25 +289,28 @@ export class BookingsService {
     }
 
     const totalPassengers =
-      (createBookingDto.flights?.reduce(
-        (sum, f) => sum + f.passengerIds.length,
+      (bookingFlights.reduce(
+        (sum, f) => sum + f.passengers.length,
         0,
       ) || 0) +
-      (createBookingDto.stays?.reduce(
+      (bookingStays.reduce(
         (sum, s) => sum + s.occupancy.adults + (s.occupancy.children || 0),
         0,
       ) || 0);
+
+    const isBatchBooking = totalPassengers > 1;
+    const batchLabel = isBatchBooking ? (createBookingDto.notes || `Team Trip: ${totalPassengers} pax`) : null;
 
     const agentServiceFee = createBookingDto.agentServiceFee || 0;
     const adultMarkup = createBookingDto.adultMarkup || 0;
     const hasInsurance = createBookingDto.hasInsurance || false;
     const insuranceAmount = hasInsurance ? 25 * totalPassengers : 0; // Fixed $25 per passenger for demo
 
-    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (createBookingDto.flights?.[0]?.passengerIds?.length || 1)) + insuranceAmount - discount;
+    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) + insuranceAmount - discount;
 
     const booking = new this.bookingModel({
       pnr: pnr.toUpperCase(),
-      user: new Types.ObjectId(userId),
+      user: userId ? new Types.ObjectId(userId) : null,
       tenant: createBookingDto.tenantId
         ? new Types.ObjectId(createBookingDto.tenantId)
         : null,
@@ -337,6 +344,8 @@ export class BookingsService {
       totalPassengers,
       isRoundTrip: createBookingDto.isRoundTrip || false,
       notes: createBookingDto.notes,
+      isBatchBooking,
+      batchLabel,
       ipAddress: createBookingDto.ipAddress,
       deviceFingerprint: createBookingDto.deviceFingerprint,
       userAgent: createBookingDto.userAgent,
@@ -346,7 +355,10 @@ export class BookingsService {
     const saved = await booking.save();
 
      // 5. Handle Payment immediately if Wallet
-     if (createBookingDto.paymentProvider === 'wallet') {
+      if (createBookingDto.paymentProvider === 'wallet') {
+        if (!userId) {
+          throw new BadRequestException('Wallet payment is only available for registered users');
+        }
         try {
           const balance = await this.walletService.getBalance(userId);
           if (balance < totalAmount) {
@@ -360,7 +372,8 @@ export class BookingsService {
           if (saved.flights?.length) {
              const flight = saved.flights[0];
              if (flight.offerId && flight.provider) {
-                const passengers = await this.passengersService.findByIds(passengerIds);
+                 const currentFlight = saved.flights?.[0];
+                 const passengers = await this.passengersService.findByIds(currentFlight?.passengers?.map(p => p.toString()) || []);
                 await this.integrationService.bookFlight(
                   flight.offerId,
                   flight.provider,
@@ -388,7 +401,8 @@ export class BookingsService {
          if (saved.flights?.length) {
            const flight = saved.flights[0];
            if (flight.offerId && flight.provider) {
-              const passengers = await this.passengersService.findByIds(passengerIds);
+              const currentFlight = booking.flights?.[0];
+              const passengers = await this.passengersService.findByIds(currentFlight?.passengers?.map(p => p.toString()) || []);
               const holdResult = await this.integrationService.createHoldOrder(
                 flight.provider,
                 flight.offerId,
@@ -423,7 +437,7 @@ export class BookingsService {
       this.logger.error(`Risk scoring failed for ${saved.pnr}: ${err.message}`);
     });
 
-    this.logger.log(`Booking created: ${saved.pnr} for user ${userId}`);
+    this.logger.log(`Booking created: ${saved.pnr} for ${userId ? `user ${userId}` : 'guest'}`);
 
     return this.findById(saved._id.toString());
   }
@@ -546,6 +560,10 @@ export class BookingsService {
   ): Promise<BookingDocument> {
     const booking = await this.bookingModel.findById(id).exec();
     if (!booking) throw new NotFoundException("Booking not found");
+
+    if (!booking.user) {
+      throw new BadRequestException("Guest bookings cannot be cancelled online. Please contact support.");
+    }
 
     if (booking.user.toString() !== userId) {
       throw new BadRequestException("You can only cancel your own bookings");
@@ -731,8 +749,8 @@ export class BookingsService {
 
   private async sendAgentBookingNotifications(booking: BookingDocument) {
     const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "admin@flybeth.com";
-    const agentEmail = (booking.user as any).email;
-    const agentName = (booking.user as any).firstName;
+    const agentEmail = booking.user ? (booking.user as any).email : booking.contactDetails.email;
+    const agentName = booking.user ? (booking.user as any).firstName : (booking.contactDetails.name || 'Guest');
 
     // Generate PDF Invoice
     const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking);
@@ -744,6 +762,14 @@ export class BookingsService {
             <h2>New Booking Alert</h2>
             <p><strong>Agent:</strong> ${agentName} (${agentEmail})</p>
             <p><strong>PNR:</strong> ${booking.pnr}</p>
+            ${booking.isBatchBooking ? `
+              <p><strong>Batch Status:</strong> Yes (${booking.totalPassengers} travelers)</p>
+              <p><strong>Batch Label:</strong> ${booking.batchLabel || 'N/A'}</p>
+              <p><strong>Traveler List:</strong></p>
+              <ul style="font-size: 12px; color: #666;">
+                ${booking.flights?.[0]?.passengers?.map((p: any) => `<li>${p.firstName || 'Traveler'} ${p.lastName || ''}</li>`).join('') || '<li>List not available</li>'}
+              </ul>
+            ` : ''}
             <p><strong>Total Amount:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
             <p><strong>Payment Model:</strong> ${booking.paymentModel}</p>
             <hr />

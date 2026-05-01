@@ -1,10 +1,12 @@
 // src/modules/flights/flights.service.ts
 import { Injectable, NotFoundException, Inject, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
-import { Model } from "mongoose";
+import { Model, Types } from "mongoose";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import { Flight, FlightDocument } from "./schemas/flight.schema";
+import { SearchSession, SearchSessionDocument } from "./schemas/search-session.schema";
+import { RecentSearch, RecentSearchDocument } from "./schemas/recent-search.schema";
 import {
   CreateFlightDto,
   SearchFlightsDto,
@@ -22,6 +24,8 @@ export class FlightsService {
 
   constructor(
     @InjectModel(Flight.name) private flightModel: Model<FlightDocument>,
+    @InjectModel(SearchSession.name) private searchSessionModel: Model<SearchSessionDocument>,
+    @InjectModel(RecentSearch.name) private recentSearchModel: Model<RecentSearchDocument>,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private commissionsService: CommissionsService,
     private configService: SystemConfigService,
@@ -357,5 +361,46 @@ export class FlightsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  // --- Search Sessions for Security ---
+  
+  async createSearchSession(criteria: any) {
+    const session = new this.searchSessionModel({ criteria });
+    const saved = await session.save();
+    return saved._id;
+  }
+
+  async getSearchSession(id: string) {
+    if (!Types.ObjectId.isValid(id)) return null;
+    return this.searchSessionModel.findById(id);
+  }
+
+  // --- Recent Searches ---
+
+  async saveRecentSearch(userId: string | null, criteria: any) {
+    // Deduplicate: check if same search exists for this user recently
+    const query: any = { 
+      'criteria.origin': criteria.origin, 
+      'criteria.destination': criteria.destination,
+      'criteria.departureDate': criteria.departureDate
+    };
+    if (userId) query.userId = userId;
+
+    const existing = await this.recentSearchModel.findOne(query);
+    if (existing) {
+      existing.searchCount += 1;
+      return existing.save();
+    }
+
+    const recent = new this.recentSearchModel({ userId, criteria });
+    return recent.save();
+  }
+
+  async getRecentSearches(userId: string) {
+    return this.recentSearchModel.find({ userId })
+      .sort({ updatedAt: -1 })
+      .limit(10)
+      .exec();
   }
 }

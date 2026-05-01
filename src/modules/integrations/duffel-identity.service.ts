@@ -16,22 +16,26 @@ export class DuffelIdentityService {
   /**
    * Ensure a user has a Duffel identity and returns a client key for frontend interaction
    */
-  async ensureIdentity(userId: string, providedData?: any): Promise<{ customerId: string; clientKey?: string }> {
-    this.logger.log(`Ensuring Duffel identity for user ${userId} with provided data: ${JSON.stringify(providedData)}`);
+  async ensureIdentity(userId?: string, providedData?: any): Promise<{ customerId: string; clientKey?: string }> {
+    this.logger.log(`Ensuring Duffel identity for ${userId ? `user ${userId}` : 'guest'} with provided data: ${JSON.stringify(providedData)}`);
     
-    // 1. Get user from DB
-    const user = await this.usersService.findById(userId);
-    let customerId = user.duffelCustomerId;
+    let customerId: string | null = null;
 
-    // 2. If no customer ID, create one in Duffel
+    // 1. Get user from DB if userId exists
+    if (userId) {
+      const user = await this.usersService.findById(userId);
+      customerId = user.duffelCustomerId;
+    }
+
+    // 2. If no customer ID (guest or user without ID), create one in Duffel
     if (!customerId) {
-        this.logger.log(`No Duffel customer ID found for user ${userId}, creating one using ${providedData ? 'provided payload' : 'DB defaults'}...`);
+        this.logger.log(`No Duffel customer ID found, creating one using ${providedData ? 'provided payload' : 'defaults'}...`);
         
         const customer = await this.duffelProvider.createCustomer({
-            email: providedData?.email || user.email,
-            firstName: providedData?.given_name || user.firstName,
-            lastName: providedData?.family_name || user.lastName,
-            phone: providedData?.phone_number || user.phone || "+2340000000000",
+            email: providedData?.email || "guest@flybeth.com",
+            firstName: providedData?.given_name || "Guest",
+            lastName: providedData?.family_name || "User",
+            phone: providedData?.phone_number || "+2340000000000",
         });
 
         if (!customer) {
@@ -39,8 +43,17 @@ export class DuffelIdentityService {
         }
 
         customerId = customer.id;
-        await this.usersService.saveDuffelCustomerId(userId, customerId);
-        this.logger.log(`Successfully created Duffel customer ${customerId} for user ${userId}`);
+        
+        // Save only if it's a registered user
+        if (userId) {
+          await this.usersService.saveDuffelCustomerId(userId, customerId!);
+        }
+        
+        this.logger.log(`Successfully created Duffel customer ${customerId} for ${userId ? `user ${userId}` : 'guest'}`);
+    }
+
+    if (!customerId) {
+        throw new Error("Duffel customer identity not established");
     }
 
     // 3. Create a client key (ephemeral for frontend session)

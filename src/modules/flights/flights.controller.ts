@@ -35,6 +35,28 @@ export class FlightsController {
     private readonly flightsIntegrationService: FlightsIntegrationService,
   ) {}
 
+  // ─── Search Sessions for Secure URLs ────────────────────────
+  @Public()
+  @Post("search-session")
+  @ApiOperation({
+    summary: "Create a search session for secure, opaque URLs",
+  })
+  async createSearchSession(@Body() criteria: any) {
+    const sessionId = await this.flightsService.createSearchSession(criteria);
+    return { success: true, sessionId, sid: sessionId }; // Add sid for compatibility
+  }
+
+  @Public()
+  @Get("search-session/:id")
+  @ApiOperation({
+    summary: "Retrieve search criteria from a session ID",
+  })
+  async getSearchSession(@Param("id") id: string) {
+    const session = await this.flightsService.getSearchSession(id);
+    if (!session) return { success: false, message: "Session expired or not found" };
+    return { success: true, criteria: session.criteria };
+  }
+
   // ─── Live Provider Search ─────────────────────────────────────
   @Public()
   @Post("search/live")
@@ -238,6 +260,26 @@ export class FlightsController {
       departureDate,
       returnDate,
     );
+    return { success: true, data };
+  }
+
+
+  // ─── Recent Searches ─────────────────────────────────────────
+  @Post("recent")
+  @ApiOperation({ summary: "Save a recent search" })
+  async saveRecent(@Body() criteria: any, @Req() req: any) {
+    const userId = req.user?.id || null;
+    await this.flightsService.saveRecentSearch(userId, criteria);
+    return { success: true };
+  }
+
+  @Get("recent")
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: "Get user's recent searches" })
+  async getRecent(@Req() req: any) {
+    const userId = req.user.id;
+    const data = await this.flightsService.getRecentSearches(userId);
     return { success: true, data };
   }
 

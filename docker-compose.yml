@@ -2,12 +2,11 @@ version: '3.8'
 
 services:
   reverse-proxy:
-    image: traefik:v3.0
+    image: traefik:v2.11
     restart: always
     command:
-      - "--providers.docker=true"
+      - "--providers.docker"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.version=1.41"
       - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"

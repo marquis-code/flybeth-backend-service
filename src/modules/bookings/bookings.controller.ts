@@ -33,6 +33,7 @@ import { MongoIdValidationPipe } from "../../common/pipes/mongo-id-validation.pi
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
+  @Public()
   @Post()
   @ApiOperation({ summary: "Create a new booking" })
   async create(
@@ -90,6 +91,7 @@ export class BookingsController {
     return this.bookingsService.getStats(tenantId);
   }
 
+  @Public()
   @Get("reference/:pnr")
   @ApiOperation({ summary: "Get booking by PNR reference" })
   findByPNR(@Param("pnr") pnr: string) {
@@ -111,6 +113,7 @@ export class BookingsController {
     );
   }
 
+  @Public()
   @Get(":id")
   @ApiOperation({ summary: "Get booking by ID" })
   findOne(@Param("id", MongoIdValidationPipe) id: string) {
