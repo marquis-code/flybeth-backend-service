@@ -66,4 +66,14 @@ export class PackagesService {
     if (!updated) throw new NotFoundException('Package not found');
     return updated as unknown as PackageDocument;
   }
+
+  async findFeatured(): Promise<PackageDocument[]> {
+    return this.packageModel
+      .find({ isActive: true, isFeatured: true })
+      .populate("flight")
+      .populate("stay")
+      .populate("car")
+      .limit(6)
+      .exec();
+  }
 }

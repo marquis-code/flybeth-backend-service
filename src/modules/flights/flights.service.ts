@@ -47,10 +47,14 @@ export class FlightsService {
   async search(searchDto: SearchFlightsDto) {
     // Build cache key from search params
     const cacheKey = `flights:search:${JSON.stringify(searchDto)}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache hit for flight search: ${cacheKey}`);
-      return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) {
+        this.logger.debug(`Cache hit for flight search: ${cacheKey}`);
+        return cached;
+      }
+    } catch (err) {
+      this.logger.warn(`Cache get failed for flight search: ${err.message}`);
     }
 
     const query: any = {
@@ -209,7 +213,11 @@ export class FlightsService {
     };
 
     // Cache search results
-    await this.cacheManager.set(cacheKey, result, this.SEARCH_CACHE_TTL);
+    try {
+      await this.cacheManager.set(cacheKey, result, this.SEARCH_CACHE_TTL);
+    } catch (err) {
+      this.logger.warn(`Cache set failed for flight search: ${err.message}`);
+    }
 
     return result;
   }
@@ -250,8 +258,12 @@ export class FlightsService {
 
   async getPopularFlights(limit: number = 10) {
     const cacheKey = `flights:popular:${limit}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
+    } catch (err) {
+      this.logger.warn(`Cache get failed for popular flights: ${err.message}`);
+    }
 
     const flights = await this.flightModel
       .find({
@@ -266,7 +278,11 @@ export class FlightsService {
       .lean()
       .exec();
 
-    await this.cacheManager.set(cacheKey, flights, this.POPULAR_CACHE_TTL);
+    try {
+      await this.cacheManager.set(cacheKey, flights, this.POPULAR_CACHE_TTL);
+    } catch (err) {
+      this.logger.warn(`Cache set failed for popular flights: ${err.message}`);
+    }
     return flights;
   }
 
@@ -402,5 +418,17 @@ export class FlightsService {
       .sort({ updatedAt: -1 })
       .limit(10)
       .exec();
+  }
+
+  async deleteRecentSearch(userId: string, searchId: string) {
+    const result = await this.recentSearchModel.findOneAndDelete({
+      _id: searchId,
+      userId: userId
+    }).exec();
+    
+    if (!result) {
+      throw new NotFoundException("Recent search not found or unauthorized");
+    }
+    return { success: true };
   }
 }

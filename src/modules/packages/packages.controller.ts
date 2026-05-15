@@ -22,6 +22,12 @@ export class PackagesController {
   }
 
   @Public()
+  @Get("featured")
+  getFeatured() {
+    return this.packagesService.findFeatured();
+  }
+
+  @Public()
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.packagesService.findById(id);

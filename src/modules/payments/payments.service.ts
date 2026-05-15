@@ -24,6 +24,8 @@ import {
 } from "../../common/constants/roles.constant";
 import { generateReference } from "../../common/utils/crypto.util";
 import { WalletService } from "../finance/wallet.service";
+import { BnplFactory } from "./bnpl/bnpl.factory";
+import { OrderFulfillmentService } from "../bookings/order-fulfillment.service";
 
 @Injectable()
 export class PaymentsService {
@@ -37,8 +39,9 @@ export class PaymentsService {
     private paystackProvider: PaystackProvider,
     private bookingsService: BookingsService,
     private walletService: WalletService,
+    private bnplFactory: BnplFactory,
+    private orderFulfillmentService: OrderFulfillmentService,
   ) {}
-
   /**
    * Determine which payment provider to use based on currency.
    * Paystack for African currencies, Stripe for everything else.
@@ -50,6 +53,11 @@ export class PaymentsService {
     if (forcedProvider) {
       if (forcedProvider === "manual") return PaymentProvider.MANUAL;
       if (forcedProvider === "wallet") return PaymentProvider.WALLET;
+      if (forcedProvider === "credpal") return PaymentProvider.CREDPAL;
+      if (forcedProvider === "affirm") return PaymentProvider.AFFIRM;
+      if (forcedProvider === "klarna") return PaymentProvider.KLARNA;
+      if (forcedProvider === "paypal_four") return PaymentProvider.PAYPAL_FOUR;
+      
       return forcedProvider === "paystack"
         ? PaymentProvider.PAYSTACK
         : PaymentProvider.STRIPE;
@@ -138,6 +146,26 @@ export class PaymentsService {
          message: "Payment processed via Flybeth Wallet",
          reference,
        };
+    } else if (
+      [
+        PaymentProvider.CREDPAL,
+        PaymentProvider.AFFIRM,
+        PaymentProvider.KLARNA,
+        PaymentProvider.PAYPAL_FOUR,
+      ].includes(provider)
+    ) {
+      const bnplStrategy = this.bnplFactory.getStrategy(provider);
+      const bnplResult = await bnplStrategy.initializePayment(
+        bookingId,
+        amount,
+        currency,
+        dto.metadata,
+      );
+      providerResponse = {
+        status: "initialized",
+        url: bnplResult.checkoutUrl,
+        reference: bnplResult.reference,
+      };
     } else {
       // Manual Payment Flow
       providerResponse = {
@@ -314,6 +342,59 @@ export class PaymentsService {
     return { received: true };
   }
 
+  async handleBnplWebhook(
+    gateway: PaymentProvider,
+    payload: any,
+    signature: string,
+  ) {
+    const strategy = this.bnplFactory.getStrategy(gateway);
+    const isValid = await strategy.verifyWebhook(payload, signature);
+
+    if (!isValid) {
+      throw new BadRequestException(`Invalid signature for ${gateway} webhook`);
+    }
+
+    // Usually BNPL webhooks contain a reference and a status
+    // This is a generic implementation, specific providers might need mapping
+    const reference = payload.reference || payload.token || payload.id;
+    const status = payload.status || payload.event;
+
+    if (status === "SUCCESS" || status === "APPROVED" || status === "COMPLETED" || status === "captured") {
+      const payment = await this.paymentModel.findOne({
+        providerReference: reference,
+      });
+
+      if (payment) {
+        await this.processSuccessfulPayment(
+          payment.booking.toString(),
+          reference,
+          gateway,
+        );
+      }
+    }
+
+    return { received: true };
+  }
+
+  async authorizeBnplPayment(dto: { bookingId: string; provider: PaymentProvider; checkoutToken: string; amount: number; currency: string }) {
+    const strategy = this.bnplFactory.getStrategy(dto.provider);
+    
+    // Check if the strategy supports the authorization step (Affirm does)
+    if (strategy.authorizePayment) {
+      const isAuthorized = await strategy.authorizePayment(dto.checkoutToken, dto.bookingId, dto.amount, dto.currency);
+      
+      if (!isAuthorized) {
+        await this.processFailedPayment(dto.bookingId, dto.provider);
+        throw new BadRequestException(`Authorization failed for ${dto.provider}`);
+      }
+    }
+
+    // Process payment as successful since authorization/capture succeeded or isn't required
+    await this.processSuccessfulPayment(dto.bookingId, dto.checkoutToken, dto.provider);
+    
+    return { success: true, message: 'Payment authorized and processed successfully' };
+  }
+
   private async processSuccessfulPayment(
     bookingId: string,
     providerTransactionId: string,
@@ -339,9 +420,16 @@ export class PaymentsService {
       },
     );
 
-    // Confirm the booking
-    await this.bookingsService.confirmBooking(bookingId);
-    this.logger.log(`Payment successful for booking: ${bookingId}`);
+    // Confirm and fulfill the booking using the new Fulfillment Service
+    try {
+      await this.orderFulfillmentService.finalizeTravelBooking(providerTransactionId);
+    } catch (error) {
+      this.logger.error(`Fulfillment error for booking ${bookingId}: ${error.message}`);
+      // Fallback to basic confirmation if fulfillment service fails but payment is good
+      await this.bookingsService.confirmBooking(bookingId);
+    }
+    
+    this.logger.log(`Payment successful and fulfillment triggered for booking: ${bookingId}`);
   }
 
   private async processFailedPayment(

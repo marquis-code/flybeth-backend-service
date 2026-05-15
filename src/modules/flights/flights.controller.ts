@@ -283,6 +283,15 @@ export class FlightsController {
     return { success: true, data };
   }
 
+  @Delete("recent/:id")
+  @ApiBearerAuth()
+  @UseGuards(RolesGuard)
+  @ApiOperation({ summary: "Delete a recent search" })
+  async deleteRecent(@Param("id") id: string, @Req() req: any) {
+    const userId = req.user.id;
+    return this.flightsService.deleteRecentSearch(userId, id);
+  }
+
   // ─── Internal DB Search ───────────────────────────────────────
   @Public()
   @Post("search")

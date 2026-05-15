@@ -52,6 +52,10 @@ export enum PaymentProvider {
   PAYSTACK = "paystack",
   MANUAL = "manual",
   WALLET = "wallet",
+  CREDPAL = "credpal",
+  AFFIRM = "affirm",
+  KLARNA = "klarna",
+  PAYPAL_FOUR = "paypal_four",
 }
 
 export enum FlightStatus {

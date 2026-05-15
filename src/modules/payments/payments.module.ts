@@ -10,6 +10,12 @@ import { BankAccount, BankAccountSchema } from "./schemas/bank-account.schema";
 import { BookingsModule } from "../bookings/bookings.module";
 import { FinanceModule } from "../finance/finance.module";
 
+import { BnplFactory } from "./bnpl/bnpl.factory";
+import { CredpalService } from "./bnpl/services/credpal.service";
+import { AffirmService } from "./bnpl/services/affirm.service";
+import { KlarnaService } from "./bnpl/services/klarna.service";
+import { PaypalFourService } from "./bnpl/services/paypal-four.service";
+
 @Module({
   imports: [
     MongooseModule.forFeature([
@@ -20,7 +26,16 @@ import { FinanceModule } from "../finance/finance.module";
     FinanceModule,
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService, StripeProvider, PaystackProvider],
-  exports: [PaymentsService],
+  providers: [
+    PaymentsService, 
+    StripeProvider, 
+    PaystackProvider,
+    BnplFactory,
+    CredpalService,
+    AffirmService,
+    KlarnaService,
+    PaypalFourService
+  ],
+  exports: [PaymentsService, BnplFactory],
 })
 export class PaymentsModule {}

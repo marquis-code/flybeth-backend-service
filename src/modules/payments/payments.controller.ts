@@ -21,6 +21,8 @@ import { Roles } from "../../common/decorators/roles.decorator";
 import { RolesGuard } from "../../common/guards/roles.guard";
 import { Role } from "../../common/constants/roles.constant";
 import { MongoIdValidationPipe } from "../../common/pipes/mongo-id-validation.pipe";
+import { WebhookSignatureGuard } from "./bnpl/webhook-signature.guard";
+import { PaymentProvider } from "../../common/constants/roles.constant";
 
 @ApiTags("Payments")
 @Controller("payments")
@@ -70,6 +72,27 @@ export class PaymentsController {
   ) {
     const payload = JSON.stringify(req.body);
     return this.paymentsService.handlePaystackWebhook(payload, signature);
+  }
+
+  @Public()
+  @Post("webhook/:gateway")
+  @UseGuards(WebhookSignatureGuard)
+  @ApiOperation({ summary: "Generic BNPL webhook endpoint" })
+  handleBnplWebhook(
+    @Param("gateway") gateway: PaymentProvider,
+    @Body() payload: any,
+    @Headers("x-webhook-signature") signature: string,
+  ) {
+    return this.paymentsService.handleBnplWebhook(gateway, payload, signature);
+  }
+
+  @Post("bnpl/authorize")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Authorize a BNPL transaction after redirect" })
+  authorizeBnpl(
+    @Body() dto: { bookingId: string; provider: PaymentProvider; checkoutToken: string; amount: number; currency: string }
+  ) {
+    return this.paymentsService.authorizeBnplPayment(dto);
   }
 
   @Public()

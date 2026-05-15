@@ -5,12 +5,12 @@ import { AirportsService } from "./airports.service";
 import { Public } from "../../common/decorators/public.decorator";
 
 @ApiTags("Airports & Airlines")
-@Controller()
+@Controller("airports")
 export class AirportsController {
   constructor(private readonly airportsService: AirportsService) {}
 
   @Public()
-  @Get("airports/search")
+  @Get("search")
   @ApiOperation({ summary: "Search airports by name, city, or code" })
   searchAirports(@Query("q") query: string, @Query("limit") limit?: number) {
     return this.airportsService.searchAirports(query, limit);
@@ -28,14 +28,14 @@ export class AirportsController {
   }
 
   @Public()
-  @Get("airports")
+  @Get("/")
   @ApiOperation({ summary: "Get all airports" })
   getAllAirports() {
     return this.airportsService.getAllAirports();
   }
 
   @Public()
-  @Get("airports/:code")
+  @Get(":code")
   @ApiOperation({ summary: "Get airport by IATA code" })
   getAirport(@Param("code") code: string) {
     return this.airportsService.getAirportByCode(code);

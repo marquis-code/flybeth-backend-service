@@ -18,6 +18,7 @@ import { FinanceModule } from "../finance/finance.module";
 import { SystemConfigModule } from "../system-config/system-config.module";
 
 import { InvoiceService } from "./invoice.service";
+import { OrderFulfillmentService } from "./order-fulfillment.service";
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { InvoiceService } from "./invoice.service";
     SystemConfigModule,
   ],
   controllers: [BookingsController],
-  providers: [BookingsService, InvoiceService],
-  exports: [BookingsService],
+  providers: [BookingsService, InvoiceService, OrderFulfillmentService],
+  exports: [BookingsService, OrderFulfillmentService],
 })
 export class BookingsModule {}

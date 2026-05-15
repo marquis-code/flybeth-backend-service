@@ -23,8 +23,12 @@ export class AirportsService {
 
   async searchAirports(query: string, limit: number = 10) {
     const cacheKey = `airports:search:${query}:${limit}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
+    } catch (err) {
+      // Ignore cache error
+    }
 
     const results = await this.airportModel
       .find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
@@ -49,7 +53,11 @@ export class AirportsService {
         .lean()
         .exec();
 
-      await this.cacheManager.set(cacheKey, regexResults, 86400000); // 24h cache
+      try {
+        await this.cacheManager.set(cacheKey, regexResults, 86400000); // 24h cache
+      } catch (err) {
+        // Ignore cache error
+      }
       return regexResults;
     }
 
@@ -68,8 +76,12 @@ export class AirportsService {
 
   async searchAirlines(query: string, limit: number = 10) {
     const cacheKey = `airlines:search:${query}:${limit}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
+    } catch (err) {
+      // Ignore cache error
+    }
 
     const results = await this.airlineModel
       .find(
@@ -92,7 +104,11 @@ export class AirportsService {
         .lean()
         .exec();
 
-      await this.cacheManager.set(cacheKey, regexResults, 86400000);
+      try {
+        await this.cacheManager.set(cacheKey, regexResults, 86400000);
+      } catch (err) {
+        // Ignore cache error
+      }
       return regexResults;
     }
 
@@ -143,15 +159,23 @@ export class AirportsService {
     countryCode?: string,
   ) {
     const cacheKey = `cities:search:${keyword}:${limit}:${countryCode}`;
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = await this.cacheManager.get(cacheKey);
+      if (cached) return cached;
+    } catch (err) {
+      // Ignore cache error
+    }
 
     const results = await this.amadeusHelper.searchCities(
       keyword,
       limit,
       countryCode,
     );
-    await this.cacheManager.set(cacheKey, results, 86400000); // 24h cache
+    try {
+      await this.cacheManager.set(cacheKey, results, 86400000); // 24h cache
+    } catch (err) {
+      // Ignore cache error
+    }
     return results;
   }
 }
