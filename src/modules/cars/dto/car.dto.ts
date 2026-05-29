@@ -57,6 +57,17 @@ export class SearchCarsDto {
   @IsNumber()
   @Type(() => Number)
   passengers?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  driverAge?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  driverCountryCode?: string;
 }
 
 export class CreateCarDto {
@@ -97,3 +108,46 @@ export class CreateCarDto {
   @IsString({ each: true })
   availableLocations: string[];
 }
+
+export class CreateCarQuoteDto {
+  @ApiProperty()
+  @IsString()
+  rateId: string;
+}
+
+export class CarDriverDto {
+  @ApiProperty()
+  @IsString()
+  userId?: string;
+
+  @ApiProperty()
+  @IsString()
+  phoneNumber: string;
+
+  @ApiProperty()
+  @IsString()
+  givenName: string;
+
+  @ApiProperty()
+  @IsString()
+  familyName: string;
+
+  @ApiProperty()
+  @IsString()
+  email: string;
+
+  @ApiProperty()
+  @IsDateString()
+  dateOfBirth: string;
+}
+
+export class BookCarDto {
+  @ApiProperty()
+  @IsString()
+  quoteId: string;
+
+  @ApiProperty()
+  @Type(() => CarDriverDto)
+  driver: CarDriverDto;
+}
+

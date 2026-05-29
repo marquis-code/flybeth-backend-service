@@ -30,6 +30,7 @@
     "@nestjs/swagger": "^8.1.1",
     "@nestjs/throttler": "^6.3.0",
     "@nestjs/websockets": "^10.4.22",
+    "@paypal/paypal-server-sdk": "^2.3.0",
     "@types/bcrypt": "^6.0.0",
     "@types/pdfkit": "^0.17.6",
     "assemblyai": "^4.23.1",
@@ -55,7 +56,6 @@
     "resend": "^6.9.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "stripe": "^17.5.0",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

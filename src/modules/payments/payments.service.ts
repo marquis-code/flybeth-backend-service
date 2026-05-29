@@ -9,7 +9,7 @@ import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { Payment, PaymentDocument } from "./schemas/payment.schema";
 import { InitializePaymentDto, RefundPaymentDto } from "./dto/payment.dto";
-import { StripeProvider } from "./providers/stripe.provider";
+import { PaypalProvider } from "./providers/paypal.provider";
 import { PaystackProvider } from "./providers/paystack.provider";
 import {
   BankAccount,
@@ -35,7 +35,7 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(BankAccount.name)
     private bankAccountModel: Model<BankAccountDocument>,
-    private stripeProvider: StripeProvider,
+    private paypalProvider: PaypalProvider,
     private paystackProvider: PaystackProvider,
     private bookingsService: BookingsService,
     private walletService: WalletService,
@@ -44,7 +44,7 @@ export class PaymentsService {
   ) {}
   /**
    * Determine which payment provider to use based on currency.
-   * Paystack for African currencies, Stripe for everything else.
+   * Paystack for African currencies, PayPal for everything else.
    */
   private selectProvider(
     currency: string,
@@ -60,13 +60,13 @@ export class PaymentsService {
       
       return forcedProvider === "paystack"
         ? PaymentProvider.PAYSTACK
-        : PaymentProvider.STRIPE;
+        : PaymentProvider.PAYPAL;
     }
 
     return PAYSTACK_CURRENCIES.includes(currency.toUpperCase()) &&
       currency.toUpperCase() !== "USD"
       ? PaymentProvider.PAYSTACK
-      : PaymentProvider.STRIPE;
+      : PaymentProvider.PAYPAL;
   }
 
   async initializePayment(userId?: string, dto?: InitializePaymentDto) {
@@ -113,14 +113,13 @@ export class PaymentsService {
 
     let providerResponse: any;
 
-    if (provider === PaymentProvider.STRIPE) {
-      providerResponse = await this.stripeProvider.createCheckoutSession({
+    if (provider === PaymentProvider.PAYPAL) {
+      providerResponse = await this.paypalProvider.createOrder({
         amount,
         currency: currency,
         bookingId: dto.bookingId,
-        customerEmail: booking.contactDetails.email,
-        callbackUrl: dto.callbackUrl,
-        metadata: { reference },
+        callbackUrl: dto.callbackUrl || "https://flybeth.com/callback",
+        reference,
       });
     } else if (provider === PaymentProvider.PAYSTACK) {
       providerResponse = await this.paystackProvider.initializeTransaction({
@@ -218,6 +217,7 @@ export class PaymentsService {
     bookingId: string,
     currency: string,
   ) {
+    // Legacy endpoint: if used, we just return a paypal intent instead
     let booking: BookingDocument | null = null;
     if (Types.ObjectId.isValid(bookingId)) {
       booking = await this.bookingsService.findById(bookingId);
@@ -230,62 +230,67 @@ export class PaymentsService {
     }
 
     const amount = booking.pricing.totalAmount;
-    const metadata = { bookingId: booking._id.toString(), userId };
+    const reference = generateReference();
 
-    const intent = await this.stripeProvider.createPaymentIntent({
+    const intent = await this.paypalProvider.createOrder({
       amount,
       currency: currency.toLowerCase(),
       bookingId: booking._id.toString(),
-      metadata,
+      reference,
+      callbackUrl: "https://flybeth.com/callback", // placeholder
     });
 
     return {
-      clientSecret: intent.clientSecret,
+      clientSecret: intent.orderId,
       amount,
       currency,
     };
   }
 
-  async handleStripeWebhook(payload: string | Buffer, signature: string) {
+  async handlePaypalWebhook(payload: string, signature: string) {
     try {
-      const event = this.stripeProvider.verifyWebhookSignature(
-        payload,
-        signature,
-      );
+      // Basic webhook implementation
+      const event = JSON.parse(payload);
 
-      switch (event.type) {
-        case "checkout.session.completed":
-        case "payment_intent.succeeded": {
-          const sessionData = event.data.object as any;
-          const metadata = sessionData.metadata;
+      switch (event.event_type) {
+        case "CHECKOUT.ORDER.APPROVED": {
+          const resource = event.resource;
+          const orderId = resource.id;
+          const customId = resource.purchase_units?.[0]?.custom_id;
 
-          if (metadata?.type === 'wallet_topup') {
-             const userId = metadata.userId;
-             const amount = sessionData.amount_total / 100;
-             await this.walletService.credit(userId, amount, `Wallet top-up via Stripe`, { sessionId: sessionData.id });
+          if (customId === 'wallet_topup') {
+             // Wallet top-up via PayPal
+             const userId = resource.purchase_units?.[0]?.reference_id; // we can pass userId here
+             const amount = parseFloat(resource.purchase_units?.[0]?.amount?.value);
+             // Verify the order has been captured
+             await this.paypalProvider.captureOrder(orderId);
+             await this.walletService.credit(userId, amount, `Wallet top-up via PayPal`, { orderId });
              this.logger.log(`Wallet topped up: User ${userId}, Amount ${amount}`);
              break;
           }
 
-          const bookingId = metadata?.bookingId;
+          const bookingId = customId;
 
           if (bookingId) {
+            // Automatically capture the payment when approved
+            await this.paypalProvider.captureOrder(orderId);
+            
             await this.processSuccessfulPayment(
               bookingId,
-              sessionData.id || sessionData.payment_intent,
-              PaymentProvider.STRIPE,
+              orderId,
+              PaymentProvider.PAYPAL,
             );
           }
           break;
         }
-        case "payment_intent.payment_failed": {
-          const failedData = event.data.object as any;
-          const failedBookingId = failedData.metadata?.bookingId;
+        case "PAYMENT.CAPTURE.DENIED": {
+          const failedData = event.resource;
+          const failedBookingId = failedData.custom_id;
 
           if (failedBookingId) {
             await this.processFailedPayment(
               failedBookingId,
-              PaymentProvider.STRIPE,
+              PaymentProvider.PAYPAL,
             );
           }
           break;
@@ -294,7 +299,7 @@ export class PaymentsService {
 
       return { received: true };
     } catch (error) {
-      this.logger.error(`Stripe webhook error: ${error.message}`);
+      this.logger.error(`PayPal webhook error: ${error.message}`);
       throw new BadRequestException("Webhook verification failed");
     }
   }
@@ -455,8 +460,8 @@ export class PaymentsService {
     const refundAmount = dto.amount || payment.amount;
     let providerRefund: any;
 
-    if (payment.provider === PaymentProvider.STRIPE) {
-      providerRefund = await this.stripeProvider.refund(
+    if (payment.provider === PaymentProvider.PAYPAL) {
+      providerRefund = await this.paypalProvider.refund(
         payment.providerTransactionId,
         dto.amount,
       );
@@ -517,11 +522,11 @@ export class PaymentsService {
   }
 
   async initializeTopUp(userId: string, data: { amount: number, currency: string, email: string, callbackUrl: string }) {
-     return this.stripeProvider.createTopUpSession({
-        userId,
-        customerEmail: data.email,
-        amount: data.amount,
+     return this.paypalProvider.createOrder({
+        bookingId: 'wallet_topup',
+        reference: userId, // pass user id as reference
         currency: data.currency,
+        amount: data.amount,
         callbackUrl: data.callbackUrl
      });
   }

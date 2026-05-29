@@ -83,4 +83,7 @@ export interface CarAdapter {
   providerName: string;
   searchCars(query: CarSearchQuery): Promise<CarSearchResult[]>;
   priceCheck(rateKey: string, details?: any): Promise<CarPriceCheckResult>;
+  createQuote?(rateId: string): Promise<any>;
+  bookCar?(quoteId: string, driver: any): Promise<any>;
+  cancelBooking?(bookingId: string): Promise<any>;
 }

@@ -9,6 +9,7 @@ import {
   CarPriceCheckResult,
 } from "./interfaces/car-adapter.interface";
 import { ProviderConfigService } from "./provider-config.service";
+import { DuffelCarsProvider } from "./providers/duffel-cars.provider";
 
 @Injectable()
 export class CarsIntegrationService {
@@ -18,7 +19,10 @@ export class CarsIntegrationService {
   constructor(
     private providerConfigService: ProviderConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+    private duffelCarsProvider: DuffelCarsProvider,
+  ) {
+    this.registerAdapter(duffelCarsProvider);
+  }
 
   registerAdapter(adapter: CarAdapter) {
     this.adapters.set(adapter.providerName, adapter);
@@ -39,8 +43,7 @@ export class CarsIntegrationService {
     const startTime = Date.now();
     const config = await this.providerConfigService.getConfig();
 
-    // Sabre removed
-    const activeProviderNames: string[] = [];
+    const activeProviderNames: string[] = ["duffel-cars"];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))
@@ -99,5 +102,38 @@ export class CarsIntegrationService {
       throw new Error(`Unknown provider: ${provider}`);
     }
     return adapter.priceCheck(rateKey);
+  }
+
+  /**
+   * Create Quote
+   */
+  async createQuote(rateId: string, provider: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter || !adapter.createQuote) {
+      throw new Error(`Provider ${provider} does not support quotes`);
+    }
+    return adapter.createQuote(rateId);
+  }
+
+  /**
+   * Book Car
+   */
+  async bookCar(quoteId: string, driver: any, provider: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter || !adapter.bookCar) {
+      throw new Error(`Provider ${provider} does not support booking`);
+    }
+    return adapter.bookCar(quoteId, driver);
+  }
+
+  /**
+   * Cancel Booking
+   */
+  async cancelBooking(bookingId: string, provider: string) {
+    const adapter = this.adapters.get(provider);
+    if (!adapter || !adapter.cancelBooking) {
+      throw new Error(`Provider ${provider} does not support cancellation`);
+    }
+    return adapter.cancelBooking(bookingId);
   }
 }

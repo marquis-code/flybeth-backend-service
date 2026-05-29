@@ -6,8 +6,8 @@ export type PassengerDocument = Passenger & Document;
 
 @Schema({ timestamps: true, collection: "passengers" })
 export class Passenger {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
-  user: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: "User", required: false })
+  user?: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
   firstName: string;

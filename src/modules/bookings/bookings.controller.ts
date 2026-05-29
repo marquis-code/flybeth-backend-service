@@ -113,6 +113,15 @@ export class BookingsController {
     );
   }
 
+  @Post(":id/pay")
+  @ApiOperation({ summary: "Pay for a held order" })
+  payForHeldOrder(
+    @Param("id", MongoIdValidationPipe) id: string,
+    @Body() paymentDto: any,
+  ) {
+    return this.bookingsService.payForHeldOrder(id, paymentDto);
+  }
+
   @Public()
   @Get(":id")
   @ApiOperation({ summary: "Get booking by ID" })

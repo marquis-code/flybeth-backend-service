@@ -20,6 +20,7 @@ import { ConfigModule, ConfigService } from "@nestjs/config";
       { name: "email-queue" },
       { name: "booking-queue" },
       { name: "fraud-queue" },
+      { name: "duffel-webhooks-queue" },
     ),
   ],
   exports: [BullModule],

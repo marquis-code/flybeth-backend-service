@@ -3,7 +3,7 @@ import { Injectable, NotFoundException, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { Car, CarDocument } from "./schemas/car.schema";
-import { SearchCarsDto, CreateCarDto } from "./dto/car.dto";
+import { SearchCarsDto, CreateCarDto, CreateCarQuoteDto, BookCarDto } from "./dto/car.dto";
 import { CarsIntegrationService } from "../integrations/cars-integration.service";
 import {
   CarSearchQuery,
@@ -58,6 +58,11 @@ export class CarsService {
           returnTime: searchDto.dropOffTime || "10:00",
           currencyCode: searchDto.currency || "USD",
         };
+        
+        // Pass the driver fields for Duffel compatibility
+        (liveQuery as any).driverAge = searchDto.driverAge;
+        (liveQuery as any).driverCountryCode = searchDto.driverCountryCode;
+
         const integrationResults =
           await this.carsIntegrationService.search(liveQuery);
         liveCars = integrationResults.results;
@@ -70,6 +75,33 @@ export class CarsService {
       dbResults: dbCars,
       liveResults: liveCars,
     };
+  }
+
+  async createQuote(createQuoteDto: CreateCarQuoteDto): Promise<any> {
+    // For now, assume it's duffel-cars. We can make it dynamic later if needed
+    // based on the rate ID prefix.
+    const provider = "duffel-cars";
+    return this.carsIntegrationService.createQuote(createQuoteDto.rateId, provider);
+  }
+
+  async book(bookDto: BookCarDto): Promise<any> {
+    const provider = "duffel-cars";
+    // Map our generic driver DTO to the Duffel format
+    const driverPayload = {
+      user_id: bookDto.driver.userId,
+      phone_number: bookDto.driver.phoneNumber,
+      given_name: bookDto.driver.givenName,
+      family_name: bookDto.driver.familyName,
+      email: bookDto.driver.email,
+      date_of_birth: bookDto.driver.dateOfBirth,
+    };
+
+    return this.carsIntegrationService.bookCar(bookDto.quoteId, driverPayload, provider);
+  }
+
+  async cancelBooking(bookingId: string): Promise<any> {
+    const provider = "duffel-cars";
+    return this.carsIntegrationService.cancelBooking(bookingId, provider);
   }
 
   async findById(id: string): Promise<CarDocument> {

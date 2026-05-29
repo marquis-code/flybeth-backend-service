@@ -13,10 +13,14 @@ export class PassengersService {
   ) {}
 
   async create(
-    userId: string,
+    userId: string | null | undefined,
     dto: CreatePassengerDto,
   ): Promise<PassengerDocument> {
-    const passenger = new this.passengerModel({ ...dto, user: userId });
+    const payload: any = { ...dto };
+    if (userId) {
+      payload.user = userId;
+    }
+    const passenger = new this.passengerModel(payload);
     return passenger.save();
   }
 

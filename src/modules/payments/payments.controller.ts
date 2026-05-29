@@ -41,7 +41,7 @@ export class PaymentsController {
   }
   @Post("create-intent")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Create a Stripe PaymentIntent" })
+  @ApiOperation({ summary: "Create a PayPal Order Intent" })
   createIntent(
     @CurrentUser("_id") userId: string,
     @Body() body: { bookingId: string; currency: string },
@@ -54,13 +54,13 @@ export class PaymentsController {
   }
 
   @Public()
-  @Post("webhook/stripe")
-  @ApiOperation({ summary: "Stripe webhook endpoint" })
-  handleStripeWebhook(
+  @Post("webhook/paypal")
+  @ApiOperation({ summary: "PayPal webhook endpoint" })
+  handlePaypalWebhook(
     @Req() req: RawBodyRequest<Request>,
-    @Headers("stripe-signature") signature: string,
+    @Headers("paypal-auth-algo") signature: string, // Simplified header access
   ) {
-    return this.paymentsService.handleStripeWebhook(req.rawBody!, signature);
+    return this.paymentsService.handlePaypalWebhook(req.rawBody!.toString(), signature);
   }
 
   @Public()

@@ -3,12 +3,15 @@ import { Module, forwardRef } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { ConfigModule } from "@nestjs/config";
 import { UsersModule } from "../users/users.module";
+import { BullModule } from "@nestjs/bull";
+import { AirportsModule } from "../airports/airports.module";
 
 // Schemas
 import {
   FlightProviderConfig,
   FlightProviderConfigSchema,
 } from "./schemas/flight-provider-config.schema";
+import { Booking, BookingSchema } from "../bookings/schemas/booking.schema";
 
 // Services
 import { FlightsIntegrationService } from "./flights-integration.service";
@@ -18,6 +21,7 @@ import { ExperiencesIntegrationService } from "./experiences-integration.service
 import { AmadeusMarketInsightsService } from "./amadeus-market-insights.service";
 import { ProviderConfigService } from "./provider-config.service";
 import { CarsIntegrationService } from "./cars-integration.service";
+import { DuffelWebhooksService } from "./duffel-webhooks.service";
 
 // Providers
 import { AmadeusHelperService } from "./providers/amadeus-helper.service";
@@ -27,28 +31,49 @@ import { AmadeusTransfersProvider } from "./providers/amadeus-transfers.provider
 import { AmadeusExperiencesProvider } from "./providers/amadeus-experiences.provider";
 import { DuffelProvider } from "./providers/duffel.provider";
 import { DuffelStaysProvider } from "./providers/duffel-stays.provider";
+import { DuffelCarsProvider } from "./providers/duffel-cars.provider";
 import { HotelbedsHelperService } from "./providers/hotelbeds-helper.service";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
 import { DuffelIdentityService } from "./duffel-identity.service";
+
+// Processors
+import { DuffelWebhooksProcessor } from "./duffel-webhooks.processor";
+
 // Controller
 import { ProviderConfigController } from "./provider-config.controller";
 import { MarketInsightsController } from "./market-insights.controller";
 import { DuffelIdentityController } from "./duffel-identity.controller";
+import { DuffelWebhooksController } from "./duffel-webhooks.controller";
+import { DuffelUtilitiesController } from "./duffel-utilities.controller";
 
 @Module({
   imports: [
     ConfigModule,
+    BullModule.registerQueue({
+      name: "duffel-webhooks-queue",
+    }),
     MongooseModule.forFeature([
       {
         name: FlightProviderConfig.name,
         schema: FlightProviderConfigSchema,
       },
+      {
+        name: Booking.name,
+        schema: BookingSchema,
+      },
     ]),
     forwardRef(() => UsersModule),
+    forwardRef(() => AirportsModule),
   ],
-  controllers: [ProviderConfigController, MarketInsightsController, DuffelIdentityController],
+  controllers: [
+    ProviderConfigController,
+    MarketInsightsController,
+    DuffelIdentityController,
+    DuffelWebhooksController,
+    DuffelUtilitiesController,
+  ],
   providers: [
     // Config
     ProviderConfigService,
@@ -75,6 +100,9 @@ import { DuffelIdentityController } from "./duffel-identity.controller";
     AmadeusExperiencesProvider,
     HotelbedsExperiencesProvider,
 
+    // Cars providers
+    DuffelCarsProvider,
+
     // Integration services
     FlightsIntegrationService,
     StaysIntegrationService,
@@ -82,6 +110,10 @@ import { DuffelIdentityController } from "./duffel-identity.controller";
     ExperiencesIntegrationService,
     CarsIntegrationService,
     AmadeusMarketInsightsService,
+    
+    // Webhooks
+    DuffelWebhooksService,
+    DuffelWebhooksProcessor,
   ],
   exports: [
     FlightsIntegrationService,
@@ -93,6 +125,7 @@ import { DuffelIdentityController } from "./duffel-identity.controller";
     ProviderConfigService,
     AmadeusHelperService,
     DuffelIdentityService,
+    DuffelWebhooksService,
   ],
 })
 export class IntegrationsModule {}

@@ -3,7 +3,7 @@ import { Module } from "@nestjs/common";
 import { MongooseModule } from "@nestjs/mongoose";
 import { PaymentsController } from "./payments.controller";
 import { PaymentsService } from "./payments.service";
-import { StripeProvider } from "./providers/stripe.provider";
+import { PaypalProvider } from "./providers/paypal.provider";
 import { PaystackProvider } from "./providers/paystack.provider";
 import { Payment, PaymentSchema } from "./schemas/payment.schema";
 import { BankAccount, BankAccountSchema } from "./schemas/bank-account.schema";
@@ -15,6 +15,8 @@ import { CredpalService } from "./bnpl/services/credpal.service";
 import { AffirmService } from "./bnpl/services/affirm.service";
 import { KlarnaService } from "./bnpl/services/klarna.service";
 import { PaypalFourService } from "./bnpl/services/paypal-four.service";
+import { AfterpayService } from "./bnpl/services/afterpay.service";
+import { SezzleService } from "./bnpl/services/sezzle.service";
 
 @Module({
   imports: [
@@ -28,13 +30,15 @@ import { PaypalFourService } from "./bnpl/services/paypal-four.service";
   controllers: [PaymentsController],
   providers: [
     PaymentsService, 
-    StripeProvider, 
+    PaypalProvider, 
     PaystackProvider,
     BnplFactory,
     CredpalService,
     AffirmService,
     KlarnaService,
-    PaypalFourService
+    PaypalFourService,
+    AfterpayService,
+    SezzleService
   ],
   exports: [PaymentsService, BnplFactory],
 })

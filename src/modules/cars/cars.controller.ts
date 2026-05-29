@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Body, Query, Param } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { CarsService } from "./cars.service";
-import { SearchCarsDto, CreateCarDto } from "./dto/car.dto";
+import { SearchCarsDto, CreateCarDto, CreateCarQuoteDto, BookCarDto } from "./dto/car.dto";
 import { Public } from "../../common/decorators/public.decorator";
 
 @ApiTags("Cars")
@@ -15,6 +15,24 @@ export class CarsController {
   @ApiOperation({ summary: "Search for rental cars or rides" })
   async search(@Query() searchDto: SearchCarsDto) {
     return this.carsService.search(searchDto);
+  }
+
+  @Post("quotes")
+  @ApiOperation({ summary: "Create a car rental quote from a rate ID" })
+  async createQuote(@Body() createQuoteDto: CreateCarQuoteDto) {
+    return this.carsService.createQuote(createQuoteDto);
+  }
+
+  @Post("bookings")
+  @ApiOperation({ summary: "Book a car rental from a quote ID" })
+  async book(@Body() bookDto: BookCarDto) {
+    return this.carsService.book(bookDto);
+  }
+
+  @Post("bookings/:id/cancel")
+  @ApiOperation({ summary: "Cancel a car booking" })
+  async cancelBooking(@Param("id") id: string) {
+    return this.carsService.cancelBooking(id);
   }
 
   @Public()

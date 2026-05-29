@@ -5,6 +5,8 @@ import { CredpalService } from './services/credpal.service';
 import { AffirmService } from './services/affirm.service';
 import { KlarnaService } from './services/klarna.service';
 import { PaypalFourService } from './services/paypal-four.service';
+import { AfterpayService } from './services/afterpay.service';
+import { SezzleService } from './services/sezzle.service';
 import { PaymentProvider } from '../../../common/constants/roles.constant';
 
 @Injectable()
@@ -21,6 +23,10 @@ export class BnplFactory {
         return this.moduleRef.get(KlarnaService);
       case PaymentProvider.PAYPAL_FOUR:
         return this.moduleRef.get(PaypalFourService);
+      case PaymentProvider.AFTERPAY:
+        return this.moduleRef.get(AfterpayService);
+      case PaymentProvider.SEZZLE:
+        return this.moduleRef.get(SezzleService);
       default:
         throw new BadRequestException(`Unsupported BNPL Gateway: ${gateway}`);
     }

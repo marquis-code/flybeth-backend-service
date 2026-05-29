@@ -395,6 +395,39 @@ export class BookingsService {
           // Status remains pending
         }
      } 
+     // 5.1 Handle Payment immediately if Duffel
+     else if (createBookingDto.paymentProvider === 'duffel' && createBookingDto.paymentModel === 'pay_now') {
+        try {
+          if (saved.flights?.length) {
+            const flight = saved.flights[0];
+            if (flight.offerId && flight.provider) {
+              const currentFlight = saved.flights?.[0];
+              const passengers = await this.passengersService.findByIds(currentFlight?.passengers?.map(p => p.toString()) || []);
+              
+              // We use Duffel Balance (Prepaid Funds) as the payment method for instant orders
+              // as recommended in the Duffel documentation for seamless API booking without 3DS interruptions.
+              await this.integrationService.bookFlight(
+                flight.offerId,
+                flight.provider,
+                passengers,
+                { type: 'balance', amount: saved.pricing.baseFare + saved.pricing.taxes, currency: saved.pricing.currency }
+              );
+
+              // Update status to confirmed ticket
+              await this.bookingModel.findByIdAndUpdate(saved._id, {
+                status: BookingStatus.TICKETED,
+                "payment.status": PaymentStatus.SUCCESS,
+                "payment.provider": "duffel",
+                "payment.paidAt": new Date(),
+              });
+              this.logger.log(`Duffel booking paid and ticketed for ${saved.pnr}`);
+            }
+          }
+        } catch (err) {
+          this.logger.error(`Duffel payment/booking failed for ${saved.pnr}: ${err.message}`);
+          throw new BadRequestException(`Flight booking failed: ${err.message}`);
+        }
+     }
      // 5.1 Handle Hold Order Logic
      else if (createBookingDto.paymentModel === 'on_hold') {
        try {
@@ -524,6 +557,54 @@ export class BookingsService {
       "cruises.cruise",
       "cruises.passengers",
     ]);
+  }
+
+  async payForHeldOrder(bookingId: string, paymentDto: any): Promise<BookingDocument> {
+    const booking = await this.bookingModel.findById(bookingId).exec();
+    
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Only pending/held bookings can be paid for');
+    }
+    
+    if (!booking.remoteOrderId) {
+      throw new BadRequestException('Booking does not have a remote order ID');
+    }
+
+    try {
+      // Typically the flight provider is the one we hold through (e.g. Duffel)
+      const provider = booking.flights?.[0]?.provider || 'duffel';
+      
+      const paymentOpts = {
+        type: paymentDto?.type || 'balance',
+        amount: booking.pricing.totalAmount,
+        currency: booking.pricing.currency
+      };
+
+      const result = await this.integrationService.payForOrder(
+        provider,
+        booking.remoteOrderId,
+        paymentOpts
+      );
+
+      if (!result.success) {
+        throw new BadRequestException('Payment failed at the provider (price may have changed or payment rejected)');
+      }
+
+      const updated = await this.bookingModel.findByIdAndUpdate(bookingId, {
+        status: BookingStatus.TICKETED,
+        "payment.status": PaymentStatus.SUCCESS,
+        "payment.provider": provider,
+        "payment.paidAt": new Date(),
+      }, { new: true }).exec();
+      
+      this.logger.log(`Held booking paid and ticketed: ${booking.pnr}`);
+      return updated as BookingDocument;
+      
+    } catch (err) {
+      this.logger.error(`Failed to pay for held booking ${booking.pnr}: ${err.message}`);
+      throw new BadRequestException(`Payment failed: ${err.message}`);
+    }
   }
 
   async confirmBooking(bookingId: string): Promise<BookingDocument> {

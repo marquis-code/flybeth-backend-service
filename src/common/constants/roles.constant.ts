@@ -48,13 +48,15 @@ export enum PaymentStatus {
 }
 
 export enum PaymentProvider {
-  STRIPE = "stripe",
+  PAYPAL = "paypal",
   PAYSTACK = "paystack",
   MANUAL = "manual",
   WALLET = "wallet",
   CREDPAL = "credpal",
   AFFIRM = "affirm",
   KLARNA = "klarna",
+  AFTERPAY = "afterpay",
+  SEZZLE = "sezzle",
   PAYPAL_FOUR = "paypal_four",
 }
 

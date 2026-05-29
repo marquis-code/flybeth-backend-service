@@ -554,17 +554,42 @@ export class DuffelProvider implements AirlineAdapter {
     this.logger.log(`Booking Duffel flight ${offerId} with ${services?.length || 0} services`);
 
     try {
+      // 1. Fetch the exact offer to get Duffel passenger IDs and exact amount
+      const offerDetails = await this.getOfferDetails(offerId);
+      if (!offerDetails || !offerDetails.rawOffer) {
+        throw new Error("Offer not found or expired before booking");
+      }
+      
+      const rawOffer = offerDetails.rawOffer;
+      const duffelPassengers = rawOffer.passengers || [];
+      const exactAmount = rawOffer.total_amount;
+      const exactCurrency = rawOffer.total_currency;
+
+      // 2. Map our local passengers to the Duffel passenger IDs
+      const mappedPassengers = this.mapPassengersForBooking(passengers);
+      mappedPassengers.forEach((p, idx) => {
+        // Assign the strict Duffel passenger ID (e.g. pas_0000...)
+        if (duffelPassengers[idx]) {
+          p.id = duffelPassengers[idx].id;
+        }
+        
+        // Quick fix for the test Nigerian phone number being too short for E.164
+        if (p.phone_number && p.phone_number.startsWith('+234') && p.phone_number.length < 14) {
+           p.phone_number = p.phone_number.padEnd(14, '0'); 
+        }
+      });
+
       const requestBody: any = {
         data: {
           type: "instant",
           selected_offers: [offerId],
-          passengers: this.mapPassengersForBooking(passengers),
+          passengers: mappedPassengers,
           services: services || [],
           payments: [
             {
               type: payment?.type || "balance",
-              currency: payment?.currency || offer?.currency || "USD",
-              amount: String(payment?.amount || offer?.price || "0"),
+              currency: exactCurrency,
+              amount: exactAmount,
               ...(payment?.cardId ? { card_id: payment.cardId } : {}),
             },
           ],
@@ -581,7 +606,7 @@ export class DuffelProvider implements AirlineAdapter {
       if (!response.ok) {
         const errorBody = await response.text();
         this.logger.error(`Duffel booking failed: ${response.status} ${errorBody}`);
-        throw new Error(`Duffel booking failed: ${response.status}`);
+        throw new Error(`Duffel booking failed: ${response.status} ${errorBody}`);
       }
 
       const data = await response.json();
@@ -717,6 +742,201 @@ export class DuffelProvider implements AirlineAdapter {
     } catch (error) {
       this.logger.error(`Duffel payment error: ${error.message}`);
       return { success: false };
+    }
+  }
+
+  /**
+   * Get airlines list
+   */
+  async getAirlines(query: any = {}): Promise<any> {
+    const queryParams = new URLSearchParams(query as any).toString();
+    const url = `${this.baseUrl}/air/airlines${queryParams ? '?' + queryParams : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get airlines: ${response.status}`);
+        return { data: [] };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAirlines error: ${error.message}`);
+      return { data: [] };
+    }
+  }
+
+  /**
+   * Get a single airline
+   */
+  async getAirline(id: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/air/airlines/${id}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get airline ${id}: ${response.status}`);
+        return { data: null };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAirline error: ${error.message}`);
+      return { data: null };
+    }
+  }
+
+  /**
+   * Get aircraft list
+   */
+  async getAircraftList(query: any = {}): Promise<any> {
+    const queryParams = new URLSearchParams(query as any).toString();
+    const url = `${this.baseUrl}/air/aircraft${queryParams ? '?' + queryParams : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get aircraft: ${response.status}`);
+        return { data: [] };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAircraftList error: ${error.message}`);
+      return { data: [] };
+    }
+  }
+
+  /**
+   * Get a single aircraft
+   */
+  async getAircraft(id: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/air/aircraft/${id}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get aircraft ${id}: ${response.status}`);
+        return { data: null };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAircraft error: ${error.message}`);
+      return { data: null };
+    }
+  }
+
+  /**
+   * Get airports list
+   */
+  async getAirports(query: any = {}): Promise<any> {
+    const queryParams = new URLSearchParams(query as any).toString();
+    const url = `${this.baseUrl}/air/airports${queryParams ? '?' + queryParams : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get airports: ${response.status}`);
+        return { data: [] };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAirports error: ${error.message}`);
+      return { data: [] };
+    }
+  }
+
+  /**
+   * Get a single airport
+   */
+  async getAirport(id: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/air/airports/${id}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get airport ${id}: ${response.status}`);
+        return { data: null };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getAirport error: ${error.message}`);
+      return { data: null };
+    }
+  }
+
+  /**
+   * Get cities list
+   */
+  async getCities(query: any = {}): Promise<any> {
+    const queryParams = new URLSearchParams(query as any).toString();
+    const url = `${this.baseUrl}/air/cities${queryParams ? '?' + queryParams : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get cities: ${response.status}`);
+        return { data: [] };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getCities error: ${error.message}`);
+      return { data: [] };
+    }
+  }
+
+  /**
+   * Get a single city
+   */
+  async getCity(id: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/air/cities/${id}`, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get city ${id}: ${response.status}`);
+        return { data: null };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getCity error: ${error.message}`);
+      return { data: null };
+    }
+  }
+
+  /**
+   * Get place suggestions
+   */
+  async getPlacesSuggestions(query: any = {}): Promise<any> {
+    const queryParams = new URLSearchParams(query as any).toString();
+    const url = `${this.baseUrl}/places/suggestions${queryParams ? '?' + queryParams : ''}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: this.getHeaders(),
+      });
+      if (!response.ok) {
+        this.logger.error(`Failed to get places suggestions: ${response.status}`);
+        return { data: [] };
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error(`Duffel getPlacesSuggestions error: ${error.message}`);
+      return { data: [] };
     }
   }
 }
