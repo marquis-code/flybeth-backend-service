@@ -19,6 +19,13 @@ export class PassengersService {
     const payload: any = { ...dto };
     if (userId) {
       payload.user = userId;
+      // Use upsert to prevent creating duplicate passengers for the same user
+      const existing = await this.passengerModel.findOneAndUpdate(
+        { user: userId, firstName: dto.firstName, lastName: dto.lastName },
+        { $set: payload },
+        { new: true, upsert: true }
+      ).exec();
+      return existing as unknown as PassengerDocument;
     }
     const passenger = new this.passengerModel(payload);
     return passenger.save();

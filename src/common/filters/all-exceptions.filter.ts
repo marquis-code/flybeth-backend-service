@@ -8,18 +8,22 @@ import {
   Logger,
 } from "@nestjs/common";
 import { Request, Response } from "express";
+import { I18nService } from 'nestjs-i18n';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  constructor(private readonly i18n: I18nService) {}
+
+  async catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const lang = request.headers['accept-language'] || 'en';
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let message = "Internal server error";
+    let message: string | string[] = "Internal server error";
     let errors: any = null;
 
     if (exception instanceof HttpException) {
@@ -39,6 +43,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `Unhandled exception: ${exception.message}`,
         exception.stack,
       );
+    }
+
+    // Translate message if it's a string, or map over array
+    if (this.i18n) {
+      if (typeof message === 'string') {
+        try {
+          const key = `common.errors.${message.toUpperCase().replace(/\s+/g, '_')}`;
+          const translated = await this.i18n.translate(key, { lang });
+          if (translated !== key) {
+            message = translated as string;
+          }
+        } catch { /* ignore */ }
+      } else if (Array.isArray(message)) {
+        message = (await Promise.all(message.map(async (msg: string) => {
+          try {
+             return (await this.i18n.translate(msg, { lang })) || msg;
+          } catch { return msg; }
+        }))) as string[];
+      }
     }
 
     response.status(status).json({

@@ -86,6 +86,7 @@ export class PaymentsController {
     return this.paymentsService.handleBnplWebhook(gateway, payload, signature);
   }
 
+  @Public()
   @Post("bnpl/authorize")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Authorize a BNPL transaction after redirect" })
@@ -93,6 +94,16 @@ export class PaymentsController {
     @Body() dto: { bookingId: string; provider: PaymentProvider; checkoutToken: string; amount: number; currency: string }
   ) {
     return this.paymentsService.authorizeBnplPayment(dto);
+  }
+
+  @Public()
+  @Post("verify")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Explicitly verify a payment transaction" })
+  verifyPayment(
+    @Body() dto: { bookingId: string; provider: PaymentProvider; checkoutToken: string; amount?: number; currency?: string }
+  ) {
+    return this.paymentsService.verifyPayment(dto);
   }
 
   @Public()

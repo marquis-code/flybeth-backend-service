@@ -5,6 +5,7 @@ export interface FlightSearchQuery {
   destination: string;
   departureDate: string;
   returnDate?: string;
+  flexibleDates?: boolean;
   adults: number;
   children?: number;
   infants?: number;
@@ -12,6 +13,16 @@ export interface FlightSearchQuery {
   maxConnections?: number;
   userRole?: string;
   customerId?: string;
+}
+
+export interface FlightItinerary {
+  origin: string;
+  destination: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: number; // minutes
+  stops: number;
+  segments: FlightSegment[];
 }
 
 export interface FlightSegment {
@@ -45,8 +56,9 @@ export interface FlightSearchResult {
   priceWithCommission: number;
   currency: string;
   seatsAvailable?: number;
-  stops: number;
-  segments: FlightSegment[];
+  stops?: number; // legacy
+  segments?: FlightSegment[]; // legacy
+  itineraries: FlightItinerary[];
   cabinClass?: string;
   expiresAt?: string;
   conditions?: {

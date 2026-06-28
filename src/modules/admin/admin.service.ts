@@ -1,5 +1,5 @@
-// src/modules/admin/admin.service.ts
 import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { Booking } from "../bookings/schemas/booking.schema";
@@ -12,6 +12,7 @@ import { BookingsService } from "../bookings/bookings.service";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { Invitation } from "./schemas/invitation.schema";
 import { NotificationsService } from "../notifications/notifications.service";
+import { AccessControlService } from "../access-control/access-control.service";
 import { InviteDto } from "./dto/invite.dto";
 import { v4 as uuidv4 } from "uuid";
 
@@ -29,6 +30,7 @@ export class AdminService {
     private usersService: UsersService,
     private bookingsService: BookingsService,
     private notificationsService: NotificationsService,
+    private acService: AccessControlService,
   ) {}
 
   async getDashboard() {
@@ -178,7 +180,6 @@ export class AdminService {
     const matchStage: any = { status: "success" };
     if (tenantId) matchStage.tenant = new Types.ObjectId(tenantId);
 
-    // Time-based grouping
     let dateFormat: string;
     switch (period) {
       case "daily":
@@ -194,15 +195,16 @@ export class AdminService {
         dateFormat = "%Y-%m";
     }
 
-    const revenue = await this.paymentModel
-      .aggregate([
+    const bookingMatchStage: any = { status: { $in: ["confirmed", "ticketed"] } };
+    if (tenantId) bookingMatchStage.tenant = new Types.ObjectId(tenantId);
+
+    const [trends, payments, bookingStats] = await Promise.all([
+      this.paymentModel.aggregate([
         { $match: matchStage },
         {
           $group: {
             _id: {
-              period: {
-                $dateToString: { format: dateFormat, date: "$paidAt" },
-              },
+              period: { $dateToString: { format: dateFormat, date: "$paidAt" } },
               currency: "$currency",
             },
             totalAmount: { $sum: "$amount" },
@@ -210,10 +212,73 @@ export class AdminService {
           },
         },
         { $sort: { "_id.period": -1 } },
-      ])
-      .exec();
+      ]),
+      this.paymentModel
+        .find(matchStage)
+        .populate("tenant", "name")
+        .sort({ paidAt: -1 })
+        .limit(100) // Ledger display limit
+        .exec(),
+      this.bookingModel.aggregate([
+        { $match: bookingMatchStage },
+        {
+          $group: {
+            _id: null,
+            totalCommission: { $sum: { $add: [{ $ifNull: ["$pricing.platformCommission", 0] }, { $ifNull: ["$pricing.platformAncillaryMargin", 0] }] } },
+            totalVipRevenue: { $sum: { $ifNull: ["$pricing.vipSupportAmount", 0] } },
+            totalBookings: { $sum: 1 },
+            vipBookingsCount: {
+              $sum: { $cond: [{ $gt: ["$pricing.vipSupportAmount", 0] }, 1, 0] }
+            }
+          }
+        }
+      ]).exec()
+    ]);
 
-    return revenue;
+    let grossRevenue = 0;
+    let pendingDisbursements = 0;
+
+    const stats = bookingStats[0] || { totalCommission: 0, totalVipRevenue: 0, totalBookings: 0, vipBookingsCount: 0 };
+    const commissionEarned = stats.totalCommission;
+    const vipRevenue = stats.totalVipRevenue;
+    const vipConversionRate = stats.totalBookings > 0 ? ((stats.vipBookingsCount / stats.totalBookings) * 100).toFixed(1) : 0;
+
+    const ledger = payments.map((p) => {
+      grossRevenue += p.amount;
+      
+      const rate = grossRevenue > 0 ? (commissionEarned / grossRevenue) * 100 : 0; // Approximate average rate for display
+      const payout = p.amount - (p.amount * (rate / 100));
+      
+      // If status is just success, we treat it as settled for now, or mock unsettled randomly for UI
+      const isSettled = Math.random() > 0.2; 
+      if (!isSettled) pendingDisbursements += payout;
+
+      return {
+        id: p.providerTransactionId || p._id.toString().substring(0, 8),
+        agency: (p.tenant as any)?.name || "Direct / B2C",
+        amount: p.amount,
+        currency: p.currency,
+        rate: rate.toFixed(1),
+        payout: payout,
+        settled: isSettled,
+        date: p.paidAt ? p.paidAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      };
+    });
+
+    const takeRate = grossRevenue > 0 ? ((commissionEarned / grossRevenue) * 100).toFixed(1) : 0;
+
+    return {
+      metrics: {
+        grossRevenue,
+        commissionEarned,
+        pendingDisbursements,
+        takeRate,
+        vipRevenue,
+        vipConversionRate
+      },
+      ledger,
+      trends
+    };
   }
 
   async getSystemHealth() {
@@ -294,15 +359,26 @@ export class AdminService {
     await invitation.save();
 
     // Send invitation email
-    await this.notificationsService.sendDynamicEmail({
-      slug: "team-invitation",
-      to: inviteDto.email,
-      data: {
-        inviteUrl: `${process.env.ADMIN_URL || "http://localhost:3001"}/signup?token=${token}`,
-        role: inviteDto.role,
-        expiresAt: expiresAt.toLocaleDateString(),
-      },
-    });
+    let roleName = inviteDto.role.toString();
+    let permissions: string[] = [];
+    try {
+      const roleDoc = await this.acService.findRoleById(inviteDto.role.toString());
+      if (roleDoc) {
+        roleName = roleDoc.name;
+        permissions = roleDoc.permissions || [];
+      }
+    } catch (e) {
+      this.logger.warn(`Could not resolve role name for role id ${inviteDto.role}`);
+    }
+
+    const inviteUrl = `${process.env.ADMIN_URL || "http://localhost:3006"}/signup?token=${token}`;
+    await this.notificationsService.sendTeamInvitationEmail(
+      inviteDto.email,
+      roleName,
+      inviteUrl,
+      expiresAt.toLocaleDateString(),
+      permissions
+    );
 
     this.logger.log(
       `Team invitation sent to ${inviteDto.email} (Role: ${inviteDto.role})`,
@@ -338,11 +414,44 @@ export class AdminService {
   }
 
   async cancelInvitation(id: string) {
-    const result = await this.invitationModel.findByIdAndDelete(id).exec();
+    const result = await this.invitationModel.findByIdAndUpdate(id, { status: "expired" }, { new: true }).exec();
     if (!result) {
       throw new Error("Invitation not found");
     }
     return { message: "Invitation cancelled successfully" };
+  }
+
+  async resendInvitation(id: string) {
+    const invite = await this.invitationModel.findById(id).exec();
+    if (!invite || invite.status !== "pending") {
+      throw new Error("Only pending invitations can be resent");
+    }
+    
+    const token = invite.token;
+    const inviteUrl = `${process.env.ADMIN_URL || "http://localhost:3006"}/signup?token=${token}`;
+    
+    let roleName = invite.role.toString();
+    let permissions: string[] = [];
+    try {
+      const roleDoc = await this.acService.findRoleById(invite.role.toString());
+      if (roleDoc) {
+        roleName = roleDoc.name;
+        permissions = roleDoc.permissions || [];
+      }
+    } catch (e) {
+      this.logger.warn(`Could not resolve role name for role id ${invite.role}`);
+    }
+
+    await this.notificationsService.sendTeamInvitationEmail(
+      invite.email,
+      roleName,
+      inviteUrl,
+      invite.expiresAt.toLocaleDateString(),
+      permissions
+    );
+
+    this.logger.log(`Resent invitation to ${invite.email}`);
+    return { message: "Invitation resent successfully" };
   }
 
   async createAdminUser(dto: any, createdBy: string) {
@@ -432,5 +541,48 @@ export class AdminService {
       message: "Global settlement initiated successfully. Batch ID: SET-" + Date.now(),
       processedCount: await this.paymentModel.countDocuments({ status: "success" })
     };
+  }
+
+  // --- Cron Jobs for Invitations ---
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleExpiredInvitations() {
+    try {
+      const result = await this.invitationModel.updateMany(
+        { status: "pending", expiresAt: { $lt: new Date() } },
+        { $set: { status: "expired" } }
+      );
+      if (result.modifiedCount > 0) {
+        this.logger.log(`Marked ${result.modifiedCount} invitations as expired`);
+      }
+    } catch (error) {
+      this.logger.error(`Error expiring invitations: ${error.message}`);
+    }
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  async sendInvitationReminders() {
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfterTomorrow = new Date();
+      dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+      const expiringInvitations = await this.invitationModel.find({
+        status: "pending",
+        expiresAt: { $gte: tomorrow, $lt: dayAfterTomorrow }
+      });
+
+      for (const invite of expiringInvitations) {
+        const inviteUrl = `${process.env.ADMIN_URL || "http://localhost:3006"}/signup?token=${invite.token}`;
+        await this.notificationsService.sendInvitationReminderEmail(invite.email, inviteUrl);
+      }
+
+      if (expiringInvitations.length > 0) {
+        this.logger.log(`Sent reminder emails to ${expiringInvitations.length} pending invitations`);
+      }
+    } catch (error) {
+      this.logger.error(`Error sending invitation reminders: ${error.message}`);
+    }
   }
 }

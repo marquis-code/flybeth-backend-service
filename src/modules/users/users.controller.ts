@@ -20,19 +20,21 @@ import {
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Roles } from "../../common/decorators/roles.decorator";
+import { Permissions } from "../../common/decorators/permissions.decorator";
 import { RolesGuard } from "../../common/guards/roles.guard";
-import { Role } from "../../common/constants/roles.constant";
+import { PermissionsGuard } from "../../common/guards/permissions.guard";
+import { Role, Permission } from "../../common/constants/roles.constant";
 import { MongoIdValidationPipe } from "../../common/pipes/mongo-id-validation.pipe";
 
 @ApiTags("Users")
 @ApiBearerAuth()
 @Controller("users")
-@UseGuards(RolesGuard)
+@UseGuards(RolesGuard, PermissionsGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT)
+  @Permissions(Permission.ACCESS_ADMIN_PANEL)
   @ApiOperation({ summary: "Create a new user (Admin/Agent only)" })
   create(@Body() createUserDto: any, @CurrentUser("tenant") tenantId: string) {
     if (tenantId) createUserDto.tenant = tenantId;
@@ -40,7 +42,7 @@ export class UsersController {
   }
 
   @Get("admins")
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT, Role.STAFF)
+  @Permissions(Permission.ACCESS_ADMIN_PANEL)
   @ApiOperation({ summary: "Get all administrative users for support" })
   findAdmins() {
     return this.usersService.findAdmins();
@@ -62,7 +64,7 @@ export class UsersController {
   }
 
   @Get()
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.AGENT)
+  @Permissions(Permission.ACCESS_ADMIN_PANEL)
   @ApiOperation({ summary: "List all users (Admin/Agent only)" })
   findAll(
     @Query() paginationDto: PaginationDto,
@@ -73,14 +75,14 @@ export class UsersController {
   }
 
   @Get(":id")
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+  @Permissions(Permission.MANAGE_STAFF)
   @ApiOperation({ summary: "Get user by ID" })
   findOne(@Param("id", MongoIdValidationPipe) id: string) {
     return this.usersService.findById(id);
   }
 
   @Patch(":id/role")
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+  @Permissions(Permission.MANAGE_ROLES)
   @ApiOperation({ summary: "Update user role" })
   updateRole(
     @Param("id", MongoIdValidationPipe) id: string,
@@ -90,7 +92,7 @@ export class UsersController {
   }
 
   @Patch(":id/agent-status")
-  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN)
+  @Permissions(Permission.MANAGE_STAFF)
   @ApiOperation({ summary: "Update agent status" })
   updateAgentStatus(
     @Param("id", MongoIdValidationPipe) id: string,

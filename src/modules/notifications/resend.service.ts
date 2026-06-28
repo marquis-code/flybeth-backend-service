@@ -122,7 +122,7 @@ export class ResendService {
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>${title}</title>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
           
           body { 
             margin: 0; 
@@ -130,178 +130,146 @@ export class ResendService {
             width: 100% !important; 
             -webkit-text-size-adjust: 100%; 
             -ms-text-size-adjust: 100%; 
-            background-color: #f8fafc; 
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: #1e293b;
+            background-color: #f9fafb; 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1f2937;
           }
           
           .email-wrapper { 
-            background-color: #f8fafc; 
-            padding: 50px 15px; 
+            background-color: #f9fafb; 
+            padding: 40px 0; 
           }
           
           .container { 
             background-color: #ffffff; 
-            max-width: 640px; 
+            max-width: 560px; 
             width: 100%;
             margin: 0 auto; 
-            border-radius: 32px; 
+            border-radius: 12px; 
             text-align: left;
-            box-shadow: 0 40px 80px -20px rgba(13, 29, 173, 0.1); 
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid #f3f4f6;
             overflow: hidden;
             position: relative;
           }
 
-          .header-accent {
-            height: 8px;
-            background: linear-gradient(90deg, #0D1DAD 0%, #FF3D00 100%);
-            width: 100%;
-          }
-          
           .header { 
-            padding: 50px 50px 40px; 
+            padding: 32px 32px 16px; 
             text-align: center; 
           }
           
           .logo { 
-            height: 42px; 
+            height: 24px; 
             width: auto; 
-            margin-bottom: 40px; 
-          }
-          
-          .badge {
-            display: inline-block;
-            padding: 10px 20px;
-            background: rgba(13, 29, 173, 0.05);
-            border-radius: 100px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(13, 29, 173, 0.1);
-          }
-          
-          .badge span {
-            color: #0D1DAD;
-            font-size: 11px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
+            margin-bottom: 24px; 
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
           }
           
           .title { 
-            color: #0f172a; 
-            font-size: 36px; 
-            font-weight: 800; 
+            color: #111827; 
+            font-size: 18px; 
+            font-weight: 600; 
             margin: 0; 
-            letter-spacing: -1px; 
-            line-height: 1.1; 
+            line-height: 1.4; 
           }
           
           .body-content { 
-            padding: 0 50px 60px; 
-            font-size: 17px; 
-            line-height: 1.8; 
-            color: #475569; 
+            padding: 0 32px 32px; 
+            font-size: 14px; 
+            line-height: 1.6; 
+            color: #4b5563; 
           }
           
           .body-content p { 
-            margin-bottom: 24px; 
+            margin-bottom: 16px; 
           }
           
           .body-content strong { 
-            color: #0f172a; 
-            font-weight: 700; 
+            color: #111827; 
+            font-weight: 600; 
           }
           
           .action-area { 
-            text-align: center; 
-            margin: 45px 0; 
+            margin: 24px 0; 
+            text-align: center;
           }
           
           .btn { 
             display: inline-block; 
-            padding: 22px 48px; 
-            background: #0f172a;
+            padding: 10px 20px; 
+            background: #0D1DAD;
             color: #ffffff !important; 
             text-decoration: none !important; 
-            border-radius: 20px; 
-            font-weight: 700; 
-            font-size: 16px; 
-            box-shadow: 0 15px 30px rgba(15, 23, 42, 0.2);
-            transition: all 0.3s ease;
+            border-radius: 6px; 
+            font-weight: 500; 
+            font-size: 13px; 
+            transition: all 0.2s ease;
           }
           
           .footer { 
             text-align: center; 
-            padding: 50px;
-            background-color: #f8fafc;
-            border-top: 1px solid #f1f5f9;
+            padding: 32px;
+            background-color: #f9fafb;
+            border-top: 1px solid #f3f4f6;
           }
           
-          .footer-logo {
-            height: 24px;
-            opacity: 0.4;
-            margin-bottom: 20px;
+          .footer-cta {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px dashed #e5e7eb;
+          }
+          
+          .footer-cta p {
+            margin: 0 0 12px 0;
+            font-size: 14px;
+            color: #374151;
+            font-weight: 500;
           }
 
           .footer-link {
             color: #0D1DAD;
             text-decoration: none;
-            font-weight: 600;
-          }
-          
-          .footer-text { 
-            font-size: 13px; 
-            color: #94a3b8; 
-            line-height: 2; 
             font-weight: 500;
           }
           
-          .legal-notice {
-            font-size: 11px;
-            color: #cbd5e1;
-            margin-top: 30px;
-            line-height: 1.6;
-            max-width: 400px;
-            margin-left: auto;
-            margin-right: auto;
+          .footer-text { 
+            font-size: 12px; 
+            color: #9ca3af; 
+            line-height: 1.8; 
           }
-
+          
           @media only screen and (max-width: 640px) {
+            .email-wrapper { padding: 0; }
             .container { 
               border-radius: 0; 
               border: none;
-              box-shadow: none;
             }
-            .header { padding: 40px 30px; }
-            .body-content { padding: 0 30px 40px; }
-            .title { font-size: 28px; }
-            .footer { padding: 40px 30px; }
+            .header { padding: 32px 24px 16px; }
+            .body-content { padding: 0 24px 32px; }
+            .footer { padding: 32px 24px; }
           }
         </style>
       </head>
       <body>
         <div class="email-wrapper">
           <div class="container">
-            <div class="header-accent"></div>
             <div class="header">
               <img src="${logoUrl}" alt="Flybeth" class="logo" />
-              <div class="badge"><span>Verified System Dispatch</span></div>
               <h1 class="title">${title}</h1>
             </div>
             <div class="body-content">
               ${content}
             </div>
             <div class="footer">
-              <img src="${logoUrl}" alt="Flybeth" class="footer-logo" />
-              <div class="footer-text">
-                <strong>FLYBETH GLOBAL LLC</strong><br>
-                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077<br>
-                <a href="mailto:hello@flybeth.com" class="footer-link">hello@flybeth.com</a> • <a href="https://flybeth.com" class="footer-link">flybeth.com</a><br>
-                &copy; ${new Date().getFullYear()} • Elevating Every Journey.
+              <div class="footer-cta">
+                <p>Ready for your next journey?</p>
+                <a href="https://flybeth.com" class="footer-link">Explore more destinations at Flybeth.com →</a>
               </div>
-              <div class="legal-notice">
-                This email and any attachments are confidential and intended solely for the addressee. 
-                If you have received this message in error, please notify the sender immediately and delete this message.
+              <div class="footer-text">
+                FLYBETH GLOBAL LLC<br>
+                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077<br>
+                &copy; ${new Date().getFullYear()} &bull; Elevating Every Journey.
               </div>
             </div>
           </div>

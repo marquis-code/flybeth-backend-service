@@ -220,3 +220,37 @@ export class SocialLoginDto {
   @IsOptional()
   ipAddress?: string;
 }
+
+export class AcceptInvitationDto {
+  @ApiProperty({ example: "john@example.com" })
+  @IsEmail()
+  email: string;
+
+  @ApiProperty({ example: "StrongP@ss1" })
+  @IsString()
+  @MinLength(8)
+  password: string;
+
+  @ApiProperty({ example: "John" })
+  @IsString()
+  firstName: string;
+
+  @ApiProperty({ example: "Doe" })
+  @IsString()
+  lastName: string;
+
+  @ApiPropertyOptional({ example: "+1234567890" })
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @ApiProperty({ description: "Invitation token" })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
+}

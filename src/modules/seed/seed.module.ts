@@ -13,6 +13,7 @@ import {
   BankAccountSchema,
 } from "../payments/schemas/bank-account.schema";
 import { User, UserSchema } from "../users/schemas/user.schema";
+import { Department, DepartmentSchema } from "../chat/schemas/department.schema";
 
 import { RoleEntity, RoleSchema } from "../access-control/schemas/role.schema";
 import { PermissionEntity, PermissionSchema } from "../access-control/schemas/permission.schema";
@@ -26,6 +27,7 @@ import { PermissionEntity, PermissionSchema } from "../access-control/schemas/pe
       { name: User.name, schema: UserSchema },
       { name: RoleEntity.name, schema: RoleSchema },
       { name: PermissionEntity.name, schema: PermissionSchema },
+      { name: Department.name, schema: DepartmentSchema },
     ]),
   ],
   providers: [SeedService],

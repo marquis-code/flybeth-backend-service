@@ -50,6 +50,23 @@ export class PaypalProvider {
   }) {
     const accessToken = await this.getAccessToken();
     
+    // PayPal Supported Currencies
+    const supportedCurrencies = ["AUD", "BRL", "CAD", "CNY", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS", "JPY", "MYR", "MXN", "TWD", "NZD", "NOK", "PHP", "PLN", "GBP", "RUB", "SGD", "SEK", "CHF", "THB", "USD"];
+    
+    let finalCurrency = params.currency.toUpperCase();
+    let finalAmount = params.amount;
+
+    if (!supportedCurrencies.includes(finalCurrency)) {
+      // Aggressive fallback to USD with an estimated exchange rate
+      this.logger.warn(`Currency ${finalCurrency} is not supported by PayPal. Falling back to USD.`);
+      if (finalCurrency === 'NGN') {
+        finalAmount = params.amount / 1500; // Estimated exchange rate
+      } else {
+        finalAmount = params.amount / 1000; // Generic fallback
+      }
+      finalCurrency = 'USD';
+    }
+    
     try {
       const response = await axios.post(
         `${this.baseUrl}/v2/checkout/orders`,
@@ -60,14 +77,18 @@ export class PaypalProvider {
               reference_id: params.reference,
               custom_id: params.bookingId,
               amount: {
-                currency_code: params.currency.toUpperCase(),
-                value: params.amount.toFixed(2),
+                currency_code: finalCurrency,
+                value: finalAmount.toFixed(2),
               },
             },
           ],
           application_context: {
-            return_url: `${params.callbackUrl}?status=success&reference=${params.reference}`,
-            cancel_url: `${params.callbackUrl}?status=cancelled&reference=${params.reference}`,
+            return_url: params.callbackUrl.includes('?') 
+              ? `${params.callbackUrl}&reference=${params.reference}` 
+              : `${params.callbackUrl}?status=success&reference=${params.reference}`,
+            cancel_url: params.callbackUrl.includes('?')
+              ? `${params.callbackUrl.replace('status=success', 'status=cancelled')}&reference=${params.reference}`
+              : `${params.callbackUrl}?status=cancelled&reference=${params.reference}`,
             shipping_preference: "NO_SHIPPING",
             user_action: "PAY_NOW"
           }

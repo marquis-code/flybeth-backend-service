@@ -263,6 +263,21 @@ export class CreateBookingDto {
   @IsBoolean()
   hasInsurance?: boolean;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  hasVipSupport?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  extraBaggageCount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  premiumSeatCount?: number;
+
   @ApiPropertyOptional({ enum: ['pay_now', 'on_hold'] })
   @IsOptional()
   @IsString()

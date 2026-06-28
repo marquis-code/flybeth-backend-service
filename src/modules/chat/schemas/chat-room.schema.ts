@@ -23,8 +23,14 @@ export class ChatRoom {
   @Prop({ type: Object, default: {} })
   metadata?: Record<string, any>;
 
-  @Prop({ enum: ["open", "closed", "bot_handling", "agent_handling"], default: "open" })
+  @Prop({ enum: ["open", "closed", "bot_handling", "agent_handling", "resolved"], default: "open" })
   status: string;
+
+  @Prop({ enum: ["general", "billing", "flight_booking", "hotel_booking", "cancellations", "technical"], default: "general" })
+  department?: string;
+
+  @Prop()
+  ticketNumber?: string;
 
   @Prop({ type: Types.ObjectId, ref: "User" })
   assignedAgent?: Types.ObjectId;

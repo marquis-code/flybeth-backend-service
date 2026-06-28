@@ -1,16 +1,21 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { RoleEntity, RoleDocument } from './schemas/role.schema';
 import { PermissionEntity, PermissionDocument } from './schemas/permission.schema';
+import { User, UserDocument } from '../users/schemas/user.schema';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AccessControlService implements OnModuleInit {
   private readonly logger = new Logger(AccessControlService.name);
 
+
   constructor(
     @InjectModel(RoleEntity.name) private roleModel: Model<RoleDocument>,
     @InjectModel(PermissionEntity.name) private permissionModel: Model<PermissionDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async onModuleInit() {
@@ -73,7 +78,29 @@ export class AccessControlService implements OnModuleInit {
   }
 
   async updateRole(id: string, data: any) {
-    return this.roleModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    const updatedRole = await this.roleModel.findByIdAndUpdate(id, data, { new: true }).exec();
+    
+    if (updatedRole) {
+      // Find all users with this role
+      const users = await this.userModel.find({ role: id }).exec();
+      
+      // Notify each user of the permission update
+      for (const user of users) {
+        if (user.email) {
+          try {
+            await this.notificationsService.sendRoleUpdateEmail(
+              user.email,
+              updatedRole.name,
+              updatedRole.permissions
+            );
+          } catch (error) {
+            this.logger.error(`Failed to send role update email to ${user.email}: ${error.message}`);
+          }
+        }
+      }
+    }
+    
+    return updatedRole;
   }
 
   async deleteRole(id: string) {

@@ -10,6 +10,8 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { CacheModule } from "@nestjs/cache-manager";
 import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
+import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } from 'nestjs-i18n';
+import * as path from 'path';
 
 // Config
 import appConfig from "./config/app.config";
@@ -139,6 +141,20 @@ import { AppController } from "./app.controller";
     QueueModule,
     SchedulerModule,
     SeedModule,
+
+    // I18n
+    I18nModule.forRoot({
+      fallbackLanguage: 'en',
+      loaderOptions: {
+        path: path.join(__dirname, '/i18n/'),
+        watch: true,
+      },
+      resolvers: [
+        { use: QueryResolver, options: ['lang'] },
+        AcceptLanguageResolver,
+        new HeaderResolver(['x-custom-lang']),
+      ],
+    }),
   ],
   providers: [
     // Global JWT guard (applies to all routes, @Public() decorator skips)

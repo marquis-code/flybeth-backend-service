@@ -101,10 +101,11 @@ export class FlightsController {
   @ApiOperation({
     summary: "Price a flight offer (confirm final fare and taxes)",
   })
-  priceOffer(@Body() payload: any) {
+  priceOffer(@Body() payload: any, @Req() req: any) {
     // We expect the frontend to pass { flightOffer, provider }
     const { flightOffer, provider } = payload;
-    return this.flightsIntegrationService.priceOffer(flightOffer, provider);
+    const userRole = req?.user?.role || "customer";
+    return this.flightsIntegrationService.priceOffer(flightOffer, provider, userRole);
   }
 
   @Public()

@@ -288,6 +288,22 @@ export class BookingsService {
       }
     }
 
+    const isB2C = !createBookingDto.tenantId && userId; // If no tenantId, it's direct consumer
+    const isB2B = !!createBookingDto.tenantId;
+
+    // Platform Commission (B2B or B2C)
+    const platformCommissionPercent = isB2B ? config.b2bCommission : config.b2cCommission;
+    const platformCommission = totalBaseFare * (platformCommissionPercent / 100);
+    
+    // Ancillary Margin for external flights
+    let platformAncillaryMargin = 0;
+    if (bookingFlights.some(f => f.provider && f.provider !== 'manual')) {
+      platformAncillaryMargin = totalBaseFare * ((config.ancillaryMargin || 0) / 100);
+    }
+
+    // Hide platform commission and ancillary margin inside the base fare as requested
+    totalBaseFare += platformCommission + platformAncillaryMargin;
+
     const totalPassengers =
       (bookingFlights.reduce(
         (sum, f) => sum + f.passengers.length,
@@ -303,10 +319,23 @@ export class BookingsService {
 
     const agentServiceFee = createBookingDto.agentServiceFee || 0;
     const adultMarkup = createBookingDto.adultMarkup || 0;
+    
+    // Dynamic Ancillary pricing from config
     const hasInsurance = createBookingDto.hasInsurance || false;
-    const insuranceAmount = hasInsurance ? 25 * totalPassengers : 0; // Fixed $25 per passenger for demo
+    const insuranceAmount = hasInsurance ? (config.ancillaryPrices?.insurance || 25) * totalPassengers : 0;
+    
+    const hasVipSupport = createBookingDto.hasVipSupport || false;
+    const vipSupportAmount = hasVipSupport ? (config.ancillaryPrices?.vipSupport || 15) : 0;
+    
+    const extraBaggageCount = createBookingDto.extraBaggageCount || 0;
+    const baggageAmount = extraBaggageCount * (config.ancillaryPrices?.bags || 25);
+    
+    const premiumSeatCount = createBookingDto.premiumSeatCount || 0;
+    const seatAmount = premiumSeatCount * (config.ancillaryPrices?.seats || 15);
 
-    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) + insuranceAmount - discount;
+    const totalAncillaries = insuranceAmount + vipSupportAmount + baggageAmount + seatAmount;
+
+    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) + totalAncillaries - discount;
 
     const booking = new this.bookingModel({
       pnr: pnr.toUpperCase(),
@@ -330,6 +359,11 @@ export class BookingsService {
         agentServiceFee,
         adultMarkup,
         insuranceAmount,
+        vipSupportAmount,
+        baggageAmount,
+        seatAmount,
+        platformCommission,
+        platformAncillaryMargin,
         discount,
         totalAmount,
         currency: createBookingDto.currency || "USD",
@@ -353,6 +387,13 @@ export class BookingsService {
     });
 
     const saved = await booking.save();
+    
+    // Aggressive real-time emission
+    try {
+      this.notificationsService.emitBookingAttempt(saved.toObject());
+    } catch (e) {
+      this.logger.warn("Failed to emit real-time booking attempt: " + e.message);
+    }
 
      // 5. Handle Payment immediately if Wallet
       if (createBookingDto.paymentProvider === 'wallet') {
@@ -420,10 +461,13 @@ export class BookingsService {
                 "payment.provider": "duffel",
                 "payment.paidAt": new Date(),
               });
+              
+              this.notificationsService.emitBookingSuccess(saved.toObject());
               this.logger.log(`Duffel booking paid and ticketed for ${saved.pnr}`);
             }
           }
         } catch (err) {
+          this.notificationsService.emitBookingFailed(saved.toObject());
           this.logger.error(`Duffel payment/booking failed for ${saved.pnr}: ${err.message}`);
           throw new BadRequestException(`Flight booking failed: ${err.message}`);
         }
@@ -507,12 +551,55 @@ export class BookingsService {
     return booking as unknown as BookingDocument;
   }
 
+  async findByPnrAndEmail(pnr: string, email: string, sendEmail?: boolean): Promise<BookingDocument> {
+    const query = {
+      pnr: pnr.trim().toUpperCase(),
+      "contactDetails.email": { $regex: new RegExp(`^${email.trim()}$`, "i") },
+    };
+
+    const booking = await this.bookingModel
+      .findOne(query)
+      .populate("user", "firstName lastName email")
+      .populate("flights.flight")
+      .populate("flights.passengers")
+      .populate("stays.stay")
+      .populate("stays.room")
+      .lean()
+      .exec();
+
+    if (!booking) {
+      throw new NotFoundException("Booking not found for the provided details");
+    }
+
+    if (sendEmail) {
+      this.notificationsService.sendBookingConfirmation({
+        email: booking.contactDetails?.email,
+        pnr: booking.pnr,
+        firstName: (booking.user as any)?.firstName || booking.contactDetails?.name?.split(' ')[0] || 'Traveler',
+        totalAmount: booking.pricing?.totalAmount || 0,
+        currency: 'USD',
+        flightDetails: booking.flights && booking.flights.length > 0
+          ? booking.flights.map((f: any) => f.flight?.number || 'Flight').join(', ')
+          : 'Booking Details',
+      }).catch(err => {
+        this.logger.error(`Failed to send manage booking email for PNR ${booking.pnr}`, err);
+      });
+    }
+
+    return booking as unknown as BookingDocument;
+  }
+
   async findUserBookings(
-    userId: string,
+    user: any,
     paginationDto: PaginationDto,
     queryDto?: BookingQueryDto,
   ): Promise<PaginatedResult<BookingDocument>> {
-    const query: any = { user: new Types.ObjectId(userId) };
+    const query: any = { 
+      $or: [
+        { user: new Types.ObjectId(user._id) },
+        { "contactDetails.email": user.email }
+      ]
+    };
     if (queryDto?.status) query.status = queryDto.status;
     if (queryDto?.startDate || queryDto?.endDate) {
       query.bookedAt = {};
@@ -604,6 +691,56 @@ export class BookingsService {
     } catch (err) {
       this.logger.error(`Failed to pay for held booking ${booking.pnr}: ${err.message}`);
       throw new BadRequestException(`Payment failed: ${err.message}`);
+    }
+  }
+
+  async handleWebhookEvent(event: any): Promise<void> {
+    const { type, object } = event;
+    
+    if (!object || !object.id) {
+      this.logger.warn(`Received webhook event without object or id: ${type}`);
+      return;
+    }
+
+    try {
+      const orderId = object.id; // remoteOrderId
+
+      switch (type) {
+        case 'order.created':
+          await this.bookingModel.findOneAndUpdate(
+            { remoteOrderId: orderId, status: { $ne: BookingStatus.TICKETED } },
+            { status: BookingStatus.TICKETED, ticketedAt: new Date() }
+          );
+          this.logger.log(`Webhook: Order created for ${orderId}, updated to TICKETED.`);
+          break;
+
+        case 'order.creation_failed':
+          await this.bookingModel.findOneAndUpdate(
+            { remoteOrderId: orderId },
+            { status: BookingStatus.FAILED, notes: 'Order creation failed at the airline' }
+          );
+          this.logger.warn(`Webhook: Order creation failed for ${orderId}.`);
+          break;
+
+        case 'order_cancellation.confirmed':
+          await this.bookingModel.findOneAndUpdate(
+            { remoteOrderId: orderId },
+            { status: BookingStatus.CANCELLED }
+          );
+          this.logger.log(`Webhook: Order cancelled for ${orderId}.`);
+          break;
+
+        case 'order.airline_initiated_change_detected':
+          this.logger.log(`Webhook: Airline initiated change for ${orderId}. Requires user notification.`);
+          // Optionally send notification to user here
+          break;
+
+        default:
+          this.logger.log(`Webhook: Unhandled event type ${type}`);
+          break;
+      }
+    } catch (err) {
+      this.logger.error(`Error processing webhook event ${type}: ${err.message}`);
     }
   }
 
@@ -829,7 +966,7 @@ export class BookingsService {
   }
 
   private async sendAgentBookingNotifications(booking: BookingDocument) {
-    const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "admin@flybeth.com";
+    const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "flybethweb@gmail.com";
     const agentEmail = booking.user ? (booking.user as any).email : booking.contactDetails.email;
     const agentName = booking.user ? (booking.user as any).firstName : (booking.contactDetails.name || 'Guest');
 
@@ -860,18 +997,113 @@ export class BookingsService {
     await this.notificationsService.sendEmail(adminEmail, adminSubject, adminHtml);
 
     // 2. Notify Agent with Invoice
-    const agentSubject = `Booking Received: ${booking.pnr} - Flybeth Agent`;
+    const agentSubject = `Booking Confirmed: ${booking.pnr} - Flybeth Global`;
+    
+    const flightTimelineHtml = this.generateFlightEmailHtml(booking);
+
     const agentHtml = `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-            <h2>Booking Confirmation</h2>
-            <p>Hi ${agentName},</p>
-            <p>Your booking <strong>${booking.pnr}</strong> has been successfully received. We have attached the invoice for your records.</p>
-            <p><strong>Status:</strong> ${booking.status.toUpperCase()}</p>
-            <p><strong>Total:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
-            <br />
-            <p>Thank you for partnering with Flybeth!</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Booking Confirmation</title>
+    </head>
+    <body style="margin:0; padding:0; background-color:#eef2f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#333;">
+        <div style="max-width:600px; margin:20px auto; background-color:#ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow:hidden; border-radius:8px;">
+            
+            <div style="background: linear-gradient(135deg, #d3e5f5 0%, #b2cfee 100%); padding: 30px 40px; text-align: left;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td style="font-size:22px; font-weight:bold; color:#1a365d; letter-spacing: 1px;">BOOKING CONFIRMATION</td>
+                        <td align="right" style="font-size:14px; color:#2d3748; font-weight:bold;">PNR: <span style="color:#1a365d; font-size:16px;">${booking.pnr}</span></td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div style="padding: 20px 40px; background-color:#f8fafc; border-bottom: 1px solid #e2e8f0;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td style="padding-bottom:5px;" width="50%">
+                            <span style="font-size:11px; color:#718096; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Booking Date</span><br/>
+                            <span style="font-size:15px; color:#2d3748; font-weight:500;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                        </td>
+                        <td style="padding-bottom:5px;" width="50%" align="right">
+                            <span style="font-size:11px; color:#718096; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Guest Name</span><br/>
+                            <span style="font-size:15px; color:#2d3748; font-weight:500;">${agentName}</span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="padding: 30px 40px;">
+                <h3 style="margin:0 0 20px 0; color:#1a365d; font-size:16px; text-transform:uppercase; letter-spacing:1px; border-bottom: 2px solid #e2e8f0; padding-bottom:10px;">Flight Details</h3>
+                ${flightTimelineHtml}
+            </div>
+
+            <div style="padding: 30px 40px; background-color:#f1f5f9;">
+                <div style="background-color:#ffffff; border-radius:8px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;">
+                    <h4 style="margin:0 0 10px 0; text-align:center; color:#718096; text-transform:uppercase; font-size:11px; letter-spacing:1.5px;">Payment Receipt</h4>
+                    <div style="text-align:center; margin-bottom: 20px;">
+                        <span style="font-size:11px; color:#718096; font-weight:bold;">TOTAL CHARGE</span><br/>
+                        <span style="font-size:26px; font-weight:900; color:#1a365d; letter-spacing:-0.5px;">${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</span>
+                    </div>
+                    <hr style="border:none; border-top:1px dashed #cbd5e0; margin:15px 0;"/>
+                    <table width="100%" style="font-size:13px; color:#4a5568;" cellpadding="4">
+                        <tr>
+                            <td>Base Fare</td>
+                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.baseFare.toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td>Taxes & Surcharges</td>
+                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.taxes.toLocaleString()}</td>
+                        </tr>
+                        ${booking.pricing.agentServiceFee > 0 ? `
+                        <tr>
+                            <td>Service Fee</td>
+                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.agentServiceFee.toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                        ${booking.pricing.insuranceAmount > 0 ? `
+                        <tr>
+                            <td>Travel Insurance</td>
+                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.insuranceAmount.toLocaleString()}</td>
+                        </tr>
+                        ` : ''}
+                    </table>
+                    <hr style="border:none; border-top:1px solid #e2e8f0; margin:15px 0;"/>
+                    <table width="100%" style="font-size:14px; font-weight:bold; color:#1a365d;">
+                        <tr>
+                            <td>Total Paid</td>
+                            <td align="right">${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div style="padding: 30px 40px; text-align:center; background-color:#ffffff;">
+                <h3 style="color:#1a365d; margin:0 0 25px 0; font-size:16px; text-transform:uppercase; letter-spacing:1px;">Get Ready To Go</h3>
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align:left;">
+                    <tr>
+                        <td width="48%" style="vertical-align:top; background-color:#f7fafc; padding:15px; border-radius:6px;">
+                            <h4 style="margin:0 0 8px 0; color:#2b6cb0; font-size:14px;">✈️ Arrive On Time</h4>
+                            <p style="margin:0; font-size:12px; color:#4a5568; line-height:1.5;">Plan to arrive at the airport at least 3 hours before your scheduled departure time.</p>
+                        </td>
+                        <td width="4%"></td>
+                        <td width="48%" style="vertical-align:top; background-color:#f7fafc; padding:15px; border-radius:6px;">
+                            <h4 style="margin:0 0 8px 0; color:#2b6cb0; font-size:14px;">✅ Passport Check</h4>
+                            <p style="margin:0; font-size:12px; color:#4a5568; line-height:1.5;">Ensure your passport is valid for 6 months and review destination visa requirements.</p>
+                        </td>
+                    </tr>
+                </table>
+                <div style="margin-top:35px; border-top:1px solid #e2e8f0; padding-top:20px;">
+                    <p style="font-size:12px; color:#a0aec0; margin:0;">Thank you for booking with Flybeth Global.<br/>Your official PDF invoice is attached to this email.</p>
+                </div>
+            </div>
         </div>
+    </body>
+    </html>
     `;
+
     await this.notificationsService.sendEmail(
         agentEmail, 
         agentSubject, 
@@ -879,5 +1111,69 @@ export class BookingsService {
         {}, 
         [{ filename: `Invoice_${booking.pnr}.pdf`, content: pdfBuffer }]
     );
+  }
+
+  private generateFlightEmailHtml(booking: any): string {
+      if (!booking.flights || booking.flights.length === 0) {
+          return `<p style="color:#718096; font-size:14px; font-style:italic;">No flight itinerary details available in this booking.</p>`;
+      }
+      
+      let html = '';
+      booking.flights.forEach((f: any, idx: number) => {
+          const flight = f.flight;
+          if (!flight) return;
+          
+          let depDate = 'TBD';
+          let arrDate = 'TBD';
+          
+          try {
+              if (flight.departureTime) {
+                  depDate = new Date(flight.departureTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              }
+              if (flight.arrivalTime) {
+                  arrDate = new Date(flight.arrivalTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+              }
+          } catch (e) {
+              // Ignore date parsing errors and fallback
+          }
+          
+          html += `
+          <div style="margin-bottom: 30px;">
+              <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                      <!-- Timeline Line -->
+                      <td width="30" style="position:relative; vertical-align:top; text-align:center;">
+                          <div style="width:12px; height:12px; border-radius:50%; background-color:#3182ce; margin: 4px auto 0 auto;"></div>
+                          <div style="width:2px; height:60px; background-color:#cbd5e0; margin: 0 auto;"></div>
+                          <div style="width:12px; height:12px; border-radius:50%; border: 2px solid #3182ce; background-color:#fff; margin: 0 auto; box-sizing:border-box;"></div>
+                      </td>
+                      
+                      <!-- Details -->
+                      <td style="padding-left:15px;">
+                          <!-- Departure -->
+                          <div style="margin-bottom: 25px;">
+                              <span style="font-size:10px; color:#718096; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase;">DEPARTURE</span><br/>
+                              <span style="font-size:24px; font-weight:bold; color:#2d3748; letter-spacing:-0.5px;">${flight.departureCity || flight.origin || 'Origin'}</span>
+                              <div style="font-size:13px; color:#4a5568; margin-top:2px; font-weight:500;">${depDate}</div>
+                          </div>
+                          
+                          <!-- Arrival -->
+                          <div>
+                              <span style="font-size:10px; color:#718096; font-weight:bold; letter-spacing:1.5px; text-transform:uppercase;">DESTINATION</span><br/>
+                              <span style="font-size:24px; font-weight:bold; color:#2d3748; letter-spacing:-0.5px;">${flight.arrivalCity || flight.destination || 'Destination'}</span>
+                              <div style="font-size:13px; color:#4a5568; margin-top:2px; font-weight:500;">${arrDate}</div>
+                          </div>
+                      </td>
+                  </tr>
+              </table>
+              
+              <!-- Flight Meta Info -->
+              <div style="margin-top:20px; padding:12px 15px; background-color:#ebf8ff; border-radius:6px; font-size:12px; color:#2b6cb0; display:inline-block; border: 1px solid #bee3f8;">
+                  <strong>${flight.airline || 'Airline'}</strong> &nbsp;&bull;&nbsp; Flight ${flight.flightNumber || 'N/A'} &nbsp;&bull;&nbsp; <strong>Class:</strong> ${f.class ? f.class.toUpperCase() : 'N/A'}
+              </div>
+          </div>
+          `;
+      });
+      return html;
   }
 }

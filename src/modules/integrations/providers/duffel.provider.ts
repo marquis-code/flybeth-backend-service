@@ -231,61 +231,60 @@ export class DuffelProvider implements AirlineAdapter {
   private mapDuffelOffers(data: any): FlightSearchResult[] {
     const offers = data?.data?.offers || [];
     return offers.map((offer: any) => {
-      const firstSlice = offer.slices?.[0];
-      const allSegments: FlightSegment[] = [];
+      const itineraries = (offer.slices || []).map((slice: any) => {
+        const segments: FlightSegment[] = (slice.segments || []).map((seg: any) => ({
+          flightNumber: `${seg.marketing_carrier?.iata_code || ""}${seg.marketing_carrier_flight_number || ""}`,
+          airline:
+            seg.operating_carrier?.name ||
+            seg.marketing_carrier?.name ||
+            "Unknown",
+          airlineLogo:
+            seg.operating_carrier?.logo_symbol_url ||
+            seg.marketing_carrier?.logo_symbol_url,
+          origin: seg.origin?.iata_code,
+          destination: seg.destination?.iata_code,
+          originTerminal: seg.origin_terminal,
+          destinationTerminal: seg.destination_terminal,
+          departureTime: seg.departing_at,
+          arrivalTime: seg.arriving_at,
+          duration: this.parseDuffelDuration(seg.duration),
+          aircraft: seg.aircraft?.name,
+          operatingCarrier: seg.operating_carrier?.name,
+          marketingCarrier: seg.marketing_carrier?.name,
+        }));
 
-      // Flatten all segments from all slices
-      (offer.slices || []).forEach((slice: any) => {
-        (slice.segments || []).forEach((seg: any) => {
-          allSegments.push({
-            flightNumber: `${seg.marketing_carrier?.iata_code || ""}${seg.marketing_carrier_flight_number || ""}`,
-            airline:
-              seg.operating_carrier?.name ||
-              seg.marketing_carrier?.name ||
-              "Unknown",
-            airlineLogo:
-              seg.operating_carrier?.logo_symbol_url ||
-              seg.marketing_carrier?.logo_symbol_url,
-            origin: seg.origin?.iata_code,
-            destination: seg.destination?.iata_code,
-            originTerminal: seg.origin_terminal,
-            destinationTerminal: seg.destination_terminal,
-            departureTime: seg.departing_at,
-            arrivalTime: seg.arriving_at,
-            duration: this.parseDuffelDuration(seg.duration),
-            aircraft: seg.aircraft?.name,
-            operatingCarrier: seg.operating_carrier?.name,
-            marketingCarrier: seg.marketing_carrier?.name,
-          });
-        });
+        return {
+          origin: slice.origin?.iata_code || segments[0]?.origin,
+          destination: slice.destination?.iata_code || segments[segments.length - 1]?.destination,
+          departureTime: segments[0]?.departureTime,
+          arrivalTime: segments[segments.length - 1]?.arrivalTime,
+          duration: this.parseDuffelDuration(slice.duration),
+          stops: segments.length - 1,
+          segments,
+        };
       });
 
-      const firstSegment = allSegments[0];
-      const lastSegmentOfFirstSlice =
-        firstSlice?.segments?.[firstSlice.segments.length - 1];
+      const firstItinerary = itineraries[0];
       const price = parseFloat(offer.total_amount || "0");
 
       return {
         provider: "duffel",
         offerId: offer.id,
-        airline: offer.owner?.name || firstSegment?.airline || "Unknown",
-        airlineLogo: offer.owner?.logo_symbol_url || firstSegment?.airlineLogo,
-        flightNumbers: allSegments.map((s) => s.flightNumber),
-        origin: firstSlice?.origin?.iata_code || firstSegment?.origin,
-        destination:
-          firstSlice?.destination?.iata_code ||
-          lastSegmentOfFirstSlice?.destination?.iata_code,
-        departureTime: firstSegment?.departureTime,
-        arrivalTime:
-          lastSegmentOfFirstSlice?.arriving_at ||
-          allSegments[allSegments.length - 1]?.arrivalTime,
-        duration: this.parseDuffelDuration(firstSlice?.duration),
+        airline: offer.owner?.name || firstItinerary?.segments[0]?.airline || "Unknown",
+        airlineLogo: offer.owner?.logo_symbol_url || firstItinerary?.segments[0]?.airlineLogo,
+        flightNumbers: firstItinerary?.segments.map((s: any) => s.flightNumber) || [],
+        origin: firstItinerary?.origin,
+        destination: firstItinerary?.destination,
+        departureTime: firstItinerary?.departureTime,
+        arrivalTime: firstItinerary?.arrivalTime,
+        duration: firstItinerary?.duration,
         price,
         priceWithCommission: price, // Will be set by integration service
         currency: offer.total_currency || "USD",
         seatsAvailable: offer.available_services?.length || undefined,
-        stops: (firstSlice?.segments?.length || 1) - 1,
-        segments: allSegments,
+        stops: firstItinerary?.stops || 0,
+        segments: firstItinerary?.segments || [],
+        itineraries,
         cabinClass:
           offer.slices?.[0]?.segments?.[0]?.passengers?.[0]?.cabin_class ||
           "economy",

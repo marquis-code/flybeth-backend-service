@@ -7,6 +7,9 @@ import { CreateRoomDto, SendMessageDto } from "./dto/chat.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { paginate } from "../../common/utils/pagination.util";
 
+import { NotificationsService } from "../notifications/notifications.service";
+import { forwardRef, Inject } from "@nestjs/common";
+
 // Static bot user ID — used as sender for all bot messages
 const BOT_USER_ID = "000000000000000000000001";
 
@@ -17,6 +20,7 @@ export class ChatService {
   constructor(
     @InjectModel(ChatRoom.name) private roomModel: Model<ChatRoomDocument>,
     @InjectModel(ChatMessage.name) private messageModel: Model<ChatMessageDocument>,
+    @Inject(forwardRef(() => NotificationsService)) private notificationsService: NotificationsService,
   ) {}
 
   async findOrCreateDirectRoom(user1: string, user2: string, tenantId?: string): Promise<ChatRoomDocument> {
@@ -200,6 +204,43 @@ export class ChatService {
     } else {
       await this.roomModel.findByIdAndUpdate(roomId, update);
     }
+  }
+
+  async transferChat(roomId: string, department: string) {
+    const room = await this.roomModel.findByIdAndUpdate(roomId, { department }, { new: true }).exec();
+    if (!room) throw new NotFoundException("Room not found");
+    return room;
+  }
+
+  async resolveChat(roomId: string) {
+    const room = await this.roomModel.findById(roomId).exec();
+    if (!room) throw new NotFoundException("Room not found");
+    
+    const ticketNumber = `TKT-${Math.floor(100000 + Math.random() * 900000)}`;
+    room.status = 'resolved';
+    room.ticketNumber = ticketNumber;
+    await room.save();
+
+    const email = room.metadata?.userEmail || room.metadata?.guestEmail;
+    const name = room.metadata?.userName || room.metadata?.guestName || 'Valued Customer';
+    
+    if (email) {
+      await this.notificationsService.sendEmail(
+        email,
+        `Your Support Ticket #${ticketNumber} has been resolved`,
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+           <h2 style="color: #1a56db;">Support Request Resolved</h2>
+           <p>Hi ${name},</p>
+           <p>This is to confirm that your support request <strong>#${ticketNumber}</strong> has been marked as resolved.</p>
+           <p>If you need further assistance, please feel free to start a new chat with us!</p>
+           <br/>
+           <p>Best regards,</p>
+           <p><strong>Flybeth Support Team</strong></p>
+         </div>`
+      ).catch(e => this.logger.error("Failed to send resolution email", e));
+    }
+    
+    return room;
   }
 
   async markAsRead(roomId: string, userId: string) {

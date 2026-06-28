@@ -37,7 +37,7 @@ import { SeedService } from "../seed/seed.service";
 @ApiBearerAuth()
 @Controller("admin")
 @UseGuards(RolesGuard, PermissionsGuard)
-@Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF)
+@Permissions(Permission.ACCESS_ADMIN_PANEL)
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
@@ -132,8 +132,15 @@ export class AdminController {
   @Delete("invitations/:id")
   @ApiOperation({ summary: "Cancel an invitation" })
   @Permissions(Permission.INVITE_MEMBERS)
-  cancelInvitation(@Query("id") id: string) {
+  cancelInvitation(@Param("id") id: string) {
     return this.adminService.cancelInvitation(id);
+  }
+
+  @Post("invitations/:id/resend")
+  @ApiOperation({ summary: "Resend an invitation email" })
+  @Permissions(Permission.INVITE_MEMBERS)
+  resendInvitation(@Param("id") id: string) {
+    return this.adminService.resendInvitation(id);
   }
 
   // --- Commission Management ---
@@ -224,6 +231,7 @@ export class AdminController {
   }
 
   @Get("invitations/verify/:token")
+  @Public()
   @ApiOperation({ summary: "Verify invitation token and get details" })
   verifyInvitation(@Param("token") token: string) {
     return this.adminService.verifyInvitation(token);

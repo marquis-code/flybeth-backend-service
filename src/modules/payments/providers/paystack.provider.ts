@@ -29,8 +29,9 @@ export class PaystackProvider {
   }
 
   private getHeaders() {
+    const cleanKey = this.secretKey.replace(/['"]/g, '').trim();
     return {
-      Authorization: `Bearer ${this.secretKey}`,
+      Authorization: `Bearer ${cleanKey}`,
       "Content-Type": "application/json",
     };
   }

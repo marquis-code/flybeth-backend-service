@@ -14,6 +14,7 @@ import {
 import { ResendService } from "./resend.service";
 import { BullModule } from "@nestjs/bull";
 import { EmailProcessor } from "./email.processor";
+import { NotificationsGateway } from "./notifications.gateway";
 
 import { forwardRef } from "@nestjs/common";
 import { ChatModule } from "../chat/chat.module";
@@ -31,7 +32,7 @@ import { ChatModule } from "../chat/chat.module";
     forwardRef(() => ChatModule),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService, ResendService, EmailProcessor],
-  exports: [NotificationsService, ResendService],
+  providers: [NotificationsService, ResendService, EmailProcessor, NotificationsGateway],
+  exports: [NotificationsService, ResendService, NotificationsGateway],
 })
 export class NotificationsModule {}

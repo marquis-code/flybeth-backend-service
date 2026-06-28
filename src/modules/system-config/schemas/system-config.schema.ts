@@ -20,20 +20,17 @@ export class SystemConfig {
   @Prop({ default: 'Flybeth Global' })
   platformName: string;
 
+  @Prop({ type: MongooseSchema.Types.Mixed, default: [] })
+  exchangeRates: any[];
+
   @Prop({ default: 15, required: true })
   ancillaryMargin: number;
 
   @Prop({ 
-    type: [{ currency: String, rate: Number, symbol: String }], 
-    default: [] 
-  })
-  exchangeRates: { currency: string; rate: number; symbol: string }[];
-
-  @Prop({ 
     type: MongooseSchema.Types.Mixed,
-    default: { bags: 25, seats: 15, insurance: 12 } 
+    default: { bags: 25, seats: 15, insurance: 12, vipSupport: 15 } 
   })
-  ancillaryPrices: { bags: number; seats: number; insurance: number };
+  ancillaryPrices: { bags: number; seats: number; insurance: number; vipSupport: number };
 }
 
 export const SystemConfigSchema = SchemaFactory.createForClass(SystemConfig);

@@ -36,7 +36,7 @@ export class SystemConfigService implements OnModuleInit {
       { currency: 'INR', rate: 83.50, symbol: '₹' }
     ];
 
-    const defaultAncillaryPrices = { bags: 25, seats: 15, insurance: 12 };
+    const defaultAncillaryPrices = { bags: 25, seats: 15, insurance: 12, vipSupport: 15 };
 
     if (!config) {
       this.logger.warn('No platform config found. Creating from blueprint...');
@@ -69,6 +69,7 @@ export class SystemConfigService implements OnModuleInit {
           bags: config.ancillaryPrices?.bags || defaultAncillaryPrices.bags,
           seats: config.ancillaryPrices?.seats || defaultAncillaryPrices.seats,
           insurance: config.ancillaryPrices?.insurance || defaultAncillaryPrices.insurance,
+          vipSupport: config.ancillaryPrices?.vipSupport || defaultAncillaryPrices.vipSupport,
         };
         needsUpdate = true;
       }

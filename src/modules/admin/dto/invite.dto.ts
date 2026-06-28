@@ -11,8 +11,8 @@ export class InviteDto {
   @IsEmail()
   email: string;
 
-  @IsEnum(Role)
-  role: Role;
+  @IsString()
+  role: string;
 
   @IsArray()
   @IsEnum(Permission, { each: true })

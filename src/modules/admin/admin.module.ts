@@ -16,6 +16,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
 import { FlightsModule } from "../flights/flights.module";
 import { CampaignsModule } from "../campaigns/campaigns.module";
 import { SchedulerModule } from "../scheduler/scheduler.module";
+import { AccessControlModule } from "../access-control/access-control.module";
 import { Campaign, CampaignSchema } from "../campaigns/schemas/campaign.schema";
 import {
   Commission,
@@ -42,6 +43,7 @@ import { SeedModule } from "../seed/seed.module";
     FlightsModule,
     CampaignsModule,
     SchedulerModule,
+    AccessControlModule,
     UploadModule,
     SeedModule,
   ],

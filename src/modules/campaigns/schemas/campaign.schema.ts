@@ -23,8 +23,14 @@ export class Campaign {
   @Prop({ type: [String] })
   targetRoles: string[];
 
-  @Prop({ default: "all", enum: ["all", "active", "roles", "specific"] })
+  @Prop({ default: "all", enum: ["all", "active", "roles", "specific", "airline", "booking"] })
   targetAudience: string;
+
+  @Prop()
+  targetAirline: string;
+
+  @Prop()
+  targetBookingReference: string;
 
   @Prop({ type: [Types.ObjectId], ref: "User", default: [] })
   specificUsers: Types.ObjectId[];

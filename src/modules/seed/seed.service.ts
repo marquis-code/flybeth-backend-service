@@ -18,6 +18,7 @@ import { hashPassword } from "../../common/utils/crypto.util";
 
 import { RoleEntity, RoleDocument } from "../access-control/schemas/role.schema";
 import { PermissionEntity, PermissionDocument } from "../access-control/schemas/permission.schema";
+import { Department, DepartmentDocument } from "../chat/schemas/department.schema";
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -32,6 +33,7 @@ export class SeedService implements OnModuleInit {
     @InjectModel(RoleEntity.name) private roleModel: Model<RoleDocument>,
     @InjectModel(PermissionEntity.name)
     private permissionModel: Model<PermissionDocument>,
+    @InjectModel(Department.name) private departmentModel: Model<DepartmentDocument>,
   ) {}
 
   async onModuleInit() {
@@ -44,6 +46,26 @@ export class SeedService implements OnModuleInit {
     await this.seedAgentUser();
     await this.seedCustomerUser();
     await this.seedTestUser();
+    await this.seedDepartments();
+  }
+
+  private async seedDepartments() {
+    const count = await this.departmentModel.countDocuments().exec();
+    if (count > 0) return;
+
+    const departments = [
+      { name: "Flight Booking", slug: "flight_booking", description: "Assistance with flight reservations and ticketing", isActive: true, members: [] },
+      { name: "Hotel & Stays", slug: "hotel_booking", description: "Assistance with hotel and accommodation bookings", isActive: true, members: [] },
+      { name: "Cancellations & Refunds", slug: "cancellations", description: "Processing of cancellations and refund requests", isActive: true, members: [] },
+      { name: "Visa & Advisory", slug: "visa_advisory", description: "Visa processing and travel advisory services", isActive: true, members: [] },
+      { name: "Tour Packages", slug: "tour_packages", description: "Assistance with holiday packages and tours", isActive: true, members: [] },
+      { name: "Billing & Finance", slug: "billing", description: "Payment issues, invoices, and billing inquiries", isActive: true, members: [] },
+      { name: "Technical Support", slug: "technical_support", description: "Platform bugs, account access, and tech issues", isActive: true, members: [] },
+      { name: "General Inquiries", slug: "general", description: "General travel questions and support", isActive: true, members: [] },
+    ];
+
+    await this.departmentModel.insertMany(departments);
+    this.logger.log(`Seeded ${departments.length} support departments`);
   }
 
   private async seedPermissions() {
@@ -85,7 +107,7 @@ export class SeedService implements OnModuleInit {
       {
         name: Role.STAFF,
         description: 'Standard operational access for platform employees.',
-        permissions: ['view_dashboard', 'view_bookings', 'manage_agents', 'manage_emails'],
+        permissions: ['access_admin_panel', 'view_dashboard', 'view_bookings', 'manage_agents', 'manage_emails'],
         isDefault: true,
       },
       {
@@ -100,6 +122,42 @@ export class SeedService implements OnModuleInit {
         permissions: [],
         isDefault: true,
       },
+      {
+        name: 'travel_consultant',
+        description: 'Expert advisor for travel itineraries, bookings, and customer inquiries.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'view_bookings', 'invite_members'],
+        isDefault: true,
+      },
+      {
+        name: 'ticketing_officer',
+        description: 'Handles issuance, reissues, and refunds for flight tickets.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'view_bookings'],
+        isDefault: true,
+      },
+      {
+        name: 'accountant',
+        description: 'Manages financial records, commissions, and revenue auditing.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'audit_revenue', 'manage_commissions'],
+        isDefault: true,
+      },
+      {
+        name: 'marketing_manager',
+        description: 'Orchestrates email campaigns and promotions.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'manage_emails', 'manage_campaigns'],
+        isDefault: true,
+      },
+      {
+        name: 'support_representative',
+        description: 'Resolves customer and agent disputes, refunds, and support tickets.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'view_bookings'],
+        isDefault: true,
+      },
+      {
+        name: 'b2b_sales_executive',
+        description: 'Onboards and manages sub-agents and B2B corporate clients.',
+        permissions: ['access_admin_panel', 'view_dashboard', 'manage_agents', 'manage_tenants'],
+        isDefault: true,
+      }
     ];
 
     for (const r of roles) {

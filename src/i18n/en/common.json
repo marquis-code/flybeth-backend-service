@@ -1,0 +1,15 @@
+{
+  "validation": {
+    "NOT_EMPTY": "{property} should not be empty",
+    "IS_STRING": "{property} must be a string",
+    "INVALID_EMAIL": "Invalid email address",
+    "MIN_LENGTH": "{property} must be longer than or equal to {constraint1} characters",
+    "MAX_LENGTH": "{property} must be shorter than or equal to {constraint1} characters"
+  },
+  "errors": {
+    "INTERNAL_SERVER_ERROR": "Internal server error occurred",
+    "NOT_FOUND": "Resource not found",
+    "UNAUTHORIZED": "Unauthorized access",
+    "FORBIDDEN": "Forbidden access"
+  }
+}

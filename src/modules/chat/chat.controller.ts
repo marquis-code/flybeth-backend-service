@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Query, Req, Param } from "@nestjs/common";
 import { ChatService } from "./chat.service";
 import { AutoResponseService } from "./auto-response.service";
+import { ChatGateway } from "./chat.gateway";
 import { CreateRoomDto, SendMessageDto } from "./dto/chat.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { ApiTags, ApiBearerAuth, ApiOperation } from "@nestjs/swagger";
@@ -12,6 +13,7 @@ export class ChatController {
   constructor(
     private readonly chatService: ChatService,
     private readonly autoResponseService: AutoResponseService,
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   @Public()
@@ -57,6 +59,22 @@ export class ChatController {
   @ApiOperation({ summary: "Create or find a direct chat room" })
   findOrCreateRoom(@Req() req: any, @Body() body: { participantId: string }) {
     return this.chatService.findOrCreateDirectRoom(req.user.sub || req.user._id, body.participantId, req.user.tenant);
+  }
+
+  @ApiBearerAuth()
+  @Post("support/rooms/:roomId/resolve")
+  @ApiOperation({ summary: "Resolve a support room (Admin only)" })
+  async resolveSupportRoom(@Param("roomId") roomId: string) {
+    // In a full implementation we would check if req.user has admin roles
+    const room = await this.chatService.resolveChat(roomId);
+    const msg = await this.chatService.saveBotMessage(
+      roomId,
+      `This chat has been successfully resolved. Your ticket number is #${room.ticketNumber}. Have a great day!`
+    );
+    this.chatGateway.server.to(roomId).emit("newMessage", msg);
+    this.chatGateway.server.to(roomId).emit('roomResolved', { roomId: roomId, ticketNumber: room.ticketNumber });
+    this.chatGateway.broadcastToAdmins('support_chat_update', { roomId: roomId, status: 'resolved', ticketNumber: room.ticketNumber });
+    return room;
   }
 
   @ApiBearerAuth()

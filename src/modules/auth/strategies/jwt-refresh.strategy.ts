@@ -17,9 +17,14 @@ export class JwtRefreshStrategy extends PassportStrategy(
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
-        (request: Request) => {
-          return request?.cookies?.refreshToken;
-        },
+        // 1. Cookie-based (primary for same-domain)
+        (request: Request) => request?.cookies?.refreshToken || null,
+        // 2. Custom header (resilient for cross-domain / CORS)
+        (request: Request) => (request?.headers?.['x-refresh-token'] as string) || null,
+        // 3. Authorization Bearer header
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        // 4. Body field (last resort)
+        (request: Request) => (request?.body as any)?.refreshToken || null,
       ]),
       ignoreExpiration: false,
       secretOrKey:

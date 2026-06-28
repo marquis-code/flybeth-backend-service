@@ -25,6 +25,7 @@ import {
   ResetPasswordDto,
   VerifyOtpDto,
   ResendOtpDto,
+  AcceptInvitationDto,
 } from "./dto/auth.dto";
 import { comparePassword, generateOTP } from "../../common/utils/crypto.util";
 import { FirebaseAdminService } from "./firebase-admin.service";
@@ -86,7 +87,7 @@ export class AuthService {
           throw new ForbiddenException("Email does not match the invitation");
         }
 
-        if (invitation.role !== registerDto.role) {
+        if (invitation.role.toString() !== registerDto.role) {
           throw new ForbiddenException("Role does not match the invitation");
         }
       }
@@ -94,48 +95,53 @@ export class AuthService {
 
     let tenantId = registerDto.tenantId;
 
-    if (!tenantId && (registerDto.role === Role.AGENT || !registerDto.role) && registerDto.agencyName) {
-      this.logger.log(`Auto-creating new Tenant for Agency: ${registerDto.agencyName}`);
-      const safeSlug = registerDto.agencyName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(1000 + Math.random() * 9000);
-      
-      const tenant = await this.tenantsService.create({
-        name: registerDto.agencyName,
-        slug: safeSlug,
-        contactEmail: registerDto.email,
-        contactPhone: registerDto.phone,
-        address: registerDto.businessAddress,
-        domain: '', // Future: dynamically generate or allow custom logic
-      }, "system-onboarding");
-      
-      // Update the onboarding step for the auto-created tenant to include provided documents
-      await this.tenantsService.updateOnboarding(tenant._id.toString(), {
-        step: 7, // Marks the tenant as UNDER_REVIEW and completes onboarding schema mapping
-        businessRegistrationNumber: registerDto.registrationNumber,
-        country: registerDto.country,
-        whatsappNumber: registerDto.whatsappNumber || registerDto.phone,
-        billingAddress: registerDto.billingAddress,
-        termsAgreed: true,
-        kycDocuments: {
-          idCard: registerDto.idCardUrl,
-          selfie: registerDto.selfieUrl
-        },
-        businessDocuments: {
-          documentUrl: registerDto.cacCertificateUrl || registerDto.llcDocsUrl,
-          ein: registerDto.ein,
-          type: registerDto.country === 'Nigeria' ? 'CAC' : 'LLC'
-        },
-        bankDetails: {
-          bankName: registerDto.bankAccountDetails?.bankName,
-          accountNumber: registerDto.bankAccountDetails?.accountNumber,
-          accountName: registerDto.bankAccountDetails?.accountHolder,
-          routingNumber: registerDto.bankAccountDetails?.bankCode
-        }
-      });
-      tenantId = tenant._id.toString();
+    if (!tenantId && (registerDto.role === Role.AGENT || !registerDto.role)) {
+      const isIndependent = registerDto.agencyType === 'independent_agent';
+      const tenantName = isIndependent ? `${registerDto.firstName} ${registerDto.lastName}` : registerDto.agencyName;
+
+      if (tenantName) {
+        this.logger.log(`Auto-creating new Tenant for: ${tenantName} (${isIndependent ? 'Independent Agent' : 'Agency'})`);
+        const safeSlug = tenantName.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.floor(1000 + Math.random() * 9000);
+        
+        const tenant = await this.tenantsService.create({
+          name: tenantName,
+          slug: safeSlug,
+          contactEmail: registerDto.email,
+          contactPhone: registerDto.phone,
+          address: registerDto.businessAddress || 'N/A',
+          domain: '', // Future: dynamically generate or allow custom logic
+        }, "system-onboarding");
+        
+        // Update the onboarding step for the auto-created tenant to include provided documents
+        await this.tenantsService.updateOnboarding(tenant._id.toString(), {
+          step: 7, // Marks the tenant as UNDER_REVIEW and completes onboarding schema mapping
+          businessRegistrationNumber: registerDto.registrationNumber,
+          country: registerDto.country,
+          whatsappNumber: registerDto.whatsappNumber || registerDto.phone,
+          billingAddress: registerDto.billingAddress,
+          termsAgreed: true,
+          kycDocuments: {
+            idCard: registerDto.idCardUrl,
+            selfie: registerDto.selfieUrl
+          },
+          businessDocuments: isIndependent ? undefined : {
+            documentUrl: registerDto.cacCertificateUrl || registerDto.llcDocsUrl,
+            ein: registerDto.ein,
+            type: registerDto.country === 'Nigeria' ? 'CAC' : 'LLC'
+          },
+          bankDetails: {
+            bankName: registerDto.bankAccountDetails?.bankName,
+            accountNumber: registerDto.bankAccountDetails?.accountNumber,
+            accountName: registerDto.bankAccountDetails?.accountHolder,
+            routingNumber: registerDto.bankAccountDetails?.bankCode
+          }
+        });
+        tenantId = tenant._id.toString();
+      }
     }
 
-    if ((registerDto.role === Role.AGENT || !registerDto.role) && !registerDto.agencyLogo) {
-      throw new BadRequestException("Agency logo is required for agent registration");
+    if ((registerDto.role === Role.AGENT || !registerDto.role) && registerDto.agencyType !== 'independent_agent' && !registerDto.agencyLogo) {
+      throw new BadRequestException("Agency logo is required for agency registration");
     }
 
     const user = await this.usersService.create({
@@ -186,7 +192,8 @@ export class AuthService {
     
     // Dispatch highly-personalized welcome streams upon signup
     if (user.role === Role.AGENT) {
-      await this.notificationsService.sendAgentWelcomeEmail(user.email, user.firstName);
+      // Agents are put under review until an Admin approves their KYC and Business docs
+      await this.notificationsService.sendAgentSignupUnderReviewEmail(user.email, user.firstName);
     } else {
       await this.notificationsService.sendWelcomeEmail(user.email, user.firstName);
     }
@@ -214,6 +221,77 @@ export class AuthService {
         role: user.role,
         tenant: user.tenant,
         agencyName: user.agencyName,
+      },
+    };
+  }
+
+  async acceptInvitation(dto: AcceptInvitationDto) {
+    // 1. Verify token
+    const invitation = await this.invitationModel.findOne({
+      token: dto.token,
+      status: "pending",
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!invitation) {
+      throw new ForbiddenException("Invalid or expired invitation token");
+    }
+
+    if (invitation.email !== dto.email.toLowerCase()) {
+      throw new ForbiddenException("Email does not match the invitation");
+    }
+
+    // 2. Create the user using the secure role and tenant from the invitation record
+    const user = await this.usersService.create({
+      email: dto.email,
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      role: invitation.role, // Securely assigned directly from DB
+      tenant: invitation.tenant,
+      preferences: {
+        currency: "USD",
+        language: "en",
+        emailNotifications: true,
+        pushNotifications: true,
+      },
+      lastIp: dto.ipAddress,
+    });
+
+    // 3. Mark the invitation as accepted
+    await this.invitationModel.updateOne(
+      { _id: invitation._id },
+      { status: "accepted" },
+    );
+
+    // 4. Send OTP for 2FA
+    const otp = generateOTP();
+    await this.usersService.setOTP(user._id.toString(), otp);
+
+    await this.notificationsService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
+    
+    await this.notificationsService.sendWelcomeEmail(user.email, user.firstName);
+
+    this.logger.log(
+      `User accepted invitation, OTP sent for verification: ${user.email} (Role ID: ${user.role})`,
+    );
+
+    return {
+      requiresOtp: true,
+      email: user.email,
+      message: "Registration successful. Please verify your email with the OTP sent.",
+      user: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        tenant: user.tenant,
       },
     };
   }
@@ -297,17 +375,14 @@ export class AuthService {
     }
 
     // Mandatory 2FA: Always send OTP for security as requested
-    const isDev = this.configService.get("NODE_ENV") !== "production";
-    const otp = (isDev && isSuperAdmin) ? "123456" : generateOTP();
+    const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
-    if (!isSuperAdmin || !isDev) {
-      await this.notificationsService.sendOtpEmail(
-        user.email,
-        user.firstName,
-        otp,
-      );
-    }
+    await this.notificationsService.sendOtpEmail(
+      user.email,
+      user.firstName,
+      otp,
+    );
 
     this.logger.log(`Login initiated, OTP sent: ${user.email}`);
 
@@ -421,13 +496,19 @@ export class AuthService {
     const resetToken = uuidv4();
     await this.usersService.setResetToken(user.email, resetToken);
 
+    // Detect if user is an admin/staff to route to the correct frontend
+    const roleName = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+    const adminRoles = ['super_admin', 'tenant_admin', 'staff'];
+    const isAdmin = adminRoles.includes(roleName);
+
     await this.notificationsService.sendResetPasswordEmail(
       user.email,
       user.firstName,
       resetToken,
+      isAdmin,
     );
 
-    this.logger.log(`Password reset requested for: ${user.email}`);
+    this.logger.log(`Password reset requested for: ${user.email} (admin: ${isAdmin})`);
 
     return {
       message: "Password reset link sent to your email",
@@ -458,15 +539,10 @@ export class AuthService {
       await this.usersService.findByEmail(verifyOtpDto.email)
     )?.isVerified;
 
-    const isDev = this.configService.get("NODE_ENV") !== "production";
-    const isMasterOtp = isDev && verifyOtpDto.otp === "123456";
-
-    const user = isMasterOtp 
-      ? await this.usersService.findByEmail(verifyOtpDto.email)
-      : await this.usersService.verifyOTP(
-          verifyOtpDto.email,
-          verifyOtpDto.otp,
-        );
+    const user = await this.usersService.verifyOTP(
+      verifyOtpDto.email,
+      verifyOtpDto.otp,
+    );
 
     if (!user) {
       throw new BadRequestException("Invalid or expired OTP");

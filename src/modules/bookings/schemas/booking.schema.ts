@@ -134,6 +134,21 @@ export class BookingPricing {
 
   @Prop()
   exchangeRate: number;
+
+  @Prop({ default: 0 })
+  vipSupportAmount: number;
+
+  @Prop({ default: 0 })
+  baggageAmount: number;
+
+  @Prop({ default: 0 })
+  seatAmount: number;
+
+  @Prop({ default: 0 })
+  platformCommission: number;
+
+  @Prop({ default: 0 })
+  platformAncillaryMargin: number;
 }
 
 @Schema({ _id: false })

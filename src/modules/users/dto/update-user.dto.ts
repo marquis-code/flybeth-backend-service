@@ -67,9 +67,9 @@ export class UpdateUserDto {
 }
 
 export class UpdateUserRoleDto {
-  @ApiPropertyOptional({ enum: Role })
-  @IsEnum(Role)
-  role: Role;
+  @ApiPropertyOptional()
+  @IsString()
+  role: string;
 }
 
 export class UpdateAgentStatusDto {
@@ -84,10 +84,10 @@ export class UserQueryDto {
   @IsString()
   tenant?: string;
 
-  @ApiPropertyOptional({ enum: Role })
+  @ApiPropertyOptional()
   @IsOptional()
-  @IsEnum(Role)
-  role?: Role;
+  @IsString()
+  role?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

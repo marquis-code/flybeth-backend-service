@@ -9,11 +9,11 @@ export class Invitation {
   @Prop({ required: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ enum: Role, required: true })
-  role: Role;
+  @Prop({ type: Types.ObjectId, ref: 'RoleEntity', required: true })
+  role: Types.ObjectId;
 
-  @Prop({ type: [String], enum: Permission, default: [] })
-  permissions: Permission[];
+  @Prop({ type: [String], default: [] })
+  permissions: string[];
 
   @Prop({ required: true, unique: true })
   token: string;
@@ -34,4 +34,3 @@ export class Invitation {
 export const InvitationSchema = SchemaFactory.createForClass(Invitation);
 InvitationSchema.index({ token: 1 });
 InvitationSchema.index({ email: 1 });
-InvitationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-expire documents

@@ -201,6 +201,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const isBotHandling = room?.status === 'bot_handling' || room?.status === 'open';
 
         if (isSupportRoom && isBotHandling) {
+          // SIMPLE AUTO-ROUTING LOGIC
+          const lowerContent = payload.content.toLowerCase();
+          if (lowerContent.includes("cancel") && (lowerContent.includes("flight") || lowerContent.includes("booking"))) {
+             await this.chatService.transferChat(payload.roomId, 'cancellations');
+             this.server.to(payload.roomId).emit('roomTransferred', { roomId: payload.roomId, department: 'cancellations' });
+             this.broadcastToAdmins('support_chat_update', { roomId: payload.roomId, department: 'cancellations' });
+          } else if (lowerContent.includes("bill") || lowerContent.includes("payment")) {
+             await this.chatService.transferChat(payload.roomId, 'billing');
+             this.server.to(payload.roomId).emit('roomTransferred', { roomId: payload.roomId, department: 'billing' });
+             this.broadcastToAdmins('support_chat_update', { roomId: payload.roomId, department: 'billing' });
+          }
+
           const adminOnline = this.adminSockets.size > 0;
           const autoResult = this.autoResponseService.findResponse(payload.content);
 
@@ -283,6 +295,48 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       isTyping: payload.isTyping,
       userName: payload.userName,
     });
+  }
+
+  @SubscribeMessage("transferRoom")
+  async handleTransferRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { roomId: string; department: string },
+  ) {
+    try {
+      await this.chatService.transferChat(payload.roomId, payload.department);
+      const msg = await this.chatService.saveBotMessage(
+        payload.roomId,
+        `Chat has been transferred to the ${payload.department.replace('_', ' ')} department. An agent will be with you shortly.`
+      );
+      this.server.to(payload.roomId).emit("newMessage", msg);
+      this.server.to(payload.roomId).emit('roomTransferred', { roomId: payload.roomId, department: payload.department });
+      this.broadcastToAdmins('support_chat_update', { roomId: payload.roomId, department: payload.department });
+      return { status: "success" };
+    } catch (err) {
+      this.logger.error(`Transfer error: ${err.message}`);
+      return { status: "error" };
+    }
+  }
+
+  @SubscribeMessage("resolveRoom")
+  async handleResolveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { roomId: string },
+  ) {
+    try {
+      const room = await this.chatService.resolveChat(payload.roomId);
+      const msg = await this.chatService.saveBotMessage(
+        payload.roomId,
+        `This chat has been successfully resolved. Your ticket number is #${room.ticketNumber}. Have a great day!`
+      );
+      this.server.to(payload.roomId).emit("newMessage", msg);
+      this.server.to(payload.roomId).emit('roomResolved', { roomId: payload.roomId, ticketNumber: room.ticketNumber });
+      this.broadcastToAdmins('support_chat_update', { roomId: payload.roomId, status: 'resolved' });
+      return { status: "success", ticketNumber: room.ticketNumber };
+    } catch (err) {
+      this.logger.error(`Resolve error: ${err.message}`);
+      return { status: "error" };
+    }
   }
 
   // ─── External Methods Called from Services ──────────────────────────

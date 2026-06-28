@@ -11,15 +11,23 @@ export class JwtAuthGuard extends AuthGuard("jwt") {
   }
 
   canActivate(context: ExecutionContext) {
+    return super.canActivate(context);
+  }
+
+  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
 
     if (isPublic) {
-      return true;
+      return user || null;
     }
 
-    return super.canActivate(context);
+    if (err || !user) {
+      // Import UnauthorizedException manually at top if not imported, actually I'll just use common import
+      throw err || new (require('@nestjs/common').UnauthorizedException)();
+    }
+    return user;
   }
 }

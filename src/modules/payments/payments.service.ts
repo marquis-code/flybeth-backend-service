@@ -122,7 +122,7 @@ export class PaymentsService {
         reference,
       });
     } else if (provider === PaymentProvider.PAYSTACK) {
-      providerResponse = await this.paystackProvider.initializeTransaction({
+      const paystackRes = await this.paystackProvider.initializeTransaction({
         amount,
         currency: currency,
         email: booking.contactDetails.email,
@@ -130,6 +130,10 @@ export class PaymentsService {
         callbackUrl: dto.callbackUrl,
         metadata: { bookingId: dto.bookingId },
       });
+      providerResponse = {
+        ...paystackRes.data,
+        url: paystackRes.data?.authorization_url,
+      };
     } else if (provider === PaymentProvider.WALLET) {
        if (!userId) throw new BadRequestException("User ID is required for wallet payments");
        
@@ -151,6 +155,7 @@ export class PaymentsService {
         PaymentProvider.AFFIRM,
         PaymentProvider.KLARNA,
         PaymentProvider.PAYPAL_FOUR,
+        PaymentProvider.AFTERPAY,
       ].includes(provider)
     ) {
       const bnplStrategy = this.bnplFactory.getStrategy(provider);
@@ -158,7 +163,12 @@ export class PaymentsService {
         bookingId,
         amount,
         currency,
-        dto.metadata,
+        {
+          ...dto.metadata,
+          contactDetails: booking.contactDetails,
+          callbackUrl: dto.callbackUrl,
+          pnr: booking.pnr
+        },
       );
       providerResponse = {
         status: "initialized",
@@ -400,6 +410,48 @@ export class PaymentsService {
     return { success: true, message: 'Payment authorized and processed successfully' };
   }
 
+  async verifyPayment(dto: { bookingId: string; provider: PaymentProvider; checkoutToken: string; amount?: number; currency?: string }) {
+    if (
+      [
+        PaymentProvider.CREDPAL,
+        PaymentProvider.AFFIRM,
+        PaymentProvider.KLARNA,
+        PaymentProvider.PAYPAL_FOUR,
+      ].includes(dto.provider)
+    ) {
+      // Delegate to existing BNPL authorization logic
+      return this.authorizeBnplPayment({
+        bookingId: dto.bookingId,
+        provider: dto.provider,
+        checkoutToken: dto.checkoutToken,
+        amount: dto.amount || 0,
+        currency: dto.currency || "USD"
+      });
+    }
+
+    if (dto.provider === PaymentProvider.PAYSTACK) {
+      const verification = await this.paystackProvider.verifyTransaction(dto.checkoutToken);
+      if (verification.status === "success") {
+        await this.processSuccessfulPayment(dto.bookingId, dto.checkoutToken, dto.provider);
+        return { success: true, message: 'Payment verified successfully' };
+      }
+      throw new BadRequestException("Payment verification failed or pending");
+    }
+
+    if (dto.provider === PaymentProvider.PAYPAL) {
+      // PayPal checkout token (orderId) needs to be captured
+      try {
+        await this.paypalProvider.captureOrder(dto.checkoutToken);
+        await this.processSuccessfulPayment(dto.bookingId, dto.checkoutToken, dto.provider);
+        return { success: true, message: 'Payment verified and captured successfully' };
+      } catch (e) {
+        throw new BadRequestException("PayPal capture failed");
+      }
+    }
+
+    throw new BadRequestException(`Verification not supported for provider: ${dto.provider}`);
+  }
+
   private async processSuccessfulPayment(
     bookingId: string,
     providerTransactionId: string,
@@ -427,7 +479,7 @@ export class PaymentsService {
 
     // Confirm and fulfill the booking using the new Fulfillment Service
     try {
-      await this.orderFulfillmentService.finalizeTravelBooking(providerTransactionId);
+      await this.orderFulfillmentService.finalizeTravelBooking(bookingId);
     } catch (error) {
       this.logger.error(`Fulfillment error for booking ${bookingId}: ${error.message}`);
       // Fallback to basic confirmation if fulfillment service fails but payment is good

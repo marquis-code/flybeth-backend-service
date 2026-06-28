@@ -19,6 +19,7 @@ import { SystemConfigModule } from "../system-config/system-config.module";
 
 import { InvoiceService } from "./invoice.service";
 import { OrderFulfillmentService } from "./order-fulfillment.service";
+import { DuffelWebhookController } from "./duffel-webhook.controller";
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { OrderFulfillmentService } from "./order-fulfillment.service";
     FinanceModule,
     SystemConfigModule,
   ],
-  controllers: [BookingsController],
+  controllers: [BookingsController, DuffelWebhookController],
   providers: [BookingsService, InvoiceService, OrderFulfillmentService],
   exports: [BookingsService, OrderFulfillmentService],
 })

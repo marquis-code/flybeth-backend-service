@@ -19,7 +19,7 @@ export class OrderFulfillmentService {
     private readonly passengersService: PassengersService,
   ) {}
 
-  async finalizeTravelBooking(gatewayReference: string) {
+  async finalizeTravelBooking(bookingId: string) {
     // Start an ACID transaction session for local DB updates
     const session = await this.connection.startSession();
     session.startTransaction();
@@ -37,16 +37,7 @@ export class OrderFulfillmentService {
       // Let's assume the caller found the booking and passed it, or we find it here.
       // (Adjustment: we'll use a search by providerReference if possible)
       
-      booking = await this.bookingModel.findOne({ 
-        "payment.transactionId": gatewayReference 
-      }).session(session);
-
-      if (!booking) {
-        // Try searching by remoteOrderId
-        booking = await this.bookingModel.findOne({ 
-          remoteOrderId: gatewayReference 
-        }).session(session);
-      }
+      booking = await this.bookingModel.findById(bookingId).session(session);
 
       if (!booking) {
         throw new BadRequestException('Booking reference not matched');

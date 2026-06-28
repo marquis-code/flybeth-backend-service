@@ -65,50 +65,43 @@ async function bootstrap() {
   app.use(compression());
   app.use(cookieParser());
 
-  // ─── CORS FIX ────────────────────────────────────────────────────────────────
-  // Raw Express middleware runs BEFORE any NestJS guard/interceptor/route handler.
-  // This guarantees that:
-  //   1. Every response — including error responses — carries the correct headers.
-  //   2. OPTIONS preflight requests are terminated immediately with 204, so they
-  //      never reach a NestJS handler that might reject them.
-  // When `credentials: true` is required, Access-Control-Allow-Origin must be the
-  // exact requesting origin — NOT the wildcard "*" — which is what we mirror here.
+  // ─── AGGRESSIVE CORS FIX ─────────────────────────────────────────────────────
+  // Remove NestJS app.enableCors() to prevent duplicate header issues.
+  // We handle it entirely via this raw middleware to ensure error responses
+  // and preflight requests get the correct headers.
   app.use((req, res, next) => {
-    const origin = req.headers.origin || "*";
-    res.setHeader("Access-Control-Allow-Origin", origin);
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    } else {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+    }
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader(
       "Access-Control-Allow-Methods",
       "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     );
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization, " +
-        "X-Tenant-ID, x-captcha-token, Cache-Control, Pragma, Expires, " +
-        "x-nuxt-upgrade-edge",
-    );
+    
+    // Reflect requested headers or use a permissive default
+    const reqHeaders = req.headers["access-control-request-headers"];
+    if (reqHeaders) {
+      res.setHeader("Access-Control-Allow-Headers", reqHeaders);
+    } else {
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Origin, X-Requested-With, Content-Type, Accept, Authorization, " +
+          "X-Tenant-ID, x-captcha-token, Cache-Control, Pragma, Expires, " +
+          "x-nuxt-upgrade-edge, sentry-trace, baggage",
+      );
+    }
+    
     res.setHeader("Access-Control-Expose-Headers", "set-cookie");
 
-    // Short-circuit every OPTIONS preflight here — no further processing needed.
     if (req.method === "OPTIONS") {
       res.statusCode = 204;
       return res.end();
     }
     next();
-  });
-
-  // Keep NestJS-level CORS in sync so its internal metadata stays consistent.
-  app.enableCors({
-    origin: (origin, callback) => callback(null, origin || true),
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-    credentials: true,
-    allowedHeaders:
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization, " +
-      "X-Tenant-ID, x-captcha-token, Cache-Control, Pragma, Expires, " +
-      "x-nuxt-upgrade-edge",
-    exposedHeaders: ["set-cookie"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
   });
   // ─────────────────────────────────────────────────────────────────────────────
 

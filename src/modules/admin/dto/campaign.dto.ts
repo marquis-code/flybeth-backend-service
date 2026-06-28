@@ -46,4 +46,14 @@ export class CampaignDto {
   @IsOptional()
   @IsDateString()
   scheduledAt?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  targetAirline?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  targetBookingReference?: string;
 }

@@ -187,11 +187,26 @@ export class UsersService {
     updateRoleDto: UpdateUserRoleDto,
   ): Promise<UserDocument> {
     let roleId: any = updateRoleDto.role;
+    let roleName = typeof updateRoleDto.role === 'string' ? updateRoleDto.role : "Unknown";
+    let permissions: string[] = [];
     
     if (typeof updateRoleDto.role === 'string') {
-        const roleEntity = await this.accessControlService.findRoleByName(updateRoleDto.role);
+        // Try finding by name first (legacy support)
+        let roleEntity = await this.accessControlService.findRoleByName(updateRoleDto.role);
+        
+        // If not found by name, try finding by ID (dynamic roles)
+        if (!roleEntity) {
+            try {
+                roleEntity = await this.accessControlService.findRoleById(updateRoleDto.role);
+            } catch (e) {
+                // Ignore invalid object id errors
+            }
+        }
+
         if (roleEntity) {
             roleId = roleEntity._id;
+            roleName = roleEntity.name;
+            permissions = roleEntity.permissions || [];
         }
     }
 
@@ -202,6 +217,19 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException("User not found");
     }
+
+    if (user.email) {
+      try {
+        await this.notificationsService.sendRoleUpdateEmail(
+          user.email,
+          roleName,
+          permissions
+        );
+      } catch (error) {
+        this.logger.error(`Failed to send role update email to ${user.email}: ${error.message}`);
+      }
+    }
+
     return user;
   }
 

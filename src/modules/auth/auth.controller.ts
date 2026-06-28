@@ -21,6 +21,7 @@ import {
   RefreshTokenDto,
   ResendOtpDto,
   SocialLoginDto,
+  AcceptInvitationDto,
 } from "./dto/auth.dto";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -73,11 +74,33 @@ export class AuthController {
   }
 
   @Public()
+  @Post("accept-invite")
+  @ApiOperation({ summary: "Accept a team invitation" })
+  acceptInvitation(@Body() dto: AcceptInvitationDto) {
+    return this.authService.acceptInvitation(dto);
+  }
+
+  @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with email and password" })
-  login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result: any = await this.authService.login(loginDto);
+    if (result.data?.accessToken && result.data?.refreshToken) {
+      this.setTokenCookies(res, {
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
+      });
+    } else if (result.accessToken && result.refreshToken) {
+      this.setTokenCookies(res, {
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
+    }
+    return result;
   }
 
   @Public()
@@ -109,7 +132,11 @@ export class AuthController {
   ) {
     const tokens = await this.authService.refreshToken(userId);
     this.setTokenCookies(res, tokens);
-    return { message: "Token refreshed successfully" };
+    return {
+      message: "Token refreshed successfully",
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
   }
 
   @Public()

@@ -44,6 +44,15 @@ export class BookingsController {
   }
 
   @Public()
+  @Post("manage")
+  @ApiOperation({ summary: "Fetch a booking by PNR and email" })
+  async manageBooking(
+    @Body() body: { pnr: string; email: string; sendEmail?: boolean },
+  ) {
+    return this.bookingsService.findByPnrAndEmail(body.pnr, body.email, body.sendEmail);
+  }
+
+  @Public()
   @Post("email-capture")
   @ApiOperation({ summary: "Capture email for early booking flow" })
   async emailCapture(
@@ -63,12 +72,12 @@ export class BookingsController {
   @Get()
   @ApiOperation({ summary: "Get current user bookings" })
   findMyBookings(
-    @CurrentUser("_id") userId: string,
+    @CurrentUser() user: any,
     @Query() paginationDto: PaginationDto,
     @Query() queryDto: BookingQueryDto,
   ) {
     return this.bookingsService.findUserBookings(
-      userId,
+      user,
       paginationDto,
       queryDto,
     );

@@ -105,29 +105,43 @@ export class AmadeusProvider implements AirlineAdapter {
     const carriers = dictionaries.carriers || {};
 
     return data.data.map((offer: any) => {
-      const itinerary = offer.itineraries?.[0];
-      const segments: FlightSegment[] = (itinerary?.segments || []).map(
-        (seg: any) => ({
-          flightNumber: `${seg.carrierCode}${seg.number}`,
-          airline: carriers[seg.carrierCode] || seg.carrierCode,
-          origin: seg.departure?.iataCode,
-          destination: seg.arrival?.iataCode,
-          originTerminal: seg.departure?.terminal,
-          destinationTerminal: seg.arrival?.terminal,
-          departureTime: seg.departure?.at,
-          arrivalTime: seg.arrival?.at,
-          duration: this.amadeusHelper.parseDuration(seg.duration),
-          aircraft:
-            dictionaries.aircraft?.[seg.aircraft?.code] || seg.aircraft?.code,
-          operatingCarrier: seg.operating?.carrierCode
-            ? carriers[seg.operating.carrierCode] || seg.operating.carrierCode
-            : undefined,
-          marketingCarrier: carriers[seg.carrierCode] || seg.carrierCode,
-        }),
-      );
+      const itineraries = (offer.itineraries || []).map((itin: any) => {
+        const segments: FlightSegment[] = (itin.segments || []).map(
+          (seg: any) => ({
+            flightNumber: `${seg.carrierCode}${seg.number}`,
+            airline: carriers[seg.carrierCode] || seg.carrierCode,
+            origin: seg.departure?.iataCode,
+            destination: seg.arrival?.iataCode,
+            originTerminal: seg.departure?.terminal,
+            destinationTerminal: seg.arrival?.terminal,
+            departureTime: seg.departure?.at,
+            arrivalTime: seg.arrival?.at,
+            duration: this.amadeusHelper.parseDuration(seg.duration),
+            aircraft:
+              dictionaries.aircraft?.[seg.aircraft?.code] || seg.aircraft?.code,
+            operatingCarrier: seg.operating?.carrierCode
+              ? carriers[seg.operating.carrierCode] || seg.operating.carrierCode
+              : undefined,
+            marketingCarrier: carriers[seg.carrierCode] || seg.carrierCode,
+          }),
+        );
 
-      const firstSegment = segments[0];
-      const lastSegment = segments[segments.length - 1];
+        const firstSegment = segments[0];
+        const lastSegment = segments[segments.length - 1];
+        
+        return {
+          origin: firstSegment?.origin,
+          destination: lastSegment?.destination,
+          departureTime: firstSegment?.departureTime,
+          arrivalTime: lastSegment?.arrivalTime,
+          duration: this.amadeusHelper.parseDuration(itin.duration),
+          stops: segments.length - 1,
+          segments,
+        };
+      });
+
+      const firstItinerary = itineraries[0];
+      const lastItinerary = itineraries[itineraries.length - 1];
       const price = parseFloat(offer.price?.total || "0");
 
       // Get cabin class from first traveler's fare detail
@@ -138,19 +152,20 @@ export class AmadeusProvider implements AirlineAdapter {
       return {
         provider: "amadeus",
         offerId: offer.id,
-        airline: firstSegment?.airline || "Unknown",
-        flightNumbers: segments.map((s) => s.flightNumber),
-        origin: firstSegment?.origin || query.origin,
-        destination: lastSegment?.destination || query.destination,
-        departureTime: firstSegment?.departureTime,
-        arrivalTime: lastSegment?.arrivalTime,
-        duration: this.amadeusHelper.parseDuration(itinerary?.duration),
+        airline: firstItinerary?.segments[0]?.airline || "Unknown",
+        flightNumbers: firstItinerary?.segments.map((s: any) => s.flightNumber) || [],
+        origin: firstItinerary?.origin || query.origin,
+        destination: firstItinerary?.destination || query.destination,
+        departureTime: firstItinerary?.departureTime,
+        arrivalTime: firstItinerary?.arrivalTime,
+        duration: firstItinerary?.duration,
         price,
         priceWithCommission: price, // Will be set by integration service
         currency: offer.price?.currency || "USD",
         seatsAvailable: offer.numberOfBookableSeats,
-        stops: segments.length - 1,
-        segments,
+        stops: firstItinerary?.stops || 0,
+        segments: firstItinerary?.segments || [],
+        itineraries,
         cabinClass: cabinClass.toLowerCase(),
         expiresAt: offer.lastTicketingDate,
         conditions: {

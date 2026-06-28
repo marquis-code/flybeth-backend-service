@@ -28,6 +28,7 @@ export enum Permission {
   MANAGE_AIRPORTS = "manage_airports",
   MANAGE_AIRLINES = "manage_airlines",
   SYSTEM_ANALYTICS = "system_analytics",
+  ACCESS_ADMIN_PANEL = "access_admin_panel",
 }
 
 export enum BookingStatus {
@@ -37,6 +38,7 @@ export enum BookingStatus {
   CANCELLED = "cancelled",
   REFUNDED = "refunded",
   EXPIRED = "expired",
+  FAILED = "failed",
 }
 
 export enum PaymentStatus {

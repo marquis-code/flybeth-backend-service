@@ -59,26 +59,73 @@ export class FlightsIntegrationService {
       };
     }
 
+    // Generate combinations if flexible dates are enabled or comma-separated dates are passed
+    const generateQueries = (baseQuery: FlightSearchQuery): FlightSearchQuery[] => {
+      if (String(baseQuery.flexibleDates) !== 'true' && !baseQuery.departureDate?.includes(',')) return [baseQuery];
+
+      const queries: FlightSearchQuery[] = [];
+      const addDays = (dateStr: string, days: number) => {
+        const d = new Date(dateStr);
+        d.setDate(d.getDate() + days);
+        return d.toISOString().split('T')[0];
+      };
+
+      let depDates = [baseQuery.departureDate];
+      if (baseQuery.departureDate?.includes(',')) {
+        depDates = baseQuery.departureDate.split(',').map(d => d.trim());
+      } else if (String(baseQuery.flexibleDates) === 'true') {
+        depDates = [addDays(baseQuery.departureDate, -1), baseQuery.departureDate, addDays(baseQuery.departureDate, 1)];
+      }
+
+      let retDates: (string | undefined)[] = [baseQuery.returnDate];
+      if (baseQuery.returnDate?.includes(',')) {
+        retDates = baseQuery.returnDate.split(',').map(d => d.trim());
+      } else if (String(baseQuery.flexibleDates) === 'true' && baseQuery.returnDate) {
+        retDates = [addDays(baseQuery.returnDate, -1), baseQuery.returnDate, addDays(baseQuery.returnDate, 1)];
+      }
+
+      // Filter out undefined for logic
+      const validRetDates = retDates.filter(Boolean) as string[];
+
+      if (validRetDates.length > 0) {
+        for (const d of depDates) {
+          for (const r of validRetDates) {
+            queries.push({ ...baseQuery, departureDate: d, returnDate: r });
+          }
+        }
+      } else {
+        for (const d of depDates) {
+          queries.push({ ...baseQuery, departureDate: d });
+        }
+      }
+      return queries;
+    };
+
+    const searchQueries = generateQueries(query);
+    this.logger.log(`Generated ${searchQueries.length} query combinations for flexible dates`);
+
     // Search all active providers concurrently
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))
       .filter(Boolean)
-      .map((adapter) =>
-        adapter!
-          .searchFlights(query)
-          .then((results) => {
-            this.logger.log(
-              `${adapter!.providerName} returned ${results.length} results`,
-            );
-            return results;
-          })
-          .catch((err) => {
-            this.logger.error(
-              `Adapter ${adapter!.providerName} failed: ${err.message}`,
-            );
-            return [] as FlightSearchResult[];
-          }),
-      );
+      .map(async (adapter) => {
+        const results: FlightSearchResult[] = [];
+        // Run sequentially per provider to avoid rate limits
+        for (const q of searchQueries) {
+          try {
+            const res = await adapter!.searchFlights(q);
+            results.push(...res);
+            // Small delay to prevent rate limit spikes
+            if (searchQueries.length > 1) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+          } catch (err) {
+            this.logger.error(`Adapter ${adapter!.providerName} failed on date ${q.departureDate}: ${err.message}`);
+          }
+        }
+        this.logger.log(`${adapter!.providerName} returned ${results.length} total results across ${searchQueries.length} dates`);
+        return results;
+      });
 
     const allResults = await Promise.all(promises);
     const merged = allResults.flat();
@@ -171,7 +218,7 @@ export class FlightsIntegrationService {
   /**
    * Price a flight offer through the correct provider
    */
-  async priceOffer(offer: any, provider: string) {
+  async priceOffer(offer: any, provider: string, userRole: string = 'customer') {
     const adapter = this.adapters.get(provider);
     if (!adapter) {
       throw new Error(`Unknown provider: ${provider}`);
@@ -181,11 +228,50 @@ export class FlightsIntegrationService {
       return { data: { flightOffers: [offer] } }; // Fallback
     }
     const result = await adapter.priceOffer(offer);
-    if (result?.data?.flightOffers?.[0] && provider === 'duffel') {
-       // Wrap in search result format for helper
-       const tempResult = { rawOffer: result.data.flightOffers[0] } as any;
-       await this.applyAncillaryMargins(tempResult);
+
+    // Apply commission margin to the priced offer
+    if (result?.data?.flightOffers?.[0]) {
+       const pricedOffer = result.data.flightOffers[0];
+       let basePrice = 0;
+
+       if (provider === 'duffel') {
+           basePrice = parseFloat(pricedOffer.total_amount || '0');
+       } else if (provider === 'amadeus') {
+           basePrice = parseFloat(pricedOffer.price?.total || pricedOffer.price?.grandTotal || '0');
+       } else {
+           basePrice = pricedOffer.price || 0;
+       }
+
+       const newPrice = await this.providerConfigService.applySegmentedCommission(
+           basePrice,
+           userRole
+       );
+
+       const ratio = newPrice / (basePrice || 1);
+
+       if (provider === 'duffel') {
+           pricedOffer.total_amount = newPrice.toFixed(2);
+           if (pricedOffer.base_amount) {
+               pricedOffer.base_amount = (parseFloat(pricedOffer.base_amount) * ratio).toFixed(2);
+           }
+           if (pricedOffer.tax_amount) {
+               pricedOffer.tax_amount = (parseFloat(pricedOffer.tax_amount) * ratio).toFixed(2);
+           }
+       } else if (provider === 'amadeus') {
+           if (pricedOffer.price?.total) pricedOffer.price.total = newPrice.toFixed(2);
+           if (pricedOffer.price?.grandTotal) pricedOffer.price.grandTotal = newPrice.toFixed(2);
+           if (pricedOffer.price?.base) {
+               pricedOffer.price.base = (parseFloat(pricedOffer.price.base) * ratio).toFixed(2);
+           }
+       }
+
+       if (provider === 'duffel') {
+           // Wrap in search result format for helper
+           const tempResult = { rawOffer: pricedOffer } as any;
+           await this.applyAncillaryMargins(tempResult);
+       }
     }
+
     return result;
   }
 
