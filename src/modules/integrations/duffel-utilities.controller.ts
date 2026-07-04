@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param, Query, Post, Body } from "@nestjs/common";
 import { DuffelProvider } from "./providers/duffel.provider";
 import { Public } from "../../common/decorators/public.decorator";
 
@@ -58,5 +58,17 @@ export class DuffelUtilitiesController {
   @Get("places/suggestions")
   async getPlacesSuggestions(@Query() query: any) {
     return this.duffelProvider.getPlacesSuggestions(query);
+  }
+
+  @Public()
+  @Post("payments/payment-intents")
+  async createPaymentIntent(@Body() body: { amount: string; currency: string }) {
+    return this.duffelProvider.createPaymentIntent(body.amount, body.currency);
+  }
+
+  @Public()
+  @Post("payments/payment-intents/:id/actions/confirm")
+  async confirmPaymentIntent(@Param("id") id: string) {
+    return this.duffelProvider.confirmPaymentIntent(id);
   }
 }

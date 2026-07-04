@@ -111,8 +111,8 @@ export class ResendService {
   /**
    * Flybeth Brand Wrapper for emails
    */
-  public brandWrapper(title: string, content: string): string {
-    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://flybeth.s3.us-east-2.amazonaws.com/flight-booking/general/logo.png";
+    public brandWrapper(title: string, content: string): string {
+    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png";
     return `
       <!DOCTYPE html>
       <html lang="en">
@@ -121,155 +121,196 @@ export class ResendService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>${title}</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          
+          :root{
+            --ink:#14213D;
+            --ink-soft:#3A4A6B;
+            --gold:#C9A24B;
+            --gold-deep:#A9822F;
+            --cream:#F3EEE2;
+            --paper:#FAF7F0;
+            --white:#FFFFFF;
+            --slate:#6B7280;
+            --green:#2F9E68;
+            --line:#DCD5C2;
+            --shadow: 0 30px 60px -20px rgba(20,33,61,0.35), 0 10px 20px -10px rgba(20,33,61,0.15);
+          }
+          *{box-sizing:border-box;}
           body { 
             margin: 0; 
             padding: 0; 
             width: 100% !important; 
             -webkit-text-size-adjust: 100%; 
             -ms-text-size-adjust: 100%; 
-            background-color: #f9fafb; 
+            background:
+              radial-gradient(circle at 15% 10%, rgba(201,162,75,0.10), transparent 40%),
+              radial-gradient(circle at 85% 90%, rgba(20,33,61,0.06), transparent 45%),
+              var(--cream);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: #1f2937;
+            color: var(--ink);
           }
           
           .email-wrapper { 
-            background-color: #f9fafb; 
-            padding: 40px 0; 
+            padding: 48px 16px; 
+            display: flex;
+            justify-content: center;
           }
           
           .container { 
-            background-color: #ffffff; 
-            max-width: 560px; 
+            background: var(--white);
+            max-width: 640px; 
             width: 100%;
             margin: 0 auto; 
-            border-radius: 12px; 
+            border-radius: 22px; 
             text-align: left;
-            border: 1px solid #f3f4f6;
+            box-shadow: var(--shadow);
             overflow: hidden;
             position: relative;
           }
 
-          .header { 
-            padding: 32px 32px 16px; 
-            text-align: center; 
+          /* ===== HEADER ===== */
+          .stub-head {
+            background: linear-gradient(120deg, var(--ink) 0%, #1E2E52 60%, #223360 100%);
+            color: var(--white);
+            padding: 30px 34px 26px;
+            position: relative;
+            overflow: hidden;
           }
-          
-          .logo { 
-            height: 24px; 
-            width: auto; 
-            margin-bottom: 24px; 
+          .stub-head::after {
+            content: "";
+            position: absolute;
+            right: -40px; top: -60px;
+            width: 220px; height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(201,162,75,0.18), transparent 70%);
+          }
+          .brand-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            position: relative;
+            z-index: 1;
+          }
+          .eyebrow {
+            font-size: 10.5px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.55);
+            margin-bottom: 4px;
             display: block;
-            margin-left: auto;
-            margin-right: auto;
           }
-          
           .title { 
-            color: #111827; 
-            font-size: 18px; 
+            color: var(--gold); 
+            font-family: 'Fraunces', serif;
+            font-size: 20px; 
             font-weight: 600; 
             margin: 0; 
             line-height: 1.4; 
           }
           
           .body-content { 
-            padding: 0 32px 32px; 
+            padding: 34px; 
             font-size: 14px; 
             line-height: 1.6; 
-            color: #4b5563; 
+            color: var(--ink-soft); 
           }
           
           .body-content p { 
-            margin-bottom: 16px; 
+            margin: 0 0 16px; 
           }
           
           .body-content strong { 
-            color: #111827; 
+            color: var(--ink); 
             font-weight: 600; 
           }
           
           .action-area { 
-            margin: 24px 0; 
+            margin: 32px 0; 
             text-align: center;
           }
           
           .btn { 
             display: inline-block; 
-            padding: 10px 20px; 
-            background: #0D1DAD;
-            color: #ffffff !important; 
+            padding: 14px 28px; 
+            background: var(--ink);
+            color: var(--white) !important; 
             text-decoration: none !important; 
-            border-radius: 6px; 
-            font-weight: 500; 
-            font-size: 13px; 
+            border-radius: 10px; 
+            font-weight: 600; 
+            font-size: 14px; 
             transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid var(--ink-soft);
           }
           
           .footer { 
-            text-align: center; 
-            padding: 32px;
-            background-color: #f9fafb;
-            border-top: 1px solid #f3f4f6;
+            padding: 0 34px 34px;
+            text-align: center;
           }
           
-          .footer-cta {
-            margin-bottom: 24px;
-            padding-bottom: 24px;
-            border-bottom: 1px dashed #e5e7eb;
+          .barcode {
+            display: flex;
+            justify-content: center;
+            gap: 2px;
+            height: 34px;
+            margin: 0 auto 10px;
+            width: fit-content;
           }
-          
-          .footer-cta p {
-            margin: 0 0 12px 0;
-            font-size: 14px;
-            color: #374151;
-            font-weight: 500;
+          .barcode span {
+            display: block;
+            width: 2px;
+            background: var(--ink);
+            opacity: 0.75;
           }
-
+          .footer-note {
+            font-size: 12px;
+            color: var(--slate);
+            line-height: 1.6;
+          }
+          .footer-note b { color: var(--ink-soft); }
           .footer-link {
-            color: #0D1DAD;
+            color: var(--gold-deep);
             text-decoration: none;
-            font-weight: 500;
+            font-weight: 600;
           }
           
-          .footer-text { 
-            font-size: 12px; 
-            color: #9ca3af; 
-            line-height: 1.8; 
-          }
-          
-          @media only screen and (max-width: 640px) {
-            .email-wrapper { padding: 0; }
-            .container { 
-              border-radius: 0; 
-              border: none;
-            }
-            .header { padding: 32px 24px 16px; }
-            .body-content { padding: 0 24px 32px; }
-            .footer { padding: 32px 24px; }
+          @media (max-width:480px){
+            .email-wrapper { padding: 24px 12px; }
+            .container { border-radius: 16px; }
+            .body-content, .footer { padding-left: 22px; padding-right: 22px; }
+            .stub-head { padding: 26px 22px 22px; }
           }
         </style>
       </head>
       <body>
         <div class="email-wrapper">
           <div class="container">
-            <div class="header">
-              <img src="${logoUrl}" alt="Flybeth" class="logo" />
-              <h1 class="title">${title}</h1>
+            <div class="stub-head">
+              <div class="brand-row">
+                <div>
+                  <span class="eyebrow">Flybeth Global</span>
+                  <img src="${logoUrl}" alt="Flybeth" style="height: 32px;" />
+                </div>
+                <div style="text-align:right;">
+                  <span class="eyebrow">Notification</span>
+                  <h1 class="title">${title}</h1>
+                </div>
+              </div>
             </div>
+            
             <div class="body-content">
               ${content}
             </div>
+
             <div class="footer">
-              <div class="footer-cta">
-                <p>Ready for your next journey?</p>
-                <a href="https://flybeth.com" class="footer-link">Explore more destinations at Flybeth.com →</a>
+              <div class="barcode">
+                <span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span>
               </div>
-              <div class="footer-text">
-                FLYBETH GLOBAL LLC<br>
-                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077<br>
-                &copy; ${new Date().getFullYear()} &bull; Elevating Every Journey.
+              <div class="footer-note">
+                Ready for your next journey? <a href="https://flybeth.com" class="footer-link">Explore more</a><br>
+                FLYBETH GLOBAL LLC &bull; 1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
               </div>
             </div>
           </div>

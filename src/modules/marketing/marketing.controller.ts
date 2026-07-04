@@ -5,6 +5,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Role } from '../../common/constants/roles.constant';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('Marketing')
 @ApiBearerAuth()
@@ -18,6 +19,23 @@ export class MarketingController {
   @ApiOperation({ summary: 'Get campaign statistics' })
   getStats(@CurrentUser('tenant') tenantId: string) {
     return this.marketingService.getStats(tenantId);
+  }
+
+  @Public()
+  @Post('subscribe')
+  @ApiOperation({ summary: 'Subscribe to newsletter for cheap flights' })
+  subscribe(@Body() data: { email: string; source?: string }) {
+    if (!data.email) {
+      throw new Error('Email is required');
+    }
+    return this.marketingService.subscribe(data.email, data.source);
+  }
+
+  @Get('subscribers')
+  @Roles(Role.AGENT, Role.TENANT_ADMIN, Role.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get newsletter subscribers' })
+  getSubscribers(@Query('limit') limit?: number) {
+    return this.marketingService.getSubscribers(limit ? +limit : 100);
   }
 
   @Post('campaigns')

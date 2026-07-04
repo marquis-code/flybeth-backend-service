@@ -116,6 +116,7 @@ export class BookingsService {
             passengers: currentFlightPassengerIds.map(id => new Types.ObjectId(id)),
             offerId: flightDto.offerId,
             provider: flightDto.provider,
+            metadata: flightDto.metadata,
           });
           
           // Pricing for external is usually handled by the offer total, 
@@ -1001,108 +1002,499 @@ export class BookingsService {
     
     const flightTimelineHtml = this.generateFlightEmailHtml(booking);
 
-    const agentHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>Booking Confirmation</title>
-    </head>
-    <body style="margin:0; padding:0; background-color:#eef2f6; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color:#333;">
-        <div style="max-width:600px; margin:20px auto; background-color:#ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow:hidden; border-radius:8px;">
-            
-            <div style="background: linear-gradient(135deg, #d3e5f5 0%, #b2cfee 100%); padding: 30px 40px; text-align: left;">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                    <tr>
-                        <td style="font-size:22px; font-weight:bold; color:#1a365d; letter-spacing: 1px;">BOOKING CONFIRMATION</td>
-                        <td align="right" style="font-size:14px; color:#2d3748; font-weight:bold;">PNR: <span style="color:#1a365d; font-size:16px;">${booking.pnr}</span></td>
-                    </tr>
-                </table>
+    
+    const flightsHtml = (booking.flights && booking.flights.length > 0) ? booking.flights.map((f: any) => {
+        const flight = f.flight;
+        if (!flight) return '';
+        
+        const origin = flight.departure?.iataCode || f.metadata?.origin || 'TBD';
+        const dest = flight.arrival?.iataCode || f.metadata?.destination || 'TBD';
+        const airline = f.metadata?.airline || 'N/A';
+        const flightNbr = flight.flightNumber || 'N/A';
+        const cabinClass = f.class || 'Basic';
+        
+        return `
+        <div class="route-section">
+          <div class="section-label">Flight Details</div>
+          <div class="route">
+            <div class="route-point">
+              <div class="route-city">${origin}</div>
+              <div class="route-sub">Origin</div>
             </div>
-            
-            <div style="padding: 20px 40px; background-color:#f8fafc; border-bottom: 1px solid #e2e8f0;">
-                <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                    <tr>
-                        <td style="padding-bottom:5px;" width="50%">
-                            <span style="font-size:11px; color:#718096; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Booking Date</span><br/>
-                            <span style="font-size:15px; color:#2d3748; font-weight:500;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                        </td>
-                        <td style="padding-bottom:5px;" width="50%" align="right">
-                            <span style="font-size:11px; color:#718096; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">Guest Name</span><br/>
-                            <span style="font-size:15px; color:#2d3748; font-weight:500;">${agentName}</span>
-                        </td>
-                    </tr>
-                </table>
+            <div class="route-path">
+              <div class="plane-icon">
+                <svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.8V22l4-1 4 1v-1.2L13 19v-5.5z"/></svg>
+              </div>
             </div>
-
-            <div style="padding: 30px 40px;">
-                <h3 style="margin:0 0 20px 0; color:#1a365d; font-size:16px; text-transform:uppercase; letter-spacing:1px; border-bottom: 2px solid #e2e8f0; padding-bottom:10px;">Flight Details</h3>
-                ${flightTimelineHtml}
+            <div class="route-point dest">
+              <div class="route-city">${dest}</div>
+              <div class="route-sub">Destination</div>
             </div>
-
-            <div style="padding: 30px 40px; background-color:#f1f5f9;">
-                <div style="background-color:#ffffff; border-radius:8px; padding:20px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;">
-                    <h4 style="margin:0 0 10px 0; text-align:center; color:#718096; text-transform:uppercase; font-size:11px; letter-spacing:1.5px;">Payment Receipt</h4>
-                    <div style="text-align:center; margin-bottom: 20px;">
-                        <span style="font-size:11px; color:#718096; font-weight:bold;">TOTAL CHARGE</span><br/>
-                        <span style="font-size:26px; font-weight:900; color:#1a365d; letter-spacing:-0.5px;">${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</span>
-                    </div>
-                    <hr style="border:none; border-top:1px dashed #cbd5e0; margin:15px 0;"/>
-                    <table width="100%" style="font-size:13px; color:#4a5568;" cellpadding="4">
-                        <tr>
-                            <td>Base Fare</td>
-                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.baseFare.toLocaleString()}</td>
-                        </tr>
-                        <tr>
-                            <td>Taxes & Surcharges</td>
-                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.taxes.toLocaleString()}</td>
-                        </tr>
-                        ${booking.pricing.agentServiceFee > 0 ? `
-                        <tr>
-                            <td>Service Fee</td>
-                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.agentServiceFee.toLocaleString()}</td>
-                        </tr>
-                        ` : ''}
-                        ${booking.pricing.insuranceAmount > 0 ? `
-                        <tr>
-                            <td>Travel Insurance</td>
-                            <td align="right" style="font-weight:500;">${booking.pricing.currency} ${booking.pricing.insuranceAmount.toLocaleString()}</td>
-                        </tr>
-                        ` : ''}
-                    </table>
-                    <hr style="border:none; border-top:1px solid #e2e8f0; margin:15px 0;"/>
-                    <table width="100%" style="font-size:14px; font-weight:bold; color:#1a365d;">
-                        <tr>
-                            <td>Total Paid</td>
-                            <td align="right">${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-
-            <div style="padding: 30px 40px; text-align:center; background-color:#ffffff;">
-                <h3 style="color:#1a365d; margin:0 0 25px 0; font-size:16px; text-transform:uppercase; letter-spacing:1px;">Get Ready To Go</h3>
-                <table width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align:left;">
-                    <tr>
-                        <td width="48%" style="vertical-align:top; background-color:#f7fafc; padding:15px; border-radius:6px;">
-                            <h4 style="margin:0 0 8px 0; color:#2b6cb0; font-size:14px;">✈️ Arrive On Time</h4>
-                            <p style="margin:0; font-size:12px; color:#4a5568; line-height:1.5;">Plan to arrive at the airport at least 3 hours before your scheduled departure time.</p>
-                        </td>
-                        <td width="4%"></td>
-                        <td width="48%" style="vertical-align:top; background-color:#f7fafc; padding:15px; border-radius:6px;">
-                            <h4 style="margin:0 0 8px 0; color:#2b6cb0; font-size:14px;">✅ Passport Check</h4>
-                            <p style="margin:0; font-size:12px; color:#4a5568; line-height:1.5;">Ensure your passport is valid for 6 months and review destination visa requirements.</p>
-                        </td>
-                    </tr>
-                </table>
-                <div style="margin-top:35px; border-top:1px solid #e2e8f0; padding-top:20px;">
-                    <p style="font-size:12px; color:#a0aec0; margin:0;">Thank you for booking with Flybeth Global.<br/>Your official PDF invoice is attached to this email.</p>
-                </div>
-            </div>
+          </div>
+          <div class="fare-chip">
+            <span>Airline <b>${airline}</b></span>
+            <span class="divider">•</span>
+            <span>Flight <b>${flightNbr}</b></span>
+            <span class="divider">•</span>
+            <span>Class <b>${cabinClass}</b></span>
+          </div>
         </div>
-    </body>
-    </html>
+        `;
+    }).join('<div class="perforation"><span class="notch left"></span><span class="notch right"></span></div>') : `
+        <div class="route-section">
+            <p style="color:#6B7280; font-size:14px; font-style:italic;">No flight itinerary details available in this booking.</p>
+        </div>
     `;
+
+    const agentHtml = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flybeth — Booking Confirmation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14213D;
+    --ink-soft:#3A4A6B;
+    --gold:#C9A24B;
+    --gold-deep:#A9822F;
+    --cream:#F3EEE2;
+    --paper:#FAF7F0;
+    --white:#FFFFFF;
+    --slate:#6B7280;
+    --green:#2F9E68;
+    --line:#DCD5C2;
+    --shadow: 0 30px 60px -20px rgba(20,33,61,0.35), 0 10px 20px -10px rgba(20,33,61,0.15);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    padding:48px 16px;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(201,162,75,0.10), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(20,33,61,0.06), transparent 45%),
+      var(--cream);
+    font-family:'Inter', sans-serif;
+    color:var(--ink);
+    display:flex;
+    justify-content:center;
+  }
+
+  .ticket{
+    width:100%;
+    max-width:640px;
+    background:var(--white);
+    border-radius:22px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* ===== HEADER ===== */
+  .stub-head{
+    background:
+      linear-gradient(120deg, var(--ink) 0%, #1E2E52 60%, #223360 100%);
+    color:var(--white);
+    padding:30px 34px 26px;
+    position:relative;
+    overflow:hidden;
+  }
+  .stub-head::after{
+    content:"";
+    position:absolute;
+    right:-40px; top:-60px;
+    width:220px; height:220px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(201,162,75,0.18), transparent 70%);
+  }
+  .brand-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    position:relative;
+    z-index:1;
+  }
+  .eyebrow{
+    font-size:10.5px;
+    letter-spacing:2.5px;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.55);
+    margin-bottom:4px;
+    display:block;
+  }
+  .pnr-block{
+    text-align:right;
+  }
+  .pnr-code{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:3px;
+    color:var(--gold);
+  }
+  .status-row{
+    margin-top:22px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    position:relative;
+    z-index:1;
+  }
+  .status-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:#4ADE80;
+    box-shadow:0 0 0 3px rgba(74,222,128,0.25);
+  }
+  .status-text{
+    font-size:12.5px;
+    letter-spacing:1.2px;
+    text-transform:uppercase;
+    color:#B9C4DE;
+    font-weight:500;
+  }
+
+  /* ===== META ROW ===== */
+  .meta-row{
+    display:flex;
+    padding:22px 34px;
+    background:var(--paper);
+    border-bottom:1px dashed var(--line);
+  }
+  .meta-col{ flex:1; }
+  .meta-col + .meta-col{ text-align:right; }
+  .meta-label{
+    font-size:10.5px;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    color:var(--slate);
+    margin-bottom:5px;
+  }
+  .meta-value{
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink);
+  }
+
+  /* ===== ROUTE ===== */
+  .route-section{
+    padding:34px 34px 26px;
+  }
+  .section-label{
+    font-size:10.5px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--gold-deep);
+    font-weight:600;
+    margin-bottom:20px;
+  }
+  .route{
+    display:flex;
+    align-items:center;
+    gap:18px;
+  }
+  .route-point{ flex:0 0 auto; text-align:left; }
+  .route-point.dest{ text-align:right; }
+  .route-city{
+    font-family:'Fraunces', serif;
+    font-size:26px;
+    font-weight:600;
+    line-height:1.1;
+  }
+  .route-sub{
+    font-size:12px;
+    color:var(--slate);
+    margin-top:4px;
+    letter-spacing:0.3px;
+  }
+  .route-path{
+    flex:1;
+    position:relative;
+    height:20px;
+    display:flex;
+    align-items:center;
+  }
+  .route-path::before{
+    content:"";
+    position:absolute;
+    left:0; right:0; top:50%;
+    height:1px;
+    background:repeating-linear-gradient(to right, var(--gold) 0 6px, transparent 6px 12px);
+    transform:translateY(-50%);
+  }
+  .plane-icon{
+    position:relative;
+    margin:0 auto;
+    z-index:1;
+    background:var(--white);
+    width:26px; height:26px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .plane-icon svg{ width:16px; height:16px; fill:var(--gold-deep); }
+
+  .fare-chip{
+    margin-top:22px;
+    display:inline-flex;
+    gap:14px;
+    align-items:center;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:10px 16px;
+    font-size:12.5px;
+    color:var(--ink-soft);
+  }
+  .fare-chip b{ color:var(--ink); }
+  .fare-chip .divider{ color:var(--line); }
+
+  /* ===== PERFORATION ===== */
+  .perforation{
+    position:relative;
+    height:0;
+    border-top:2px dashed var(--line);
+    margin:0 0;
+  }
+  .notch{
+    position:absolute;
+    width:28px; height:28px;
+    background:var(--cream);
+    border-radius:50%;
+    top:-14px;
+  }
+  .notch.left{ left:-14px; }
+  .notch.right{ right:-14px; }
+
+  /* ===== RECEIPT ===== */
+  .receipt{
+    padding:30px 34px 8px;
+  }
+  .receipt-total{
+    text-align:center;
+    margin-bottom:22px;
+  }
+  .receipt-total .meta-label{ justify-content:center; margin-bottom:8px; }
+  .total-amount{
+    font-family:'Fraunces', serif;
+    font-size:40px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .total-amount sup{
+    font-size:16px;
+    font-weight:500;
+    color:var(--slate);
+    margin-right:4px;
+    top:-14px;
+  }
+
+  .stamp{
+    position:absolute;
+    right:36px;
+    top:14px;
+    width:84px; height:84px;
+    border:2px solid var(--green);
+    border-radius:50%;
+    transform:rotate(-14deg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--green);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:1px;
+    text-align:center;
+    line-height:1.3;
+    opacity:0.85;
+  }
+  .stamp::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px dashed var(--green);
+    border-radius:50%;
+  }
+  .receipt-block{ position:relative; }
+
+  .line-item{
+    display:flex;
+    justify-content:space-between;
+    padding:10px 0;
+    font-size:13.5px;
+    color:var(--ink-soft);
+  }
+  .line-item.total{
+    border-top:1px solid var(--line);
+    margin-top:6px;
+    padding-top:14px;
+    font-size:15px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .line-item span:last-child{ font-family:'IBM Plex Mono', monospace; font-weight:500; }
+
+  /* ===== PREP ===== */
+  .prep{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    padding:26px 34px 32px;
+  }
+  .prep-card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:16px;
+  }
+  .prep-icon{
+    width:30px;height:30px;
+    border-radius:8px;
+    background:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:10px;
+  }
+  .prep-icon svg{ width:16px;height:16px; fill:var(--gold); }
+  .prep-title{
+    font-size:13px;
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .prep-text{
+    font-size:11.5px;
+    color:var(--slate);
+    line-height:1.5;
+  }
+
+  /* ===== FOOTER / BARCODE ===== */
+  .footer{
+    padding:0 34px 34px;
+    text-align:center;
+  }
+  .barcode{
+    display:flex;
+    justify-content:center;
+    gap:2px;
+    height:34px;
+    margin:0 auto 10px;
+    width:fit-content;
+  }
+  .barcode span{
+    display:block;
+    width:2px;
+    background:var(--ink);
+    opacity:0.75;
+  }
+  .barcode-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:3px;
+    color:var(--slate);
+    margin-bottom:18px;
+  }
+  .footer-note{
+    font-size:12px;
+    color:var(--slate);
+    line-height:1.6;
+  }
+  .footer-note b{ color:var(--ink-soft); }
+
+  @media (max-width:480px){
+    .route-city{ font-size:20px; }
+    .total-amount{ font-size:32px; }
+    .stamp{ width:66px;height:66px; right:20px; top:8px; font-size:9px;}
+    .prep{ grid-template-columns:1fr; }
+    .meta-row, .route-section, .receipt, .footer{ padding-left:22px; padding-right:22px; }
+    .stub-head{ padding:26px 22px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="ticket">
+
+  <!-- HEADER -->
+  <div class="stub-head">
+    <div class="brand-row">
+      <div>
+        <span class="eyebrow">Booking Confirmation</span>
+        <img src="https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png" alt="Flybeth" style="height: 36px;" />
+      </div>
+      <div class="pnr-block">
+        <span class="eyebrow">PNR</span>
+        <div class="pnr-code">${booking.pnr}</div>
+      </div>
+    </div>
+    <div class="status-row">
+      <span class="status-dot"></span>
+      <span class="status-text">${booking.paymentModel === 'pay_now' ? 'Confirmed &amp; Ticketed' : 'Pending Payment'}</span>
+    </div>
+  </div>
+
+  <!-- META -->
+  <div class="meta-row">
+    <div class="meta-col">
+      <div class="meta-label">Booking Date</div>
+      <div class="meta-value">${new Date().toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+    </div>
+    <div class="meta-col">
+      <div class="meta-label">Guest Name</div>
+      <div class="meta-value">${agentName}</div>
+    </div>
+  </div>
+
+  <!-- ROUTE -->
+  ${flightsHtml}
+
+  <div class="perforation"><span class="notch left"></span><span class="notch right"></span></div>
+
+  <!-- RECEIPT -->
+  <div class="receipt">
+    <div class="receipt-block">
+      <div class="stamp">${booking.paymentModel === 'pay_now' ? 'PAID<br>IN FULL' : 'PENDING'}</div>
+      <div class="receipt-total">
+        <div class="meta-label">Total Charge</div>
+        <div class="total-amount"><sup>${booking.pricing.currency}</sup>${booking.pricing.totalAmount.toLocaleString()}</div>
+      </div>
+      <div class="line-item"><span>Base Fare</span><span>${booking.pricing.currency} ${booking.pricing.baseFare.toLocaleString()}</span></div>
+      <div class="line-item"><span>Taxes &amp; Surcharges</span><span>${booking.pricing.currency} ${booking.pricing.taxes.toLocaleString()}</span></div>
+      ${booking.pricing.agentServiceFee > 0 ? `<div class="line-item"><span>Service Fee</span><span>${booking.pricing.currency} ${booking.pricing.agentServiceFee.toLocaleString()}</span></div>` : ''}
+      ${booking.pricing.insuranceAmount > 0 ? `<div class="line-item"><span>Travel Insurance</span><span>${booking.pricing.currency} ${booking.pricing.insuranceAmount.toLocaleString()}</span></div>` : ''}
+      <div class="line-item total"><span>Total Paid</span><span>${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</span></div>
+    </div>
+  </div>
+
+  <!-- PREP -->
+  <div class="prep">
+    <div class="prep-card">
+      <div class="prep-icon"><svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.8V22l4-1 4 1v-1.2L13 19v-5.5z"/></svg></div>
+      <div class="prep-title">Arrive on time</div>
+      <div class="prep-text">Plan to arrive at least 3 hours before your scheduled departure.</div>
+    </div>
+    <div class="prep-card">
+      <div class="prep-icon"><svg viewBox="0 0 24 24"><path d="M12 2C7 2 3 5.5 3 10c0 6.5 9 12 9 12s9-5.5 9-12c0-4.5-4-8-9-8zm0 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/></svg></div>
+      <div class="prep-title">Passport check</div>
+      <div class="prep-text">Ensure it's valid for 6 months and review visa requirements.</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="barcode">
+      <span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span>
+    </div>
+    <div class="barcode-label">${booking.pnr}</div>
+    <div class="footer-note">Thank you for booking with <b>Flybeth Global</b>.<br>Your official PDF invoice is attached to this email.</div>
+  </div>
+
+</div>
+
+</body>
+</html>
+`;
+
 
     await this.notificationsService.sendEmail(
         agentEmail, 

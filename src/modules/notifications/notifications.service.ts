@@ -155,22 +155,22 @@ export class NotificationsService {
     const content = `
       <p>Hi <strong>${params.firstName}</strong>,</p>
       <p>Your flight booking has been successfully processed and ticketed.</p>
-      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
-        <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Booking Reference (PNR)</p>
-        <p style="color: #111827; font-size: 24px; font-weight: 700; margin: 0 0 24px 0;">${params.pnr}</p>
+      <div style="background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+        <p style="margin: 0 0 8px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Booking Reference (PNR)</p>
+        <p style="color: var(--ink); font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: 2px;">${params.pnr}</p>
         <div style="margin-bottom: 16px;">
-          <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Flight Route Overview</p>
-          <p style="margin: 0; color: #1f2937; font-size: 16px; font-weight: 600;">${params.flightDetails}</p>
+          <p style="margin: 0 0 4px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Flight Route Overview</p>
+          <p style="margin: 0; color: var(--ink); font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600;">${params.flightDetails}</p>
         </div>
         <div>
-          <p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px; text-transform: uppercase;">Total Paid</p>
-          <p style="margin: 0; color: #111827; font-size: 18px; font-weight: 700;">${params.currency} ${params.totalAmount.toLocaleString()}</p>
+          <p style="margin: 0 0 4px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Total Paid</p>
+          <p style="margin: 0; color: var(--gold-deep); font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600;">${params.currency} ${params.totalAmount.toLocaleString()}</p>
         </div>
       </div>
       <div class="action-area">
         <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" class="btn">View Boarding Pass</a>
       </div>
-      <p style="font-size: 12px; color: #6b7280; margin-top: 24px;">Please verify all passport requirements for your destination. We recommend arriving at the airport at least 3 hours prior to international departures.</p>
+      <p style="font-size: 12px; color: var(--slate); margin-top: 24px; line-height: 1.6;">Please verify all passport requirements for your destination. We recommend arriving at the airport at least 3 hours prior to international departures.</p>
     `;
 
     await this.sendEmail(
@@ -193,13 +193,13 @@ export class NotificationsService {
 
     const title = "Welcome to Flybeth!";
     const content = `
-      <p>Hi ${firstName},</p>
+      <p>Hi <strong>${firstName}</strong>,</p>
       <p>We're delighted to welcome you to the Flybeth family! Our mission is to make every journey feel effortless and premium.</p>
-      <div style="margin: 24px 0; background-color: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb;">
-        <p style="margin: 0 0 8px 0; font-weight: 600;">Elite Inventory</p>
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #4b5563;">Unlock global rates for flights and luxury accommodation seamlessly synced to your account.</p>
-        <p style="margin: 0 0 8px 0; font-weight: 600;">Seamless Design</p>
-        <p style="margin: 0; font-size: 13px; color: #4b5563;">Manage your entire travel ecosystem from a minimalist dashboard customized just for you.</p>
+      <div style="margin: 24px 0; background-color: var(--paper); border-radius: 12px; padding: 24px; border: 1px dashed var(--line);">
+        <p style="margin: 0 0 8px 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; color: var(--gold-deep);">Elite Inventory</p>
+        <p style="margin: 0 0 16px 0; font-size: 13px; color: var(--slate); line-height: 1.6;">Unlock global rates for flights and luxury accommodation seamlessly synced to your account.</p>
+        <p style="margin: 0 0 8px 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; color: var(--gold-deep);">Seamless Design</p>
+        <p style="margin: 0; font-size: 13px; color: var(--slate); line-height: 1.6;">Manage your entire travel ecosystem from a minimalist dashboard customized just for you.</p>
       </div>
       <div class="action-area">
         <a href="${this.configService.get("CLIENT_URL")}/search" class="btn">Discover Destinations</a>
@@ -232,12 +232,12 @@ export class NotificationsService {
       <p>Hi <strong>${firstName}</strong>,</p>
       <p>To secure your digital session, please use the following one-time password (OTP) to complete your authentication to Flybeth.</p>
       
-      <div style="background: #f9fafb; padding: 32px 24px; text-align: center; border-radius: 8px; border: 1px dashed #d1d5db; margin: 24px 0;">
-        <span style="font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 12px;">Verification Code</span>
-        <span style="font-size: 32px; font-weight: 700; letter-spacing: 4px; color: #111827;">${otp}</span>
+      <div style="position: relative; background: var(--paper); padding: 32px 24px; text-align: center; border-radius: 12px; border: 1px dashed var(--line); margin: 32px 0;">
+        <span style="font-size: 10.5px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 2.5px; display: block; margin-bottom: 12px;">Verification Code</span>
+        <span style="font-size: 40px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; letter-spacing: 6px; color: var(--ink);">${otp}</span>
       </div>
       
-      <p style="font-size: 12px; color: #6b7280; margin-top: 16px;">This code expires in 10 minutes. Never share this PIN with anyone.</p>
+      <p style="font-size: 12px; color: var(--slate); margin-top: 16px; line-height: 1.6;">This code expires in 10 minutes. Never share this PIN with anyone.</p>
     `;
     await this.sendEmail(
       email,
@@ -274,19 +274,19 @@ export class NotificationsService {
 
     const title = "Reset Your Password";
     const content = `
-      <p>Hi ${firstName},</p>
+      <p>Hi <strong>${firstName}</strong>,</p>
       <p>We received a request to reset the password for your Flybeth account. To proceed with setting a new credential, please click the secure link below.</p>
       
       <div class="action-area">
         <a href="${resetUrl}" class="btn">Reset My Password</a>
       </div>
       
-      <div style="background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 24px;">
-        <p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 600; color: #4b5563;">Trouble with the button?</p>
-        <p style="margin: 0; font-size: 12px; color: #0D1DAD; word-break: break-all;">${resetUrl}</p>
+      <div style="background: var(--paper); padding: 20px; border-radius: 12px; border: 1px dashed var(--line); margin-top: 32px;">
+        <p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 600; color: var(--slate); text-transform: uppercase; letter-spacing: 1.6px;">Trouble with the button?</p>
+        <p style="margin: 0; font-size: 12px; color: var(--ink-soft); word-break: break-all; font-family: 'IBM Plex Mono', monospace;">${resetUrl}</p>
       </div>
 
-      <p style="font-size: 12px; color: #6b7280; margin-top: 24px;">If you did not request this, please ignore this message. Your account remains protected.</p>
+      <p style="font-size: 12px; color: var(--slate); margin-top: 24px; line-height: 1.6;">If you did not request this, please ignore this message. Your account remains protected.</p>
     `;
     await this.sendEmail(
       email,
@@ -302,18 +302,18 @@ export class NotificationsService {
       <p>I am thrilled to personally welcome your agency to the Flybeth Global Network. You are the bridge between explorers and the world, and we are here to amplify your brilliance.</p>
       <p>Our ecosystem is built for speed, precision, and profit. We recognize the immense value you bring, and we've built the tools to match it.</p>
       
-      <div style="margin: 32px 0; background: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb;">
-        <p style="margin: 0 0 16px 0; font-weight: 600; font-size: 14px; text-transform: uppercase; color: #4b5563;">Commercial Advantage</p>
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Wholesale GDS Routing</p>
-        <p style="margin: 0 0 16px 0; font-size: 13px; color: #4b5563;">Access institutional flight APIs with automated mark-up logic and negotiated global airfares.</p>
-        <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Automated Clearing</p>
-        <p style="margin: 0; font-size: 13px; color: #4b5563;">Transparent commission structures with direct settlement to your verified payout institution.</p>
+      <div style="margin: 32px 0; background: var(--paper); border-radius: 12px; padding: 28px; border: 1px dashed var(--line);">
+        <p style="margin: 0 0 20px 0; font-weight: 600; font-size: 11px; text-transform: uppercase; color: var(--slate); letter-spacing: 2px;">Commercial Advantage</p>
+        <p style="margin: 0 0 4px 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; color: var(--gold-deep);">Wholesale GDS Routing</p>
+        <p style="margin: 0 0 20px 0; font-size: 13px; color: var(--slate); line-height: 1.6;">Access institutional flight APIs with automated mark-up logic and negotiated global airfares.</p>
+        <p style="margin: 0 0 4px 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; color: var(--gold-deep);">Automated Clearing</p>
+        <p style="margin: 0; font-size: 13px; color: var(--slate); line-height: 1.6;">Transparent commission structures with direct settlement to your verified payout institution.</p>
       </div>
 
       <div style="margin-top: 32px;">
-        <p style="margin: 0 0 8px 0; font-size: 14px; color: #4b5563;">With boundless love and excitement,</p>
-        <p style="margin: 0; font-weight: 600; color: #111827;">Oluremi Oshinkoya</p>
-        <p style="margin: 0; font-size: 12px; color: #6b7280;">Founder & CEO, Flybeth</p>
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: var(--slate);">With boundless love and excitement,</p>
+        <p style="margin: 0; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; color: var(--ink);">Oluremi Oshinkoya</p>
+        <p style="margin: 0; font-size: 12px; color: var(--gold-deep); letter-spacing: 0.5px; text-transform: uppercase; margin-top: 4px;">Founder & CEO, Flybeth</p>
       </div>
     `;
 
@@ -329,9 +329,9 @@ export class NotificationsService {
       <p>Hi <strong>${firstName}</strong>,</p>
       <p>Thank you for registering your agency. We have successfully secured your onboarding pipeline data and compliance documents.</p>
       
-      <div style="background: #f9fafb; border-left: 4px solid #f59e0b; padding: 16px; margin: 24px 0; border-radius: 0 8px 8px 0; border-top: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb;">
-        <p style="color: #b45309; font-weight: 600; font-size: 12px; text-transform: uppercase; margin: 0 0 8px 0;">Internal Compliance Queue</p>
-        <p style="margin: 0; color: #4b5563; font-size: 13px;">Our global compliance team is reviewing your documentation. This typically takes 24-48 hours. We will notify you once cleared for commercial operations.</p>
+      <div style="background: var(--paper); border-left: 4px solid var(--gold); padding: 20px; margin: 32px 0; border-radius: 0 12px 12px 0; border-top: 1px dashed var(--line); border-right: 1px dashed var(--line); border-bottom: 1px dashed var(--line);">
+        <p style="color: var(--gold-deep); font-weight: 600; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px; margin: 0 0 10px 0;">Internal Compliance Queue</p>
+        <p style="margin: 0; color: var(--slate); font-size: 13.5px; line-height: 1.6;">Our global compliance team is reviewing your documentation. This typically takes 24-48 hours. We will notify you once cleared for commercial operations.</p>
       </div>
 
       <div class="action-area">
@@ -355,8 +355,8 @@ export class NotificationsService {
       <p>Hi <strong>${firstName}</strong>,</p>
       <p>Excellent progression! Our compliance division has successfully authenticated and approved your <strong>${documentType}</strong>.</p>
       
-      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
-        <p style="margin: 0; color: #166534; font-size: 13px;">Your identity documents have been cleared and securely stored. This moves you closer to unrestricted transactional capabilities.</p>
+      <div style="background: var(--paper); border-left: 4px solid var(--green); padding: 20px; margin: 32px 0; border-radius: 0 12px 12px 0; border-top: 1px dashed var(--line); border-right: 1px dashed var(--line); border-bottom: 1px dashed var(--line);">
+        <p style="margin: 0; color: var(--slate); font-size: 13.5px; line-height: 1.6;">Your identity documents have been cleared and securely stored. This moves you closer to unrestricted transactional capabilities.</p>
       </div>
     `;
     await this.sendEmail(
@@ -377,13 +377,13 @@ export class NotificationsService {
       <p>Hi <strong>${firstName}</strong>,</p>
       <p>During a routine sweep, our compliance system flagged your submitted <strong>${documentType}</strong>. To proceed, we require a rapid correction.</p>
       
-      <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
-        <p style="color: #b91c1c; margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase; font-weight: 600;">Assessor Feedback</p>
-        <p style="margin: 0; color: #7f1d1d; font-size: 14px; font-weight: 500;">"${feedback}"</p>
+      <div style="background: var(--paper); border-left: 4px solid #b91c1c; padding: 20px; margin: 32px 0; border-radius: 0 12px 12px 0; border-top: 1px dashed var(--line); border-right: 1px dashed var(--line); border-bottom: 1px dashed var(--line);">
+        <p style="color: #b91c1c; margin: 0 0 8px 0; font-size: 10.5px; text-transform: uppercase; font-weight: 600; letter-spacing: 1.6px;">Assessor Feedback</p>
+        <p style="margin: 0; color: var(--ink); font-size: 14px; font-weight: 500;">"${feedback}"</p>
       </div>
 
       <div class="action-area">
-        <a href="http://agent.flybeth.com/kyc" class="btn" style="background: #b91c1c;">Submit Correction</a>
+        <a href="http://agent.flybeth.com/kyc" class="btn" style="background: #b91c1c; border-color: #7f1d1d;">Submit Correction</a>
       </div>
     `;
     await this.sendEmail(
@@ -402,10 +402,10 @@ export class NotificationsService {
       <p>Congratulations <strong>${firstName}</strong>!</p>
       <p>Your partnership application has been rigorously analyzed and passed. <strong>Your agency is now live!</strong></p>
       
-      <div style="background: #f9fafb; border: 1px dashed #d1d5db; border-radius: 8px; padding: 24px; margin: 24px 0; text-align: center;">
-        <p style="color: #4b5563; font-weight: 600; margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase;">Secure Access Key</p>
-        <p style="color: #111827; font-weight: 600; font-size: 16px; margin: 0 0 8px 0;">${email}</p>
-        <p style="color: #6b7280; font-size: 12px; margin: 0;">Access initialized with your registered security credentials.</p>
+      <div style="background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 28px; margin: 32px 0; text-align: center;">
+        <p style="color: var(--slate); font-weight: 600; margin: 0 0 12px 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 2px;">Secure Access Key</p>
+        <p style="color: var(--ink); font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 18px; margin: 0 0 12px 0; letter-spacing: 1px;">${email}</p>
+        <p style="color: var(--slate); font-size: 12px; margin: 0; line-height: 1.6;">Access initialized with your registered security credentials.</p>
       </div>
       
       <div class="action-area">
@@ -442,9 +442,9 @@ export class NotificationsService {
       <p>Congratulations!</p>
       <p>You have been invited to join the <strong>Flybeth Administrative Team</strong>. We are excited to bring you on board to help manage and scale our global travel operations.</p>
       
-      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 24px 0;">
-        <p style="color: #4b5563; font-weight: 600; margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase;">Invitation Details</p>
-        <p style="color: #111827; font-weight: 500; font-size: 14px; margin: 0 0 4px 0;">Assigned Access Level: <span style="text-transform: capitalize;">${role.replace('_', ' ')}</span></p>
+      <div style="background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; margin: 32px 0;">
+        <p style="color: var(--slate); font-weight: 600; margin: 0 0 12px 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 2px;">Invitation Details</p>
+        <p style="color: var(--ink); font-weight: 500; font-size: 14px; margin: 0 0 6px 0;">Assigned Access Level: <span style="text-transform: capitalize; color: var(--gold-deep); font-weight: 600;">${role.replace('_', ' ')}</span></p>
         <p style="color: #b91c1c; font-size: 12px; margin: 0;">Expires on ${expiresAt}</p>
         ${permissionsHtml}
       </div>
@@ -452,7 +452,7 @@ export class NotificationsService {
       <div class="action-area">
         <a href="${inviteUrl}" class="btn">Accept Invitation</a>
       </div>
-      <p style="font-size: 12px; color: #6b7280; margin-top: 16px;">If you're having trouble clicking the button, copy and paste this link: <br/><br/><code style="word-break: break-all;">${inviteUrl}</code></p>
+      <p style="font-size: 12px; color: var(--slate); margin-top: 16px; line-height: 1.6;">If you're having trouble clicking the button, copy and paste this link: <br/><br/><code style="word-break: break-all; font-family: 'IBM Plex Mono', monospace;">${inviteUrl}</code></p>
     `;
     await this.sendEmail(
       email,
@@ -482,8 +482,8 @@ export class NotificationsService {
     const content = `
       <p>Your access permissions for the role <strong>${roleName.replace(/_/g, ' ')}</strong> have been updated by an administrator.</p>
       
-      <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 24px 0;">
-        <p style="color: #4b5563; font-weight: 600; margin: 0 0 8px 0; font-size: 11px; text-transform: uppercase;">Current Permissions</p>
+      <div style="background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; margin: 32px 0;">
+        <p style="color: var(--slate); font-weight: 600; margin: 0 0 12px 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 2px;">Current Permissions</p>
         ${permissionsHtml}
       </div>
       
@@ -532,9 +532,9 @@ export class NotificationsService {
       <p>Hi <strong>${params.firstName}</strong>,</p>
       <p>Our engine noticed you paused your selection for <strong>${params.itemName}</strong>. Don't let your perfect trip slip away.</p>
       
-      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 24px 0;">
-        <p style="color: #b45309; font-weight: 600; margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase;">Dynamic Pricing Alert</p>
-        <p style="color: #92400e; font-size: 13px; margin: 0;">We've temporarily locked this rate for you. Secure it now before it resets.</p>
+      <div style="background: var(--paper); border-left: 4px solid var(--gold); border-radius: 0 12px 12px 0; border-top: 1px dashed var(--line); border-right: 1px dashed var(--line); border-bottom: 1px dashed var(--line); padding: 20px; margin: 32px 0;">
+        <p style="color: var(--gold-deep); font-weight: 600; margin: 0 0 8px 0; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Dynamic Pricing Alert</p>
+        <p style="color: var(--ink); font-size: 13.5px; margin: 0; line-height: 1.6;">We've temporarily locked this rate for you. Secure it now before it resets.</p>
       </div>
       
       <div class="action-area">

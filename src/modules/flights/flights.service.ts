@@ -286,11 +286,11 @@ export class FlightsService {
     return flights;
   }
 
-  async getDeals(limit: number = 10) {
+  async getDeals(limit: number = 10): Promise<any[]> {
     const cacheKey = `flights:deals:${limit}`;
     try {
       const cached = await this.cacheManager.get(cacheKey);
-      if (cached) return cached;
+      if (cached) return cached as any[];
 
       const flights = await this.flightModel
         .find({

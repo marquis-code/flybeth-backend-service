@@ -6,6 +6,8 @@ import { BookingsModule } from "../bookings/bookings.module";
 import { CurrencyModule } from "../currency/currency.module";
 import { NotificationsModule } from "../notifications/notifications.module";
 import { UsersModule } from "../users/users.module";
+import { MarketingModule } from "../marketing/marketing.module";
+import { FlightsModule } from "../flights/flights.module";
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { UsersModule } from "../users/users.module";
     CurrencyModule,
     NotificationsModule,
     UsersModule,
+    MarketingModule,
+    FlightsModule,
   ],
   providers: [SchedulerService],
   exports: [SchedulerService],

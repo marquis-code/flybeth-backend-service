@@ -81,6 +81,10 @@ class BookingFlightDto {
   @ApiProperty()
   @IsString()
   provider: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  metadata?: any;
 }
 
 class DetailedPassengerDto {

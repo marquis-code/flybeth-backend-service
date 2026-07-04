@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { MarketingCampaign, MarketingCampaignDocument } from './schemas/campaign.schema';
+import { Subscriber, SubscriberDocument } from './schemas/subscriber.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsersService } from '../users/users.service';
 import { PassengersService } from '../passengers/passengers.service';
@@ -14,11 +15,55 @@ export class MarketingService {
 
   constructor(
     @InjectModel(MarketingCampaign.name) private campaignModel: Model<MarketingCampaignDocument>,
+    @InjectModel(Subscriber.name) private subscriberModel: Model<SubscriberDocument>,
     private readonly notificationsService: NotificationsService,
     private readonly usersService: UsersService,
     private readonly passengersService: PassengersService,
     private readonly resendService: ResendService,
   ) {}
+
+  async subscribe(email: string, source: string = 'modal'): Promise<SubscriberDocument> {
+    const existing = await this.subscriberModel.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      if (!existing.isActive) {
+        existing.isActive = true;
+        await existing.save();
+      }
+      return existing;
+    }
+
+    const subscriber = new this.subscriberModel({
+      email,
+      source,
+      isActive: true,
+    });
+    
+    // Optional: send a welcome email here
+    try {
+      await this.notificationsService.sendEmail(
+        email,
+        'Welcome to Flybeth Flight Deals! ✈️',
+        this.resendService.brandWrapper(
+          'Welcome Aboard!',
+          `<p>Thanks for subscribing to Flybeth's aggressive flight deals.</p>
+           <p>We'll be sending you the cheapest flights we can find, every single day.</p>
+           <p>Happy travels!<br/><strong>The Flybeth Team</strong></p>`
+        )
+      );
+    } catch (e) {
+      this.logger.error(`Welcome email to ${email} failed: ${e.message}`);
+    }
+
+    return subscriber.save();
+  }
+
+  async getSubscribers(limit: number = 100) {
+    return this.subscriberModel.find().sort({ createdAt: -1 }).limit(limit).exec();
+  }
+
+  async getActiveSubscribers() {
+    return this.subscriberModel.find({ isActive: true }).exec();
+  }
 
   async create(tenantId: string, senderId: string, data: any): Promise<MarketingCampaignDocument> {
     const { _id, customRecipients, ...rest } = data;

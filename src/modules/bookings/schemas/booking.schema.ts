@@ -24,6 +24,14 @@ export class BookingFlight {
 
   @Prop()
   provider: string;
+
+  @Prop({ type: Object, required: false })
+  metadata?: {
+    origin: string;
+    destination: string;
+    airline: string;
+    departureTime?: string;
+  };
 }
 
 @Schema({ _id: false })
