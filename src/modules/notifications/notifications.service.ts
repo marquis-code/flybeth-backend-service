@@ -129,56 +129,515 @@ export class NotificationsService {
 
   async sendBookingConfirmation(params: {
     email: string;
-    pnr: string;
-    firstName: string;
-    totalAmount: number;
-    currency: string;
-    flightDetails: string;
+    booking: any;
+    attachments?: any[];
   }): Promise<void> {
-    const template = await this.getTemplateBySlug('booking-confirmation');
-    if (template && template.isActive) {
-      await this.sendDynamicEmail({
-        slug: 'booking-confirmation',
-        to: params.email,
-        data: {
-          firstName: params.firstName,
-          pnr: params.pnr,
-          totalAmount: params.totalAmount,
-          currency: params.currency,
-          flightDetails: params.flightDetails
-        }
+    const { booking } = params;
+    const pnr = booking.pnr;
+    const firstName = booking.user?.firstName || booking.contactDetails?.name?.split(' ')[0] || 'Traveler';
+    const lastName = booking.user?.lastName || booking.contactDetails?.name?.split(' ').slice(1).join(' ') || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    
+    const totalAmount = booking.pricing?.totalAmount || 0;
+    const baseAmount = booking.pricing?.baseAmount || totalAmount;
+    const taxAmount = booking.pricing?.taxAmount || 0;
+    const currency = booking.pricing?.currency || 'USD';
+    const bookingDateStr = booking.createdAt 
+      ? new Date(booking.createdAt).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) 
+      : 'Today';
+    
+    const manageUrl = `${this.configService.get("CLIENT_URL")}/bookings/${pnr}`;
+    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png";
+    
+    // ── Flight data extraction ──
+    const firstFlight = booking.flights && booking.flights[0];
+    const isReturn = booking.isRoundTrip || 
+                     (firstFlight?.metadata?.slices?.length > 1) || 
+                     (firstFlight?.metadata?.itineraries?.length > 1) || 
+                     (booking.flights && booking.flights.length > 1);
+    const tripType = isReturn ? "Round Trip" : "One Way";
+    const tripBadgeColor = isReturn ? "#6366F1" : "#0EA5E9";
+
+    // ── Build flight slice cards ──
+    let flightSlicesHtml = "";
+    if (firstFlight?.metadata?.slices && firstFlight.metadata.slices.length > 0) {
+      firstFlight.metadata.slices.forEach((slice: any, index: number) => {
+        const firstSegment = slice.segments && slice.segments[0];
+        const lastSegment = slice.segments && slice.segments[slice.segments.length - 1];
+        
+        const originCity = firstSegment?.origin?.city_name || firstSegment?.origin?.iata_city_code || firstFlight.metadata.origin || "Origin";
+        const destCity = lastSegment?.destination?.city_name || lastSegment?.destination?.iata_city_code || firstFlight.metadata.destination || "Destination";
+        const originCode = firstSegment?.origin?.iata_code || firstFlight.metadata.origin || "—";
+        const destCode = lastSegment?.destination?.iata_code || firstFlight.metadata.destination || "—";
+        
+        const airline = firstSegment?.marketing_carrier?.name || firstFlight.metadata.airline || "Airline";
+        const flightNum = firstSegment?.marketing_carrier_flight_number || "—";
+        const cabinClass = firstFlight.class || "Economy";
+        const departureTime = firstSegment?.departing_at || firstFlight.metadata.departureTime;
+        const arrivalTime = lastSegment?.arriving_at;
+        
+        const formatFlightDateTime = (iso: string) => {
+          if (!iso) return { date: "—", time: "—" };
+          const d = new Date(iso);
+          return {
+            date: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+            time: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+          };
+        };
+        
+        const dep = formatFlightDateTime(departureTime);
+        const arr = formatFlightDateTime(arrivalTime);
+        const sliceLabel = isReturn ? (index === 0 ? "Outbound" : "Return") : `Flight ${index + 1}`;
+        const stopsCount = slice.segments ? slice.segments.length - 1 : 0;
+        const stopsLabel = stopsCount === 0 ? "Nonstop" : `${stopsCount} stop${stopsCount > 1 ? 's' : ''}`;
+
+        flightSlicesHtml += `
+          <!-- Flight Slice ${index + 1} -->
+          ${index > 0 ? `<tr><td style="padding: 0 32px;"><div style="border-top: 1px dashed #E2E8F0; margin: 0;"></div></td></tr>` : ''}
+          <tr>
+            <td style="padding: ${index === 0 ? '28px' : '24px'} 32px 8px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color: ${index === 0 ? '#EEF2FF' : '#FFF7ED'}; border-radius: 6px; padding: 4px 12px;">
+                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: ${index === 0 ? '#4F46E5' : '#EA580C'}; letter-spacing: 0.5px; text-transform: uppercase;">${sliceLabel}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #94A3B8;">
+                    ${dep.date}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Route codes -->
+          <tr>
+            <td style="padding: 12px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td width="30%" valign="top">
+                    <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">${originCode}</p>
+                    <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #64748B; font-weight: 500;">${originCity}</p>
+                    <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #0F172A; font-weight: 700;">${dep.time}</p>
+                  </td>
+                  <td width="40%" align="center" valign="middle" style="padding: 0 8px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td align="center" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 10px; color: #94A3B8; font-weight: 600; letter-spacing: 0.5px; padding-bottom: 6px; text-transform: uppercase;">${stopsLabel}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 0 4px;">
+                          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td width="8" style="font-size: 0;"><div style="width: 8px; height: 8px; border-radius: 50%; border: 2px solid #6366F1;"></div></td>
+                              <td style="border-top: 2px solid #E2E8F0; font-size: 0; line-height: 0;">&nbsp;</td>
+                              <td width="24" align="center" style="font-size: 0;"><div style="color: #6366F1; font-size: 16px; margin-top: -2px;">&#9992;</div></td>
+                              <td style="border-top: 2px solid #E2E8F0; font-size: 0; line-height: 0;">&nbsp;</td>
+                              <td width="8" style="font-size: 0;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #6366F1;"></div></td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="30%" align="right" valign="top">
+                    <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 800; color: #0F172A; line-height: 1; letter-spacing: -0.5px;">${destCode}</p>
+                    <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #64748B; font-weight: 500;">${destCity}</p>
+                    <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #0F172A; font-weight: 700;">${arr.time}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Flight meta row -->
+          <tr>
+            <td style="padding: 16px 32px 20px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border-radius: 10px; border: 1px solid #F1F5F9;">
+                <tr>
+                  <td style="padding: 14px 16px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="33%" valign="top" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 10px; color: #94A3B8; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Airline</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #1E293B; font-weight: 600;">${airline}</p>
+                        </td>
+                        <td width="33%" valign="top" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 10px; color: #94A3B8; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Flight</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #1E293B; font-weight: 600;">${flightNum}</p>
+                        </td>
+                        <td width="34%" valign="top" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 10px; color: #94A3B8; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Class</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #1E293B; font-weight: 600; text-transform: capitalize;">${cabinClass}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`;
       });
-      return;
+    } else {
+      // Fallback for bookings without slice data
+      const originCode = firstFlight?.metadata?.origin || "—";
+      const destCode = firstFlight?.metadata?.destination || "—";
+      const airline = firstFlight?.metadata?.airline || "Airline";
+      const cabinClass = firstFlight?.class || "Economy";
+      
+      flightSlicesHtml = `
+        <tr>
+          <td style="padding: 28px 32px 0 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="background-color: #EEF2FF; border-radius: 6px; padding: 4px 12px;">
+                  <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #4F46E5; letter-spacing: 0.5px; text-transform: uppercase;">${tripType}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 16px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="35%" valign="top">
+                  <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 800; color: #0F172A; line-height: 1;">${originCode}</p>
+                  <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #64748B;">Origin</p>
+                </td>
+                <td width="30%" align="center" valign="middle">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="padding: 0 4px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                          <tr>
+                            <td width="8" style="font-size:0;"><div style="width:8px;height:8px;border-radius:50%;border:2px solid #6366F1;"></div></td>
+                            <td style="border-top:2px solid #E2E8F0;font-size:0;line-height:0;">&nbsp;</td>
+                            <td width="24" align="center" style="font-size:0;"><div style="color:#6366F1;font-size:16px;margin-top:-2px;">&#9992;</div></td>
+                            <td style="border-top:2px solid #E2E8F0;font-size:0;line-height:0;">&nbsp;</td>
+                            <td width="8" style="font-size:0;"><div style="width:8px;height:8px;border-radius:50%;background:#6366F1;"></div></td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td width="35%" align="right" valign="top">
+                  <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 32px; font-weight: 800; color: #0F172A; line-height: 1;">${destCode}</p>
+                  <p style="margin: 4px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #64748B;">Destination</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 0 32px 24px 32px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #64748B;">
+            ${airline} &bull; Class: <span style="text-transform: capitalize;">${cabinClass}</span>
+          </td>
+        </tr>`;
     }
 
-    const title = "Your Journey is Confirmed!";
-    const content = `
-      <p>Hi <strong>${params.firstName}</strong>,</p>
-      <p>Your flight booking has been successfully processed and ticketed.</p>
-      <div style="background: var(--paper); border: 1px dashed var(--line); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-        <p style="margin: 0 0 8px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Booking Reference (PNR)</p>
-        <p style="color: var(--ink); font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; margin: 0 0 24px 0; letter-spacing: 2px;">${params.pnr}</p>
-        <div style="margin-bottom: 16px;">
-          <p style="margin: 0 0 4px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Flight Route Overview</p>
-          <p style="margin: 0; color: var(--ink); font-family: 'Fraunces', serif; font-size: 18px; font-weight: 600;">${params.flightDetails}</p>
-        </div>
-        <div>
-          <p style="margin: 0 0 4px 0; color: var(--slate); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;">Total Paid</p>
-          <p style="margin: 0; color: var(--gold-deep); font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600;">${params.currency} ${params.totalAmount.toLocaleString()}</p>
-        </div>
-      </div>
-      <div class="action-area">
-        <a href="${this.configService.get("CLIENT_URL")}/bookings/${params.pnr}" class="btn">View Boarding Pass</a>
-      </div>
-      <p style="font-size: 12px; color: var(--slate); margin-top: 24px; line-height: 1.6;">Please verify all passport requirements for your destination. We recommend arriving at the airport at least 3 hours prior to international departures.</p>
-    `;
+    // ── Passenger rows ──
+    let passengerHtml = `
+      <tr>
+        <td style="padding: 10px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="font-size: 13px; color: #64748B;">1. ${fullName}</td>
+              <td align="right" style="font-size: 12px; color: #94A3B8;">Adult</td>
+            </tr>
+          </table>
+        </td>
+      </tr>`;
+    if (booking.passengerDetails && booking.passengerDetails.length > 0) {
+      passengerHtml = booking.passengerDetails.map((p: any, i: number) => `
+        <tr>
+          <td style="padding: 8px 0; ${i < booking.passengerDetails.length - 1 ? 'border-bottom: 1px solid #F1F5F9;' : ''} font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="font-size: 13px; color: #334155; font-weight: 500;">${i + 1}. ${(p.title || '').toUpperCase()} ${p.firstName || ''} ${p.lastName || ''}</td>
+                <td align="right" style="font-size: 12px; color: #94A3B8; text-transform: capitalize;">${p.type || 'Adult'}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>`).join('');
+    }
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>Booking Confirmed — Flybeth Global</title>
+<!--[if mso]>
+<noscript>
+<xml>
+<o:OfficeDocumentSettings>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml>
+</noscript>
+<![endif]-->
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { margin: 0; padding: 0; width: 100% !important; height: 100% !important; background-color: #F1F5F9; }
+  @media only screen and (max-width: 620px) {
+    .email-container { width: 100% !important; }
+    .px-mob { padding-left: 20px !important; padding-right: 20px !important; }
+    .route-code { font-size: 26px !important; }
+    .hero-title { font-size: 22px !important; }
+    .price-big { font-size: 28px !important; }
+    .stack-col { display: block !important; width: 100% !important; }
+    .stack-col-right { padding-top: 12px !important; text-align: left !important; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background-color:#F1F5F9; -webkit-font-smoothing: antialiased;">
+<!-- Preheader -->
+<div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">Your flight is confirmed — reference ${pnr}. ${tripType} &#8226; ${firstName}, your booking details are inside.</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#F1F5F9;">
+<tr>
+<td align="center" style="padding: 32px 16px 40px 16px;">
+
+  <!-- ═══ MAIN CONTAINER ═══ -->
+  <table role="presentation" class="email-container" width="580" cellpadding="0" cellspacing="0" border="0" style="width:580px; max-width:580px;">
+
+    <!-- Logo header -->
+    <tr>
+      <td align="center" style="padding: 0 0 24px 0;">
+        <img src="${logoUrl}" alt="Flybeth Global" style="height: 32px; display: block;" />
+      </td>
+    </tr>
+
+    <!-- ═══ CARD ═══ -->
+    <tr>
+      <td style="background-color: #FFFFFF; border-radius: 20px; overflow: hidden; box-shadow: 0 4px 32px rgba(15,23,42,0.06), 0 1px 4px rgba(15,23,42,0.04);">
+
+        <!-- ── Gradient Header ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="px-mob" style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #334155 100%); padding: 32px 36px 28px 36px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td class="stack-col" valign="top">
+                    <!-- Status badge -->
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 16px;">
+                      <tr>
+                        <td style="background-color: rgba(74,222,128,0.15); border-radius: 20px; padding: 5px 14px;">
+                          <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                              <td style="width: 8px; height: 8px;">
+                                <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #4ADE80;"></div>
+                              </td>
+                              <td style="padding-left: 8px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #4ADE80; letter-spacing: 1px; text-transform: uppercase;">Confirmed &amp; Ticketed</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                    <!-- Greeting -->
+                    <p class="hero-title" style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 26px; font-weight: 800; color: #FFFFFF; line-height: 1.2;">You're all set, ${firstName}!</p>
+                    <p style="margin: 8px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #94A3B8; line-height: 1.5;">Your flight has been booked and ticketed successfully.</p>
+                  </td>
+                  <td class="stack-col stack-col-right" width="140" align="right" valign="top" style="padding-top: 4px;">
+                    <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 10px; color: #64748B; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;">Booking Ref</p>
+                    <p style="margin: 4px 0 0 0; font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 800; color: #FFFFFF; letter-spacing: 2px;">${pnr}</p>
+                    <p style="margin: 8px 0 0 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: #64748B;">${bookingDateStr}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ── Trip Type + Flight Slices ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="px-mob" style="padding: 0 20px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border: 1px solid #E2E8F0; border-radius: 16px; overflow: hidden; margin-top: 28px;">
+                ${flightSlicesHtml}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ── Passenger Details ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="px-mob" style="padding: 28px 32px 0 32px;">
+              <p style="margin: 0 0 12px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #94A3B8; letter-spacing: 1.5px; text-transform: uppercase;">Passengers</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                ${passengerHtml}
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ── Payment Summary ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="px-mob" style="padding: 28px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #94A3B8; letter-spacing: 1.5px; text-transform: uppercase;">Payment Summary</td>
+                  <td align="right">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="background-color: #F0FDF4; border-radius: 20px; padding: 4px 12px;">
+                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: #16A34A; font-weight: 700;">&#10003; Paid</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px; background-color: #F8FAFC; border-radius: 12px; border: 1px solid #F1F5F9;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding: 6px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #64748B;">Base fare</td>
+                        <td align="right" style="padding: 6px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #334155; font-weight: 600;">${currency} ${baseAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #64748B;">Taxes &amp; surcharges</td>
+                        <td align="right" style="padding: 6px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #334155; font-weight: 600;">${currency} ${taxAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border-top: 1px dashed #E2E8F0; padding: 16px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #0F172A; font-weight: 700;">Total charged</td>
+                        <td align="right">
+                          <span class="price-big" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 800; color: #0F172A;">${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ── Before You Fly ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="px-mob" style="padding: 28px 32px 0 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #EEF2FF 0%, #F0F9FF 100%); border-radius: 14px; border: 1px solid #E0E7FF;">
+                <tr>
+                  <td style="padding: 24px;">
+                    <p style="margin: 0 0 16px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 700; color: #6366F1; letter-spacing: 1.5px; text-transform: uppercase;">Before You Fly</p>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td width="28" valign="top" style="padding-top: 1px;">
+                          <div style="width: 24px; height: 24px; border-radius: 8px; background-color: #6366F1; color: #FFFFFF; text-align: center; font-size: 12px; line-height: 24px;">&#9200;</div>
+                        </td>
+                        <td style="padding-left: 14px; padding-bottom: 18px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 14px; color: #1E293B; font-weight: 700;">Arrive early</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #64748B; line-height: 1.5;">Plan to arrive at least 3 hours before your scheduled departure.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="28" valign="top" style="padding-top: 1px;">
+                          <div style="width: 24px; height: 24px; border-radius: 8px; background-color: #6366F1; color: #FFFFFF; text-align: center; font-size: 12px; line-height: 24px;">&#128274;</div>
+                        </td>
+                        <td style="padding-left: 14px; padding-bottom: 18px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 14px; color: #1E293B; font-weight: 700;">Check your passport</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #64748B; line-height: 1.5;">Ensure it's valid for at least 6 months and review visa requirements.</p>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td width="28" valign="top" style="padding-top: 1px;">
+                          <div style="width: 24px; height: 24px; border-radius: 8px; background-color: #6366F1; color: #FFFFFF; text-align: center; font-size: 12px; line-height: 24px;">&#128179;</div>
+                        </td>
+                        <td style="padding-left: 14px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+                          <p style="margin: 0; font-size: 14px; color: #1E293B; font-weight: 700;">Download your invoice</p>
+                          <p style="margin: 3px 0 0 0; font-size: 13px; color: #64748B; line-height: 1.5;">Your official PDF invoice is attached to this email for your records.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- ── CTA Button ── -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td align="center" class="px-mob" style="padding: 28px 32px 32px 32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-radius: 12px; background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); box-shadow: 0 4px 14px rgba(99,102,241,0.3);">
+                    <a href="${manageUrl}" target="_blank" style="display: inline-block; padding: 15px 40px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 700; color: #FFFFFF; text-decoration: none; letter-spacing: 0.3px;">View Booking Details</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+
+    <!-- ═══ FOOTER ═══ -->
+    <tr>
+      <td align="center" style="padding: 28px 24px 0 24px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+        <p style="margin: 0; font-size: 13px; color: #64748B; line-height: 1.6;">Thank you for choosing <strong style="color: #334155;">Flybeth Global</strong></p>
+        <p style="margin: 6px 0 0 0; font-size: 12px; color: #94A3B8;">Your official PDF invoice is attached to this email.</p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 20px 24px 0 24px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="padding: 0 10px;"><a href="${manageUrl}" style="font-size: 12px; color: #6366F1; text-decoration: none; font-weight: 600;">Manage Booking</a></td>
+            <td style="color: #CBD5E1; font-size: 12px;">&middot;</td>
+            <td style="padding: 0 10px;"><a href="${this.configService.get("CLIENT_URL")}/help" style="font-size: 12px; color: #6366F1; text-decoration: none; font-weight: 600;">Help Center</a></td>
+            <td style="color: #CBD5E1; font-size: 12px;">&middot;</td>
+            <td style="padding: 0 10px;"><a href="${this.configService.get("CLIENT_URL")}" style="font-size: 12px; color: #6366F1; text-decoration: none; font-weight: 600;">flybeth.com</a></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding: 20px 24px 0 24px; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;">
+        <p style="margin: 0; font-size: 11px; color: #CBD5E1;">FLYBETH GLOBAL LLC &bull; 1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077</p>
+        <p style="margin: 6px 0 0 0; font-size: 11px; color: #CBD5E1;">This is an automated message. Please do not reply directly to this email.</p>
+      </td>
+    </tr>
+
+  </table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>`;
 
     await this.sendEmail(
       params.email,
-      `Booking Confirmed: ${params.pnr} - Flybeth`,
-      this.resendService.brandWrapper(title, content),
+      `Booking Confirmed: ${pnr} - Flybeth Global`,
+      htmlContent,
+      undefined,
+      params.attachments
     );
   }
+
 
   async sendWelcomeEmail(email: string, firstName: string): Promise<void> {
     const template = await this.getTemplateBySlug('welcome-email');
@@ -676,6 +1135,7 @@ export class NotificationsService {
     to: string;
     data: Record<string, any>;
     tenantId?: string;
+    attachments?: any[];
   }): Promise<void> {
     const template = await this.getTemplateBySlug(params.slug, params.tenantId);
     if (!template) {
@@ -697,7 +1157,7 @@ export class NotificationsService {
       ? htmlContent
       : this.resendService.brandWrapper(subject, htmlContent);
 
-    await this.sendEmail(params.to, subject, finalHtml);
+    await this.sendEmail(params.to, subject, finalHtml, {}, params.attachments);
   }
 
     async seedDefaultTemplates(): Promise<void> {

@@ -111,7 +111,7 @@ export class ResendService {
   /**
    * Flybeth Brand Wrapper for emails
    */
-    public brandWrapper(title: string, content: string): string {
+  public brandWrapper(title: string, content: string): string {
     const logoUrl = this.configService.get("APP_LOGO_URL") || "https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png";
     return `
       <!DOCTYPE html>
@@ -121,200 +121,61 @@ export class ResendService {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <title>${title}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-        <style>
-          :root{
-            --ink:#14213D;
-            --ink-soft:#3A4A6B;
-            --gold:#C9A24B;
-            --gold-deep:#A9822F;
-            --cream:#F3EEE2;
-            --paper:#FAF7F0;
-            --white:#FFFFFF;
-            --slate:#6B7280;
-            --green:#2F9E68;
-            --line:#DCD5C2;
-            --shadow: 0 30px 60px -20px rgba(20,33,61,0.35), 0 10px 20px -10px rgba(20,33,61,0.15);
-          }
-          *{box-sizing:border-box;}
-          body { 
-            margin: 0; 
-            padding: 0; 
-            width: 100% !important; 
-            -webkit-text-size-adjust: 100%; 
-            -ms-text-size-adjust: 100%; 
-            background:
-              radial-gradient(circle at 15% 10%, rgba(201,162,75,0.10), transparent 40%),
-              radial-gradient(circle at 85% 90%, rgba(20,33,61,0.06), transparent 45%),
-              var(--cream);
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: var(--ink);
-          }
-          
-          .email-wrapper { 
-            padding: 48px 16px; 
-            display: flex;
-            justify-content: center;
-          }
-          
-          .container { 
-            background: var(--white);
-            max-width: 640px; 
-            width: 100%;
-            margin: 0 auto; 
-            border-radius: 22px; 
-            text-align: left;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            position: relative;
-          }
-
-          /* ===== HEADER ===== */
-          .stub-head {
-            background: linear-gradient(120deg, var(--ink) 0%, #1E2E52 60%, #223360 100%);
-            color: var(--white);
-            padding: 30px 34px 26px;
-            position: relative;
-            overflow: hidden;
-          }
-          .stub-head::after {
-            content: "";
-            position: absolute;
-            right: -40px; top: -60px;
-            width: 220px; height: 220px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(201,162,75,0.18), transparent 70%);
-          }
-          .brand-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            position: relative;
-            z-index: 1;
-          }
-          .eyebrow {
-            font-size: 10.5px;
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
-            color: rgba(255,255,255,0.55);
-            margin-bottom: 4px;
-            display: block;
-          }
-          .title { 
-            color: var(--gold); 
-            font-family: 'Fraunces', serif;
-            font-size: 20px; 
-            font-weight: 600; 
-            margin: 0; 
-            line-height: 1.4; 
-          }
-          
-          .body-content { 
-            padding: 34px; 
-            font-size: 14px; 
-            line-height: 1.6; 
-            color: var(--ink-soft); 
-          }
-          
-          .body-content p { 
-            margin: 0 0 16px; 
-          }
-          
-          .body-content strong { 
-            color: var(--ink); 
-            font-weight: 600; 
-          }
-          
-          .action-area { 
-            margin: 32px 0; 
-            text-align: center;
-          }
-          
-          .btn { 
-            display: inline-block; 
-            padding: 14px 28px; 
-            background: var(--ink);
-            color: var(--white) !important; 
-            text-decoration: none !important; 
-            border-radius: 10px; 
-            font-weight: 600; 
-            font-size: 14px; 
-            transition: all 0.2s ease;
-            font-family: 'Inter', sans-serif;
-            border: 1px solid var(--ink-soft);
-          }
-          
-          .footer { 
-            padding: 0 34px 34px;
-            text-align: center;
-          }
-          
-          .barcode {
-            display: flex;
-            justify-content: center;
-            gap: 2px;
-            height: 34px;
-            margin: 0 auto 10px;
-            width: fit-content;
-          }
-          .barcode span {
-            display: block;
-            width: 2px;
-            background: var(--ink);
-            opacity: 0.75;
-          }
-          .footer-note {
-            font-size: 12px;
-            color: var(--slate);
-            line-height: 1.6;
-          }
-          .footer-note b { color: var(--ink-soft); }
-          .footer-link {
-            color: var(--gold-deep);
-            text-decoration: none;
-            font-weight: 600;
-          }
-          
-          @media (max-width:480px){
-            .email-wrapper { padding: 24px 12px; }
-            .container { border-radius: 16px; }
-            .body-content, .footer { padding-left: 22px; padding-right: 22px; }
-            .stub-head { padding: 26px 22px 22px; }
-          }
-        </style>
       </head>
-      <body>
-        <div class="email-wrapper">
-          <div class="container">
-            <div class="stub-head">
-              <div class="brand-row">
-                <div>
-                  <span class="eyebrow">Flybeth Global</span>
-                  <img src="${logoUrl}" alt="Flybeth" style="height: 32px;" />
-                </div>
-                <div style="text-align:right;">
-                  <span class="eyebrow">Notification</span>
-                  <h1 class="title">${title}</h1>
-                </div>
-              </div>
-            </div>
-            
-            <div class="body-content">
-              ${content}
-            </div>
+      <body style="margin: 0; padding: 0; background-color: #F3EEE2; font-family: Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F3EEE2; padding: 40px 16px;">
+          <tr>
+            <td align="center">
+              <!-- Main Email Container -->
+              <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(20,33,61,0.05);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 32px; border-bottom: 3px solid #2F9E68; background-color: #FFFFFF;">
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td align="left" valign="middle">
+                          <img src="${logoUrl}" alt="Flybeth Global" style="height: 36px; display: block;" />
+                        </td>
+                        <td align="right" valign="middle">
+                          <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #6B7280; font-weight: 600;">Notification</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
 
-            <div class="footer">
-              <div class="barcode">
-                <span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span>
-              </div>
-              <div class="footer-note">
-                Ready for your next journey? <a href="https://flybeth.com" class="footer-link">Explore more</a><br>
-                FLYBETH GLOBAL LLC &bull; 1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
-              </div>
-            </div>
-          </div>
-        </div>
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 32px;">
+                    ${content}
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 0 32px 32px 32px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: #6B7280; line-height: 1.6;">
+                      Ready for your next journey? <a href="https://flybeth.com" style="color: #C9A24B; text-decoration: none; font-weight: 600;">Explore more</a><br>
+                      FLYBETH GLOBAL LLC &bull; 1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              
+              <!-- App Disclaimer -->
+              <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin-top: 16px;">
+                <tr>
+                  <td align="center" style="padding: 16px;">
+                    <p style="margin: 0; font-size: 11px; color: #A0AABF; text-transform: uppercase; letter-spacing: 1px;">
+                      This is an automated message. Please do not reply directly to this email.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;

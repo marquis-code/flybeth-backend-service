@@ -8,7 +8,9 @@ import {
   Param,
   Query,
   UseGuards,
+  Res,
 } from "@nestjs/common";
+import { Response } from "express";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { BookingsService } from "./bookings.service";
 import {
@@ -105,6 +107,19 @@ export class BookingsController {
   @ApiOperation({ summary: "Get booking by PNR reference" })
   findByPNR(@Param("pnr") pnr: string) {
     return this.bookingsService.findByPNR(pnr);
+  }
+
+  @Public()
+  @Get("reference/:pnr/receipt")
+  @ApiOperation({ summary: "Download booking receipt PDF by PNR" })
+  async downloadReceipt(@Param("pnr") pnr: string, @Res() res: Response) {
+    const pdfBuffer = await this.bookingsService.generateReceiptPdf(pnr);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Receipt_${pnr}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+    res.send(pdfBuffer);
   }
 
   @Get("tenant/:tenantId")

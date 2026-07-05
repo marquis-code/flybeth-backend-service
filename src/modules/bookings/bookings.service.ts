@@ -573,18 +573,20 @@ export class BookingsService {
     }
 
     if (sendEmail) {
-      this.notificationsService.sendBookingConfirmation({
-        email: booking.contactDetails?.email,
-        pnr: booking.pnr,
-        firstName: (booking.user as any)?.firstName || booking.contactDetails?.name?.split(' ')[0] || 'Traveler',
-        totalAmount: booking.pricing?.totalAmount || 0,
-        currency: 'USD',
-        flightDetails: booking.flights && booking.flights.length > 0
-          ? booking.flights.map((f: any) => f.flight?.number || 'Flight').join(', ')
-          : 'Booking Details',
-      }).catch(err => {
+      try {
+        const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking as any);
+        const destination = booking.flights && booking.flights.length > 0 
+          ? ((booking.flights[0].flight as any)?.arrival?.city || booking.flights[0].metadata?.destination || 'your destination')
+          : 'your destination';
+
+        await this.notificationsService.sendBookingConfirmation({
+          email: booking.contactDetails?.email,
+          booking: booking,
+          attachments: [{ filename: `Receipt_${booking.pnr}.pdf`, content: pdfBuffer }]
+        });
+      } catch (err) {
         this.logger.error(`Failed to send manage booking email for PNR ${booking.pnr}`, err);
-      });
+      }
     }
 
     return booking as unknown as BookingDocument;
@@ -770,6 +772,13 @@ export class BookingsService {
 
     this.logger.log(`Booking confirmed: ${booking.pnr}`);
     return booking;
+  }
+
+
+
+  async generateReceiptPdf(pnr: string): Promise<Buffer> {
+    const booking = await this.findByPNR(pnr);
+    return this.invoiceService.generateInvoicePdf(booking);
   }
 
   async cancelBooking(
