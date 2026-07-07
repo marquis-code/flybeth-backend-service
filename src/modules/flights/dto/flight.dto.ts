@@ -10,6 +10,7 @@ import {
   IsBoolean,
   Min,
   Max,
+  ValidateIf,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
@@ -153,6 +154,7 @@ export class SearchFlightsDto {
 
   @ApiPropertyOptional({ example: "2025-06-22" })
   @IsOptional()
+  @ValidateIf((object, value) => value !== "")
   @IsDateString()
   returnDate?: string;
 

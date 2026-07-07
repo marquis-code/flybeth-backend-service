@@ -1,9 +1,10 @@
 // src/modules/integrations/interfaces/airline-adapter.interface.ts
 
 export interface FlightSearchQuery {
-  origin: string;
-  destination: string;
-  departureDate: string;
+  origin?: string;
+  destination?: string;
+  departureDate?: string;
+  slices?: { origin: string; destination: string; departureDate: string }[];
   returnDate?: string;
   flexibleDates?: boolean;
   adults: number;

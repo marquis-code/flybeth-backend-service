@@ -55,21 +55,28 @@ export class DuffelProvider implements AirlineAdapter {
       }
 
       // Build slices
-      const slices: any[] = [
-        {
+      let slices: any[] = [];
+      if (query.slices && query.slices.length > 0) {
+        slices = query.slices.map(s => ({
+          origin: s.origin.toUpperCase(),
+          destination: s.destination.toUpperCase(),
+          departure_date: s.departureDate,
+        }));
+      } else if (query.origin && query.destination && query.departureDate) {
+        slices.push({
           origin: query.origin.toUpperCase(),
           destination: query.destination.toUpperCase(),
           departure_date: query.departureDate,
-        },
-      ];
-
-      // Return slice for round trips
-      if (query.returnDate) {
-        slices.push({
-          origin: query.destination.toUpperCase(),
-          destination: query.origin.toUpperCase(),
-          departure_date: query.returnDate,
         });
+
+        // Return slice for round trips
+        if (query.returnDate) {
+          slices.push({
+            origin: query.destination.toUpperCase(),
+            destination: query.origin.toUpperCase(),
+            departure_date: query.returnDate,
+          });
+        }
       }
 
       const requestBody: any = {

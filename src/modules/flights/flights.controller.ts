@@ -74,6 +74,7 @@ export class FlightsController {
       destination: searchDto.destination,
       departureDate: searchDto.departureDate,
       returnDate: searchDto.returnDate,
+      slices: searchDto.slices,
       adults: searchDto.adults || 1,
       children: searchDto.children || 0,
       infants: searchDto.infants || 0,

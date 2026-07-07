@@ -38,6 +38,7 @@ async function bootstrap() {
       "/users",
       "/bookings",
       "/chat",
+      "/marketing",
     ];
 
     const needsPrefix =

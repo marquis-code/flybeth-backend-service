@@ -86,6 +86,14 @@ export class LiveStaysSearchDto {
   @IsOptional()
   @IsBoolean()
   freeCancellationOnly?: boolean;
+
+  @ApiPropertyOptional({
+    example: "hotelbeds",
+    description: "Filter results to only return properties from a specific provider",
+  })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class FetchRatesDto {

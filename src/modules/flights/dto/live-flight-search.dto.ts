@@ -5,31 +5,43 @@ import {
   IsOptional,
   IsDateString,
   Min,
+  ValidateIf,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class LiveFlightSearchDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: "LHR",
-    description: "Origin airport IATA code",
+    description: "Origin airport IATA code (optional if slices provided)",
   })
+  @IsOptional()
   @IsString()
-  origin: string;
+  origin?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: "JFK",
-    description: "Destination airport IATA code",
+    description: "Destination airport IATA code (optional if slices provided)",
   })
+  @IsOptional()
   @IsString()
-  destination: string;
+  destination?: string;
 
-  @ApiProperty({ example: "2026-06-15" })
+  @ApiPropertyOptional({ example: "2026-06-15" })
+  @IsOptional()
   @IsDateString()
-  departureDate: string;
+  departureDate?: string;
+
+  @ApiPropertyOptional({
+    description: "Array of slices for multi-city search. Overrides origin/destination/departureDate",
+    example: [{ origin: "LHR", destination: "JFK", departureDate: "2026-06-15" }]
+  })
+  @IsOptional()
+  slices?: { origin: string; destination: string; departureDate: string }[];
 
   @ApiPropertyOptional({ example: "2026-06-22" })
   @IsOptional()
+  @ValidateIf((object, value) => value !== "")
   @IsDateString()
   returnDate?: string;
 

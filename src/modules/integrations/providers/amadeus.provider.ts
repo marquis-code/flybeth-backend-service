@@ -27,6 +27,11 @@ export class AmadeusProvider implements AirlineAdapter {
     try {
       const token = await this.amadeusHelper.getAccessToken();
 
+      if (query.slices && query.slices.length > 0) {
+        this.logger.log("Amadeus GET API does not support multi-city. Skipping Amadeus.");
+        return [];
+      }
+
       // Build query params for GET request
       const params = new URLSearchParams({
         originLocationCode: query.origin.toUpperCase(),

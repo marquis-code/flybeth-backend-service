@@ -61,6 +61,7 @@ export class FlightsIntegrationService {
 
     // Generate combinations if flexible dates are enabled or comma-separated dates are passed
     const generateQueries = (baseQuery: FlightSearchQuery): FlightSearchQuery[] => {
+      if (baseQuery.slices && baseQuery.slices.length > 0) return [baseQuery];
       if (String(baseQuery.flexibleDates) !== 'true' && !baseQuery.departureDate?.includes(',')) return [baseQuery];
 
       const queries: FlightSearchQuery[] = [];

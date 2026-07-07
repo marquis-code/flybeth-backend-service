@@ -45,8 +45,14 @@ export class StaysIntegrationService {
   }> {
     const startTime = Date.now();
     const config = await this.providerConfigService.getConfig();
-    const activeProviderNames =
+    let activeProviderNames =
       await this.providerConfigService.getActiveProviderNames("stays");
+
+    if (query.provider) {
+      activeProviderNames = activeProviderNames.filter(
+        (name) => name === query.provider,
+      );
+    }
 
     if (activeProviderNames.length === 0) {
       this.logger.warn("No active stays providers configured");

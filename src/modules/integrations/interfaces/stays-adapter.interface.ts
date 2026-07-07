@@ -12,6 +12,7 @@ export interface StaysSearchQuery {
   guests: Array<{ type: "adult" | "child"; age?: number }>;
   rooms: number;
   freeCancellationOnly?: boolean;
+  provider?: string;
 }
 
 export interface StaysSearchResult {

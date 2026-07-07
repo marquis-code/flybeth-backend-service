@@ -1,5 +1,7 @@
 // src/modules/integrations/providers/hotelbeds.provider.ts
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 import {
   StaysAdapter,
   StaysSearchQuery,
@@ -14,7 +16,10 @@ export class HotelbedsProvider implements StaysAdapter {
   readonly providerName = "hotelbeds";
   private readonly logger = new Logger(HotelbedsProvider.name);
 
-  constructor(private helper: HotelbedsHelperService) {}
+  constructor(
+    private helper: HotelbedsHelperService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async searchStays(query: StaysSearchQuery): Promise<StaysSearchResult[]> {
     this.logger.log(
@@ -50,6 +55,7 @@ export class HotelbedsProvider implements StaysAdapter {
               unit: "km",
             }
           : undefined,
+        filter: { packaging: false },
       };
 
       const response = await fetch(
@@ -70,6 +76,28 @@ export class HotelbedsProvider implements StaysAdapter {
       }
 
       const data = await response.json();
+
+      if (data.hotels && data.hotels.hotels) {
+        const childAges = query.guests
+          .filter((g) => g.type === "child")
+          .map((g) => g.age || 7)
+          .join(",");
+        await Promise.all(
+          data.hotels.hotels.map(async (h: any) => {
+            const searchResultId = `${h.code}|${query.checkInDate}|${query.checkOutDate}|${adults}|${children}|${childAges}`;
+            await this.cacheManager.set(
+              `hb_rooms_${searchResultId}`,
+              {
+                rooms: h.rooms,
+                currency: data.hotels.currency || h.currency || "USD",
+                hotelName: h.name,
+              },
+              3600000,
+            );
+          }),
+        );
+      }
+
       return this.mapSearchResults(data, query);
     } catch (error) {
       this.logger.error(`HotelBeds search error: ${error.message}`);
@@ -200,54 +228,55 @@ export class HotelbedsProvider implements StaysAdapter {
         ] as any;
       }
 
-      const paxes = childAges
-        ? childAges
-            .split(",")
-            .map((age: any) => ({ type: "CH", age: parseInt(age) }))
-        : [];
-      const body = {
-        stay: { checkIn, checkOut },
-        occupancies: [
-          {
-            rooms: 1,
-            adults: parseInt(adults),
-            children: parseInt(children),
-            paxes: paxes.length > 0 ? paxes : undefined,
-          },
-        ],
-        hotels: {
-          hotel: [parseInt(code)],
-        },
-      };
+      const cachedData: any = await this.cacheManager.get(`hb_rooms_${searchResultId}`);
+      if (!cachedData || !cachedData.rooms) {
+        this.logger.warn(`Rooms not found in cache for ${searchResultId}`);
+        return [];
+      }
 
-      const response = await fetch(
-        `${this.helper.baseUrl}/hotel-api/1.0/hotels`,
-        {
-          method: "POST",
-          headers: this.helper.getHeadersFor("hotel"),
-          body: JSON.stringify(body),
-        },
+      const rooms = cachedData.rooms;
+      const currency = cachedData.currency;
+      const hotelName = cachedData.hotelName || "Hotel";
+
+      // Cache individual rates for createQuote
+      await Promise.all(
+        rooms.map(async (room: any) => {
+          if (room.rates) {
+            await Promise.all(
+              room.rates.map(async (rate: any) => {
+                await this.cacheManager.set(
+                  `hb_rate_${rate.rateKey}`,
+                  {
+                    rateKey: rate.rateKey,
+                    rateType: rate.rateType,
+                    net: rate.net,
+                    boardName: rate.boardName,
+                    cancellationPolicies: rate.cancellationPolicies,
+                    hotelName: hotelName,
+                    roomName: room.name,
+                    currency: currency,
+                  },
+                  3600000,
+                );
+              }),
+            );
+          }
+        }),
       );
 
-      if (!response.ok) return [];
-      const data = await response.json();
-      const hotel = data.hotels?.hotels?.[0];
-
-      if (!hotel || !hotel.rooms) return [];
-
-      return hotel.rooms.map((room: any) => ({
+      return rooms.map((room: any) => ({
         roomId: room.code,
         name: room.name,
         rates: room.rates.map((rate: any) => ({
           rateId: rate.rateKey,
           name: rate.boardName || "Standard Rate",
           price: parseFloat(rate.net),
-          currency: data.hotels.currency || "USD",
+          currency: currency,
           boardType: rate.boardCode,
           conditions:
             rate.cancellationPolicies?.map((cp: any) => ({
               title: `Cancellation from ${cp.from}`,
-              description: `Charge: ${cp.amount} ${data.hotels.currency || "USD"}`,
+              description: `Charge: ${cp.amount} ${currency}`,
             })) || [],
         })),
       }));
@@ -269,6 +298,21 @@ export class HotelbedsProvider implements StaysAdapter {
           currency: "USD",
           rateType: "RECHECK",
           raw: {},
+        };
+      }
+
+      const cachedRate: any = await this.cacheManager.get(`hb_rate_${rateId}`);
+      if (cachedRate && cachedRate.rateType === "BOOKABLE") {
+        this.logger.log(`Rate is BOOKABLE, bypassing checkrates for ${rateId}`);
+        return {
+          quoteId: cachedRate.rateKey,
+          hotelName: cachedRate.hotelName || "Hotel",
+          roomName: cachedRate.roomName || "Room",
+          price: parseFloat(cachedRate.net),
+          currency: cachedRate.currency,
+          rateType: cachedRate.rateType,
+          cancellationPolicies: cachedRate.cancellationPolicies,
+          raw: { rate: cachedRate },
         };
       }
 
@@ -364,14 +408,20 @@ export class HotelbedsProvider implements StaysAdapter {
         body.paymentData = guestDetails.paymentData;
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 65000);
+
       const response = await fetch(
         `${this.helper.baseUrl}/hotel-api/1.0/bookings`,
         {
           method: "POST",
           headers: this.helper.getHeadersFor("hotel"),
           body: JSON.stringify(body),
+          signal: controller.signal,
         },
       );
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
