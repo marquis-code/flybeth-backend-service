@@ -71,10 +71,10 @@ export class FlightsIntegrationService {
         return d.toISOString().split('T')[0];
       };
 
-      let depDates = [baseQuery.departureDate];
+      let depDates: (string | undefined)[] = [baseQuery.departureDate];
       if (baseQuery.departureDate?.includes(',')) {
         depDates = baseQuery.departureDate.split(',').map(d => d.trim());
-      } else if (String(baseQuery.flexibleDates) === 'true') {
+      } else if (String(baseQuery.flexibleDates) === 'true' && baseQuery.departureDate) {
         depDates = [addDays(baseQuery.departureDate, -1), baseQuery.departureDate, addDays(baseQuery.departureDate, 1)];
       }
 

@@ -38,6 +38,9 @@ export class HotelbedsTransfersProvider implements TransfersAdapter {
       if (query.endGeoCode) {
         toType = "GPS";
         toCode = query.endGeoCode; // "lat,long"
+      } else if (query.endCityName && query.endCityName.length === 3) {
+        toType = "IATA";
+        toCode = query.endCityName.toUpperCase();
       } else if (query.endAddressLine) {
         toType = "GPS";
         toCode = query.endGeoCode || "0";

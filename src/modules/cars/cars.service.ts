@@ -42,8 +42,8 @@ export class CarsService {
       query["capacity.passengers"] = { $gte: searchDto.passengers };
     }
 
-    // Fetch from database
-    const dbCars = await this.carModel.find(query).exec();
+    // Fetch from database - MOCK CARS DISABLED FOR PRODUCTION
+    const dbCars: any[] = []; // await this.carModel.find(query).exec();
 
     // Fetch from live integrations
     let liveCars: CarSearchResult[] = [];

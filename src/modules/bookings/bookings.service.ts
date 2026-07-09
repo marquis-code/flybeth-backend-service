@@ -271,6 +271,12 @@ export class BookingsService {
       const pkg = await this.packagesService.findById(
         createBookingDto.packageId,
       );
+
+      // If no explicit flights/stays were mapped, use the package's base price multiplied by passenger count
+      if (totalBaseFare === 0) {
+        totalBaseFare = pkg.basePrice * (createBookingDto.passengerDetails?.length || 1);
+      }
+
       // Apply the discount percentage defined in the package
       discount = totalBaseFare * (pkg.discountPercentage / 100);
     }
@@ -305,7 +311,7 @@ export class BookingsService {
     // Hide platform commission and ancillary margin inside the base fare as requested
     totalBaseFare += platformCommission + platformAncillaryMargin;
 
-    const totalPassengers =
+    let totalPassengers =
       (bookingFlights.reduce(
         (sum, f) => sum + f.passengers.length,
         0,
@@ -314,6 +320,10 @@ export class BookingsService {
         (sum, s) => sum + s.occupancy.adults + (s.occupancy.children || 0),
         0,
       ) || 0);
+
+    if (totalPassengers === 0 && createBookingDto.packageId) {
+      totalPassengers = createBookingDto.passengerDetails?.length || 1;
+    }
 
     const isBatchBooking = totalPassengers > 1;
     const batchLabel = isBatchBooking ? (createBookingDto.notes || `Team Trip: ${totalPassengers} pax`) : null;

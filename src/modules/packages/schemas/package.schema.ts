@@ -12,6 +12,21 @@ export class Package {
   @Prop({ required: true })
   description: string;
 
+  @Prop()
+  destination: string;
+
+  @Prop()
+  duration: number; // in nights
+
+  @Prop()
+  stars: number;
+
+  @Prop([String])
+  inclusions: string[];
+
+  @Prop({ default: false })
+  isFeatured: boolean;
+
   @Prop([String])
   images: string[];
 

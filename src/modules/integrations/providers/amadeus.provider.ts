@@ -34,13 +34,13 @@ export class AmadeusProvider implements AirlineAdapter {
 
       // Build query params for GET request
       const params = new URLSearchParams({
-        originLocationCode: query.origin.toUpperCase(),
-        destinationLocationCode: query.destination.toUpperCase(),
-        departureDate: query.departureDate,
         adults: String(query.adults || 1),
         currencyCode: "USD",
         max: "50",
       });
+      if (query.origin) params.set("originLocationCode", query.origin.toUpperCase());
+      if (query.destination) params.set("destinationLocationCode", query.destination.toUpperCase());
+      if (query.departureDate) params.set("departureDate", query.departureDate);
 
       if (query.returnDate) {
         params.set("returnDate", query.returnDate);

@@ -27,12 +27,17 @@ export class PermissionsGuard implements CanActivate {
     }
     const { user } = context.switchToHttp().getRequest();
 
+    const userRole = typeof user?.role === 'object' ? user.role?.name : user?.role;
+
     // Super Admins and System Owner bypass permission checks
-    if (user?.role === Role.SUPER_ADMIN || user?.email === 'abahmarquis@gmail.com') {
+    if (userRole === Role.SUPER_ADMIN || user?.email === 'abahmarquis@gmail.com') {
       return true;
     }
 
     if (!user?.permissions) return false;
+
+    // If user has 'all' permissions (from seed), they can access everything
+    if (user.permissions.includes('all')) return true;
 
     return requiredPermissions.every((permission) =>
       user.permissions?.includes(permission),

@@ -27,10 +27,10 @@ async function run() {
   const Role = mongoose.model('Role', RoleSchema, 'roles');
   const User = mongoose.model('User', UserSchema, 'users');
 
-  const adminRole = await Role.findOne({ name: 'super_admin' });
+  let adminRole = await Role.findOne({ name: 'super_admin' });
   if (!adminRole) {
-    console.error('Super Admin role not found!');
-    process.exit(1);
+    console.log('Super Admin role not found, creating it...');
+    adminRole = await Role.create({ name: 'super_admin', permissions: ['all'] });
   }
 
   const email = 'admin@flybeth.com';

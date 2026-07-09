@@ -39,6 +39,9 @@ async function bootstrap() {
       "/bookings",
       "/chat",
       "/marketing",
+      "/admin",
+      "/packages",
+      "/system-config"
     ];
 
     const needsPrefix =

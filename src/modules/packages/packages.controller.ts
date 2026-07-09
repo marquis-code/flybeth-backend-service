@@ -28,6 +28,12 @@ export class PackagesController {
   }
 
   @Public()
+  @Get("dynamic")
+  getDynamic(@Query() query: any) {
+    return this.packagesService.searchDynamic(query);
+  }
+
+  @Public()
   @Get(":id")
   findOne(@Param("id") id: string) {
     return this.packagesService.findById(id);

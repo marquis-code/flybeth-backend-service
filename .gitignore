@@ -65,3 +65,11 @@ agent/dist/
 agent/node_modules/
 user/dist/
 user/node_modules/
+
+# Local scripts and scratch files
+scratch_*.js
+test-*.js
+seed*.js
+seed*.ts
+fix_*.js
+
