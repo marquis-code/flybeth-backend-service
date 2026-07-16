@@ -61,6 +61,7 @@ export interface FlightSearchResult {
   segments?: FlightSegment[]; // legacy
   itineraries: FlightItinerary[];
   cabinClass?: string;
+  fareBrandName?: string;
   expiresAt?: string;
   conditions?: {
     refundable: boolean;

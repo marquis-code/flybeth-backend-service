@@ -295,6 +295,10 @@ export class DuffelProvider implements AirlineAdapter {
         cabinClass:
           offer.slices?.[0]?.segments?.[0]?.passengers?.[0]?.cabin_class ||
           "economy",
+        fareBrandName:
+          offer.slices?.[0]?.fare_brand_name ||
+          offer.slices?.[0]?.segments?.[0]?.passengers?.[0]?.fare_basis_code ||
+          null,
         expiresAt: offer.expires_at,
         paymentRequirements: offer.payment_requirements ? {
           requiresInstantPayment: offer.payment_requirements.requires_instant_payment,
