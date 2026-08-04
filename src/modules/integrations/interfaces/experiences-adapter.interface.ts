@@ -4,6 +4,7 @@ export interface ExperienceSearchQuery {
   latitude: number;
   longitude: number;
   radius?: number; // km
+  query?: string; // Search string (e.g. city name)
 }
 
 export interface ExperienceSearchResult {

@@ -64,6 +64,16 @@ export class PaymentsController {
   }
 
   @Public()
+  @Post("webhook/stripe")
+  @ApiOperation({ summary: "Stripe webhook endpoint" })
+  handleStripeWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers("stripe-signature") signature: string,
+  ) {
+    return this.paymentsService.handleStripeWebhook(req.rawBody!, signature);
+  }
+
+  @Public()
   @Post("webhook/paystack")
   @ApiOperation({ summary: "Paystack webhook endpoint" })
   handlePaystackWebhook(

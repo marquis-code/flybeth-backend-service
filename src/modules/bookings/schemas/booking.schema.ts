@@ -257,6 +257,34 @@ export class Booking {
   @Prop({ default: false })
   hasInsurance: boolean;
 
+  @Prop({ type: Object, required: false })
+  insuranceDetails?: {
+    policyId: string;
+    provider: string;
+    status: string;
+    issuedAt: Date;
+    partnerTransactionId: string;
+  };
+
+  @Prop({ default: false })
+  hasLounge: boolean;
+
+  @Prop({ type: Object, required: false })
+  loungeDetails?: {
+    orderId: number;
+    poNumber: string;
+    provider: string;
+    status: string;
+    amountCharged: number;
+    currencyCode: string;
+    vouchers: Array<{
+      productId: number;
+      voucherCode: string;
+      pin?: string;
+      validity?: string;
+    }>;
+  };
+
   // Security & Fraud tracking
   @Prop()
   ipAddress: string;

@@ -29,6 +29,8 @@ import { BotGuardMiddleware } from "./common/middleware/bot-guard.middleware";
 
 // Feature Modules
 import { AuthModule } from "./modules/auth/auth.module";
+
+import { EsimsModule } from "./modules/esims/esims.module";
 import { UsersModule } from "./modules/users/users.module";
 import { TenantsModule } from "./modules/tenants/tenants.module";
 import { FlightsModule } from "./modules/flights/flights.module";
@@ -120,6 +122,7 @@ import { AppController } from "./app.controller";
     ChatModule,
     StaysModule,
     TrackingModule,
+    EsimsModule,
     IntegrationsModule,
     PackagesModule,
     CarsModule,

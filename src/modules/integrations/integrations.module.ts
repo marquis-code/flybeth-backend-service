@@ -18,6 +18,8 @@ import { FlightsIntegrationService } from "./flights-integration.service";
 import { StaysIntegrationService } from "./stays-integration.service";
 import { TransfersIntegrationService } from "./transfers-integration.service";
 import { ExperiencesIntegrationService } from "./experiences-integration.service";
+import { InsuranceIntegrationService } from "./insurance-integration.service";
+import { LoungesIntegrationService } from "./lounges-integration.service";
 import { AmadeusMarketInsightsService } from "./amadeus-market-insights.service";
 import { ProviderConfigService } from "./provider-config.service";
 import { CarsIntegrationService } from "./cars-integration.service";
@@ -36,6 +38,12 @@ import { HotelbedsHelperService } from "./providers/hotelbeds-helper.service";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
+import { ViatorExperiencesProvider } from "./providers/viator-experiences.provider";
+import { XCoverInsuranceProvider } from "./providers/xcover-insurance.provider";
+import { BookingCarsProvider } from "./providers/booking-cars.provider";
+import { PlumLoungesProvider } from "./providers/plum-lounges.provider";
+import { TraveltekProvider } from "./providers/traveltek.provider";
+import { WelcomePickupsProvider } from "./providers/welcome-pickups.provider";
 import { DuffelIdentityService } from "./duffel-identity.service";
 
 // Processors
@@ -95,20 +103,32 @@ import { DuffelUtilitiesController } from "./duffel-utilities.controller";
     // Transfer providers
     AmadeusTransfersProvider,
     HotelbedsTransfersProvider,
+    WelcomePickupsProvider,
 
     // Experience providers
     AmadeusExperiencesProvider,
     HotelbedsExperiencesProvider,
+    ViatorExperiencesProvider,
+
+    // Insurance providers
+    XCoverInsuranceProvider,
 
     // Cars providers
     DuffelCarsProvider,
+    BookingCarsProvider,
+    
+    // Lounges providers
+    PlumLoungesProvider,
+    TraveltekProvider,
 
     // Integration services
     FlightsIntegrationService,
     StaysIntegrationService,
     TransfersIntegrationService,
     ExperiencesIntegrationService,
+    InsuranceIntegrationService,
     CarsIntegrationService,
+    LoungesIntegrationService,
     AmadeusMarketInsightsService,
     
     // Webhooks
@@ -120,12 +140,16 @@ import { DuffelUtilitiesController } from "./duffel-utilities.controller";
     StaysIntegrationService,
     TransfersIntegrationService,
     ExperiencesIntegrationService,
+    InsuranceIntegrationService,
     CarsIntegrationService,
+    LoungesIntegrationService,
     AmadeusMarketInsightsService,
     ProviderConfigService,
     AmadeusHelperService,
     DuffelIdentityService,
     DuffelWebhooksService,
+    TraveltekProvider,
+    WelcomePickupsProvider,
   ],
 })
 export class IntegrationsModule {}

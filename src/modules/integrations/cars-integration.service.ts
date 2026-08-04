@@ -10,6 +10,7 @@ import {
 } from "./interfaces/car-adapter.interface";
 import { ProviderConfigService } from "./provider-config.service";
 import { DuffelCarsProvider } from "./providers/duffel-cars.provider";
+import { BookingCarsProvider } from "./providers/booking-cars.provider";
 
 @Injectable()
 export class CarsIntegrationService {
@@ -20,8 +21,10 @@ export class CarsIntegrationService {
     private providerConfigService: ProviderConfigService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private duffelCarsProvider: DuffelCarsProvider,
+    private bookingCarsProvider: BookingCarsProvider,
   ) {
     this.registerAdapter(duffelCarsProvider);
+    this.registerAdapter(bookingCarsProvider);
   }
 
   registerAdapter(adapter: CarAdapter) {
@@ -43,7 +46,7 @@ export class CarsIntegrationService {
     const startTime = Date.now();
     const config = await this.providerConfigService.getConfig();
 
-    const activeProviderNames: string[] = ["duffel-cars"];
+    const activeProviderNames: string[] = ["duffel-cars", "booking-cars"];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))

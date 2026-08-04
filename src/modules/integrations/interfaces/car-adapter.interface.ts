@@ -11,6 +11,12 @@ export interface CarSearchQuery {
   vehicleType?: string;
   currencyCode?: string;
   passengers?: number;
+  driverAge?: number;
+  bookerCountry?: string; // e.g., 'nl', 'us'
+  coordinates?: {
+    latitude: number;
+    longitude: number;
+  };
 }
 
 export interface CarSearchResult {

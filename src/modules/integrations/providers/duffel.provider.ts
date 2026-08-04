@@ -79,6 +79,11 @@ export class DuffelProvider implements AirlineAdapter {
         }
       }
 
+      if (slices.length === 0) {
+        this.logger.warn("Duffel search skipped: No valid slices provided");
+        return [];
+      }
+
       const requestBody: any = {
         data: {
           slices,

@@ -32,6 +32,11 @@ export class AmadeusProvider implements AirlineAdapter {
         return [];
       }
 
+      if (!query.origin || !query.destination || !query.departureDate) {
+        this.logger.warn("Amadeus search skipped: Missing required fields (origin, destination, or departureDate)");
+        return [];
+      }
+
       // Build query params for GET request
       const params = new URLSearchParams({
         adults: String(query.adults || 1),

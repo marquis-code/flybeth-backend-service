@@ -50,6 +50,7 @@ export enum PaymentStatus {
 }
 
 export enum PaymentProvider {
+  STRIPE = "stripe",
   PAYPAL = "paypal",
   PAYSTACK = "paystack",
   MANUAL = "manual",

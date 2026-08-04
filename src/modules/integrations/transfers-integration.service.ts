@@ -7,6 +7,7 @@ import {
 } from "./interfaces/transfers-adapter.interface";
 import { AmadeusTransfersProvider } from "./providers/amadeus-transfers.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
+import { WelcomePickupsProvider } from "./providers/welcome-pickups.provider";
 import { ProviderConfigService } from "./provider-config.service";
 
 @Injectable()
@@ -17,10 +18,12 @@ export class TransfersIntegrationService {
   constructor(
     private amadeusTransfersProvider: AmadeusTransfersProvider,
     private hotelbedsTransfersProvider: HotelbedsTransfersProvider,
+    private welcomePickupsProvider: WelcomePickupsProvider,
     private providerConfigService: ProviderConfigService,
   ) {
     this.registerAdapter(amadeusTransfersProvider);
     this.registerAdapter(hotelbedsTransfersProvider);
+    this.registerAdapter(welcomePickupsProvider);
   }
 
   registerAdapter(adapter: TransfersAdapter) {
@@ -37,7 +40,7 @@ export class TransfersIntegrationService {
     };
   }> {
     const startTime = Date.now();
-    const activeProviderNames = ["amadeus", "hotelbeds-transfers"];
+    const activeProviderNames = ["amadeus", "hotelbeds-transfers", "welcome-pickups"];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))

@@ -7,6 +7,7 @@ import {
 } from "./interfaces/experiences-adapter.interface";
 import { AmadeusExperiencesProvider } from "./providers/amadeus-experiences.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
+import { ViatorExperiencesProvider } from "./providers/viator-experiences.provider";
 
 @Injectable()
 export class ExperiencesIntegrationService {
@@ -16,9 +17,11 @@ export class ExperiencesIntegrationService {
   constructor(
     private amadeusExperiencesProvider: AmadeusExperiencesProvider,
     private hotelbedsExperiencesProvider: HotelbedsExperiencesProvider,
+    private viatorExperiencesProvider: ViatorExperiencesProvider,
   ) {
     this.registerAdapter(amadeusExperiencesProvider);
     this.registerAdapter(hotelbedsExperiencesProvider);
+    this.registerAdapter(viatorExperiencesProvider);
   }
 
   registerAdapter(adapter: ExperiencesAdapter) {
@@ -35,7 +38,7 @@ export class ExperiencesIntegrationService {
     };
   }> {
     const startTime = Date.now();
-    const activeProviderNames = ["amadeus", "hotelbeds-activities"];
+    const activeProviderNames = ["amadeus", "hotelbeds-activities", "viator"];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))

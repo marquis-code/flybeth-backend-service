@@ -11,6 +11,7 @@ import { Payment, PaymentDocument } from "./schemas/payment.schema";
 import { InitializePaymentDto, RefundPaymentDto } from "./dto/payment.dto";
 import { PaypalProvider } from "./providers/paypal.provider";
 import { PaystackProvider } from "./providers/paystack.provider";
+import { StripeProvider } from "./providers/stripe.provider";
 import {
   BankAccount,
   BankAccountDocument,
@@ -37,6 +38,7 @@ export class PaymentsService {
     private bankAccountModel: Model<BankAccountDocument>,
     private paypalProvider: PaypalProvider,
     private paystackProvider: PaystackProvider,
+    private stripeProvider: StripeProvider,
     private bookingsService: BookingsService,
     private walletService: WalletService,
     private bnplFactory: BnplFactory,
@@ -44,7 +46,7 @@ export class PaymentsService {
   ) {}
   /**
    * Determine which payment provider to use based on currency.
-   * Paystack for African currencies, PayPal for everything else.
+   * Paystack for NGN, Stripe for everything else (PayPal as legacy/manual override).
    */
   private selectProvider(
     currency: string,
@@ -57,16 +59,16 @@ export class PaymentsService {
       if (forcedProvider === "affirm") return PaymentProvider.AFFIRM;
       if (forcedProvider === "klarna") return PaymentProvider.KLARNA;
       if (forcedProvider === "paypal_four") return PaymentProvider.PAYPAL_FOUR;
+      if (forcedProvider === "paypal") return PaymentProvider.PAYPAL;
       
       return forcedProvider === "paystack"
         ? PaymentProvider.PAYSTACK
-        : PaymentProvider.PAYPAL;
+        : PaymentProvider.STRIPE;
     }
 
-    return PAYSTACK_CURRENCIES.includes(currency.toUpperCase()) &&
-      currency.toUpperCase() !== "USD"
+    return currency.toUpperCase() === "NGN"
       ? PaymentProvider.PAYSTACK
-      : PaymentProvider.PAYPAL;
+      : PaymentProvider.STRIPE;
   }
 
   async initializePayment(userId?: string, dto?: InitializePaymentDto) {
@@ -120,6 +122,15 @@ export class PaymentsService {
         bookingId: dto.bookingId,
         callbackUrl: dto.callbackUrl || "https://flybeth.com/callback",
         reference,
+      });
+    } else if (provider === PaymentProvider.STRIPE) {
+      providerResponse = await this.stripeProvider.createSession({
+        amount,
+        currency: currency,
+        bookingId: dto.bookingId,
+        callbackUrl: dto.callbackUrl || "https://flybeth.com/callback",
+        reference,
+        email: booking.contactDetails.email,
       });
     } else if (provider === PaymentProvider.PAYSTACK) {
       const paystackRes = await this.paystackProvider.initializeTransaction({
@@ -255,6 +266,29 @@ export class PaymentsService {
       amount,
       currency,
     };
+  }
+
+  async handleStripeWebhook(body: string | Buffer, signature: string) {
+    let event;
+    try {
+      event = this.stripeProvider.verifyWebhookSignature(body, signature);
+    } catch (err) {
+      throw new BadRequestException(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as any;
+      if (session.payment_status === 'paid') {
+        const bookingId = session.metadata?.bookingId;
+        const reference = session.client_reference_id;
+        
+        if (bookingId && reference) {
+          await this.processSuccessfulPayment(bookingId, reference, PaymentProvider.STRIPE);
+        }
+      }
+    }
+
+    return { received: true };
   }
 
   async handlePaypalWebhook(payload: string, signature: string) {
@@ -446,6 +480,16 @@ export class PaymentsService {
         return { success: true, message: 'Payment verified and captured successfully' };
       } catch (e) {
         throw new BadRequestException("PayPal capture failed");
+      }
+    }
+
+    if (dto.provider === PaymentProvider.STRIPE) {
+      try {
+        await this.stripeProvider.captureOrder(dto.checkoutToken);
+        await this.processSuccessfulPayment(dto.bookingId, dto.checkoutToken, dto.provider);
+        return { success: true, message: 'Payment verified and captured successfully' };
+      } catch (e) {
+        throw new BadRequestException("Stripe capture failed or session not paid");
       }
     }
 

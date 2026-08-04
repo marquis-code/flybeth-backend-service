@@ -19,10 +19,10 @@ export class InitializePaymentDto {
 
   @ApiPropertyOptional({
     description: "Force specific provider",
-    enum: ["paypal", "paystack", "wallet", "credpal", "affirm", "klarna", "afterpay", "sezzle", "paypal_four"],
+    enum: ["paypal", "paystack", "stripe", "wallet", "credpal", "affirm", "klarna", "afterpay", "sezzle", "paypal_four"],
   })
   @IsOptional()
-  @IsEnum(["paypal", "paystack", "wallet", "credpal", "affirm", "klarna", "afterpay", "sezzle", "paypal_four"])
+  @IsEnum(["paypal", "paystack", "stripe", "wallet", "credpal", "affirm", "klarna", "afterpay", "sezzle", "paypal_four"])
   provider?: string;
 
   @ApiPropertyOptional({ description: "Additional metadata" })
