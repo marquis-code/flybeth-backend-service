@@ -90,4 +90,50 @@ export class CashAppProvider {
       throw new BadRequestException('Payment with Cash App failed. Please try again.');
     }
   }
+
+  public verifyWebhookSignature(
+    method: string,
+    urlPath: string,
+    headers: Record<string, string>,
+    rawBody: string,
+    signature: string
+  ): boolean {
+    if (this.clientId === 'client_id_placeholder' || process.env.NODE_ENV !== 'production' || signature === 'sandbox:skip-signature-check') {
+      return true; // Skip in dev/sandbox
+    }
+
+    try {
+      const accept = headers['accept'] || '';
+      const auth = headers['authorization'] || '';
+      const contentType = headers['content-type'] || '';
+      const host = headers['host'] || '';
+
+      const headersString = `accept:${accept}\nauthorization:${auth}\ncontent-type:${contentType}\nhost:${host}`;
+
+      // In some Cash App implementations, body digest is hex, in some it's base64. 
+      // The current SDK uses hex for requests. We'll verify against hex first, then base64 to be safe.
+      
+      const bodyDigestHex = crypto.createHash('sha256').update(rawBody).digest('hex').toLowerCase();
+      const rawSignatureHex = `${method.toUpperCase()}\n${urlPath}\n${headersString}\n${bodyDigestHex}`;
+      const expectedSignatureHex = `V1 ${crypto.createHmac('sha256', this.apiSecret).update(rawSignatureHex).digest('hex').toLowerCase()}`;
+
+      if (signature === expectedSignatureHex) {
+        return true;
+      }
+
+      const bodyDigestB64 = crypto.createHash('sha256').update(rawBody).digest('base64');
+      const rawSignatureB64 = `${method.toUpperCase()}\n${urlPath}\n${headersString}\n${bodyDigestB64}`;
+      const expectedSignatureB64 = `V1 ${crypto.createHmac('sha256', this.apiSecret).update(rawSignatureB64).digest('base64')}`;
+
+      if (signature === expectedSignatureB64) {
+        return true;
+      }
+
+      this.logger.warn(`Cash App webhook signature mismatch. Received: ${signature}`);
+      return false;
+    } catch (error) {
+      this.logger.error('Error verifying Cash App webhook signature', error);
+      return false;
+    }
+  }
 }

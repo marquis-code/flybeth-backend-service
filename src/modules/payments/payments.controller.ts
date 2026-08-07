@@ -85,6 +85,21 @@ export class PaymentsController {
   }
 
   @Public()
+  @Post("webhook/cashapp")
+  @ApiOperation({ summary: "Cash App Pay webhook endpoint" })
+  handleCashAppWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers("x-signature") signature: string,
+  ) {
+    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body);
+    const method = req.method;
+    const urlPath = req.originalUrl;
+    const headers = req.headers as Record<string, string>;
+    
+    return this.paymentsService.handleCashAppWebhook(method, urlPath, headers, rawBody, signature);
+  }
+
+  @Public()
   @Post("webhook/:gateway")
   @UseGuards(WebhookSignatureGuard)
   @ApiOperation({ summary: "Generic BNPL webhook endpoint" })

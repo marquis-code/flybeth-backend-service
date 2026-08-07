@@ -294,6 +294,43 @@ export class PaymentsService {
     return { received: true };
   }
 
+  async handleCashAppWebhook(method: string, urlPath: string, headers: Record<string, string>, rawBody: string, signature: string) {
+    const isValid = this.cashAppProvider.verifyWebhookSignature(method, urlPath, headers, rawBody, signature);
+    
+    if (!isValid) {
+      throw new BadRequestException("Invalid Cash App Pay webhook signature");
+    }
+
+    const event = JSON.parse(rawBody);
+
+    switch (event.type) {
+      case "payment.status.updated": {
+        const data = event.data?.object;
+        const bookingId = data?.reference_id; // Using reference_id as bookingId based on our createPayment implementation
+        const status = data?.status;
+
+        if (bookingId && status === 'CAPTURED') {
+          await this.processSuccessfulPayment(
+            bookingId,
+            data.id,
+            PaymentProvider.CASHAPP,
+          );
+        } else if (bookingId && (status === 'FAILED' || status === 'CANCELED' || status === 'DECLINED')) {
+          await this.processFailedPayment(
+            bookingId,
+            PaymentProvider.CASHAPP,
+          );
+        }
+        break;
+      }
+      // Can handle other types like grant.status.updated if needed
+      default:
+        this.logger.log(`Received unhandled Cash App webhook event type: ${event.type}`);
+    }
+
+    return { received: true };
+  }
+
   async handlePaypalWebhook(payload: string, signature: string) {
     try {
       // Basic webhook implementation
