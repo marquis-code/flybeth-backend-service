@@ -24,6 +24,7 @@ import { ResendService } from "./resend.service";
 import { forwardRef, Inject } from "@nestjs/common";
 import { ChatGateway } from "../chat/chat.gateway";
 import { NotificationsGateway } from "./notifications.gateway";
+import { SystemConfigService } from "../system-config/system-config.service";
 
 @Injectable()
 export class NotificationsService {
@@ -36,6 +37,7 @@ export class NotificationsService {
     private templateModel: Model<EmailTemplateDocument>,
     private configService: ConfigService,
     private resendService: ResendService,
+    private systemConfigService: SystemConfigService,
     @InjectQueue("email-queue") private emailQueue: Queue,
     @Inject(forwardRef(() => ChatGateway))
     private readonly chatGateway: ChatGateway,
@@ -149,6 +151,52 @@ export class NotificationsService {
     const manageUrl = `${this.configService.get("CLIENT_URL")}/bookings/${pnr}`;
     const logoUrl = this.configService.get("APP_LOGO_URL") || "https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png";
     
+    // ── Payment Instructions generation ──
+    let paymentInstructionsHtml = "";
+    if (booking.paymentMethod === 'manual' || booking.paymentMethod === 'transfer' || booking.paymentStatus === 'pending') {
+      const config = await this.systemConfigService.getConfig();
+      const bankAccount = config.bankAccounts?.find(acc => acc.currency === currency) || config.bankAccounts?.[0];
+
+      if (bankAccount) {
+        paymentInstructionsHtml = `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px;">
+          <tr>
+            <td class="px-mob" style="padding: 0 32px;">
+              <div style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <h3 style="margin: 0 0 12px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 16px; font-weight: 700; color: #92400E;">Action Required: Complete Your Payment</h3>
+                <p style="margin: 0 0 16px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #B45309; line-height: 1.5;">Your booking is currently on hold. To confirm your ticket, please complete the bank transfer using the details below:</p>
+                
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border-radius: 8px; padding: 16px; border: 1px solid #FEF3C7;">
+                  <tr>
+                    <td style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #92400E; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Bank Name</td>
+                    <td align="right" style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #1E3A8A; font-weight: 700;">${bankAccount.bankName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #92400E; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Account Name</td>
+                    <td align="right" style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #1E3A8A; font-weight: 700;">${bankAccount.accountName}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #92400E; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Account Number</td>
+                    <td align="right" style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 18px; color: #1E3A8A; font-weight: 800; letter-spacing: 1px;">${bankAccount.accountNumber}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 12px; color: #92400E; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">Amount to Send</td>
+                    <td align="right" style="padding: 4px 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 16px; color: #B45309; font-weight: 800;">${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                  </tr>
+                </table>
+                
+                <div style="margin-top: 16px; padding: 12px; background-color: #FEF3C7; border-radius: 6px;">
+                  <p style="margin: 0; font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 13px; color: #92400E; font-weight: 600;">
+                    &#9888; Important: <span style="font-weight: 400;">${bankAccount.instructions || `Please include your Booking Reference <strong>${pnr}</strong> in the transfer memo.`}</span>
+                  </p>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>`;
+      }
+    }
+
     // ── Flight data extraction ──
     const firstFlight = booking.flights && booking.flights[0];
     const isReturn = booking.isRoundTrip || 
@@ -490,8 +538,8 @@ export class NotificationsService {
                   <td align="right">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td style="background-color: #F0FDF4; border-radius: 20px; padding: 4px 12px;">
-                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: #16A34A; font-weight: 700;">&#10003; Paid</span>
+                        <td style="background-color: ${booking.paymentStatus === 'pending' ? '#FEF9C3' : '#F0FDF4'}; border-radius: 20px; padding: 4px 12px;">
+                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: ${booking.paymentStatus === 'pending' ? '#CA8A04' : '#16A34A'}; font-weight: 700;">${booking.paymentStatus === 'pending' ? '&#8987; Pending' : '&#10003; Paid'}</span>
                         </td>
                       </tr>
                     </table>
@@ -518,7 +566,7 @@ export class NotificationsService {
                   <td style="border-top: 1px dashed #E2E8F0; padding: 16px 20px;">
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #0F172A; font-weight: 700;">Total charged</td>
+                        <td style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 14px; color: #0F172A; font-weight: 700;">Total due</td>
                         <td align="right">
                           <span class="price-big" style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 800; color: #0F172A;">${currency} ${totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                         </td>
@@ -530,6 +578,9 @@ export class NotificationsService {
             </td>
           </tr>
         </table>
+
+        <!-- ── Payment Instructions (For Manual Payments) ── -->
+        ${paymentInstructionsHtml}
 
         <!-- ── Before You Fly ── -->
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">

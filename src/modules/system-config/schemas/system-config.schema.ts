@@ -31,6 +31,15 @@ export class SystemConfig {
     default: { bags: 25, seats: 15, insurance: 12, vipSupport: 15 } 
   })
   ancillaryPrices: { bags: number; seats: number; insurance: number; vipSupport: number };
+
+  @Prop({ type: MongooseSchema.Types.Mixed, default: [] })
+  bankAccounts: { 
+    currency: string; 
+    accountName: string; 
+    accountNumber: string; 
+    bankName: string;
+    instructions?: string;
+  }[];
 }
 
 export const SystemConfigSchema = SchemaFactory.createForClass(SystemConfig);

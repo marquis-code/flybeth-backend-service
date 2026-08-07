@@ -38,6 +38,23 @@ export class SystemConfigService implements OnModuleInit {
 
     const defaultAncillaryPrices = { bags: 25, seats: 15, insurance: 12, vipSupport: 15 };
 
+    const defaultBankAccounts = [
+      {
+        currency: 'NGN',
+        accountName: 'Flybeth Limited',
+        accountNumber: '0124034266',
+        bankName: 'Wema Bank',
+        instructions: 'Please include your Booking Reference in the transfer memo.'
+      },
+      {
+        currency: 'USD',
+        accountName: 'Flybeth Ltd',
+        accountNumber: '0620862082',
+        bankName: 'Wema Bank',
+        instructions: 'Please include your Booking Reference in the transfer memo.'
+      }
+    ];
+
     if (!config) {
       this.logger.warn('No platform config found. Creating from blueprint...');
       config = new this.configModel({
@@ -48,6 +65,7 @@ export class SystemConfigService implements OnModuleInit {
         ancillaryMargin: 15,
         exchangeRates: defaultExchangeRates,
         ancillaryPrices: defaultAncillaryPrices,
+        bankAccounts: defaultBankAccounts,
         platformName: 'Flybeth Global'
       });
       await config.save();
@@ -55,6 +73,12 @@ export class SystemConfigService implements OnModuleInit {
     } else {
       this.logger.log('Platform config audit in progress...');
       let needsUpdate = false;
+      
+      if (!config.bankAccounts || config.bankAccounts.length === 0) {
+        this.logger.warn('No bank accounts detected. Seeding defaults...');
+        config.bankAccounts = defaultBankAccounts;
+        needsUpdate = true;
+      }
       
       // Force populate if empty or fundamentally incomplete
       if (!config.exchangeRates || config.exchangeRates.length === 0) {
