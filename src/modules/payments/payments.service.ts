@@ -12,6 +12,7 @@ import { InitializePaymentDto, RefundPaymentDto } from "./dto/payment.dto";
 import { PaypalProvider } from "./providers/paypal.provider";
 import { PaystackProvider } from "./providers/paystack.provider";
 import { StripeProvider } from "./providers/stripe.provider";
+import { CashAppProvider } from "./providers/cashapp.provider";
 import {
   BankAccount,
   BankAccountDocument,
@@ -39,6 +40,7 @@ export class PaymentsService {
     private paypalProvider: PaypalProvider,
     private paystackProvider: PaystackProvider,
     private stripeProvider: StripeProvider,
+    private cashAppProvider: CashAppProvider,
     private bookingsService: BookingsService,
     private walletService: WalletService,
     private bnplFactory: BnplFactory,
@@ -60,6 +62,7 @@ export class PaymentsService {
       if (forcedProvider === "klarna") return PaymentProvider.KLARNA;
       if (forcedProvider === "paypal_four") return PaymentProvider.PAYPAL_FOUR;
       if (forcedProvider === "paypal") return PaymentProvider.PAYPAL;
+      if (forcedProvider === "cashapp") return PaymentProvider.CASHAPP;
       
       return forcedProvider === "paystack"
         ? PaymentProvider.PAYSTACK
@@ -625,5 +628,57 @@ export class PaymentsService {
         amount: data.amount,
         callbackUrl: data.callbackUrl
      });
+  }
+
+  async processCashAppPayment(bookingId: string, grantId: string) {
+    let booking: BookingDocument | null = null;
+    if (Types.ObjectId.isValid(bookingId)) {
+      booking = await this.bookingsService.findById(bookingId);
+    } else {
+      booking = await this.bookingsService.findByPNR(bookingId);
+    }
+
+    if (!booking) {
+      throw new NotFoundException("Booking not found");
+    }
+
+    const actualBookingId = (booking as any)._id?.toString() || bookingId;
+
+    // Check for existing successful payment
+    const existingPayment = await this.paymentModel.findOne({
+      booking: new Types.ObjectId(actualBookingId),
+      status: PaymentStatus.SUCCESS,
+    });
+
+    if (existingPayment) {
+      throw new BadRequestException("Booking already paid");
+    }
+
+    const amount = booking.pricing.totalAmount;
+    const currency = booking.pricing.currency || "USD";
+
+    const response = await this.cashAppProvider.createPayment({
+      amount,
+      currency,
+      grantId,
+    });
+
+    // Create payment record
+    const payment = await this.paymentModel.create({
+      booking: new Types.ObjectId(actualBookingId),
+      amount,
+      currency,
+      provider: PaymentProvider.CASHAPP,
+      reference: response.data.payment?.id || `CASHAPP-${Date.now()}`,
+      status: response.status === 'success' ? PaymentStatus.SUCCESS : PaymentStatus.PENDING,
+      metadata: response.data,
+    });
+
+    if (payment.status === PaymentStatus.SUCCESS) {
+      // Trigger order fulfillment
+      await this.orderFulfillmentService.finalizeTravelBooking(actualBookingId);
+    }
+
+    return payment;
   }
 }

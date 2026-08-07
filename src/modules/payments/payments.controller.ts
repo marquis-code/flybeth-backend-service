@@ -117,6 +117,16 @@ export class PaymentsController {
   }
 
   @Public()
+  @Post("cashapp/process")
+  @ApiBearerAuth()
+  @ApiOperation({ summary: "Process a Cash App payment" })
+  processCashAppPayment(
+    @Body() dto: { bookingId: string; grantId: string }
+  ) {
+    return this.paymentsService.processCashAppPayment(dto.bookingId, dto.grantId);
+  }
+
+  @Public()
   @Get("bank-accounts")
   @ApiOperation({ summary: "Get active bank accounts for manual payment" })
   findBankAccounts(@Query("currency") currency?: string) {

@@ -6,6 +6,7 @@ import { PaymentsService } from "./payments.service";
 import { PaypalProvider } from "./providers/paypal.provider";
 import { PaystackProvider } from "./providers/paystack.provider";
 import { StripeProvider } from "./providers/stripe.provider";
+import { CashAppProvider } from "./providers/cashapp.provider";
 import { Payment, PaymentSchema } from "./schemas/payment.schema";
 import { BankAccount, BankAccountSchema } from "./schemas/bank-account.schema";
 import { BookingsModule } from "../bookings/bookings.module";
@@ -34,6 +35,7 @@ import { SezzleService } from "./bnpl/services/sezzle.service";
     PaypalProvider, 
     PaystackProvider,
     StripeProvider,
+    CashAppProvider,
     BnplFactory,
     CredpalService,
     AffirmService,

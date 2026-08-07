@@ -61,6 +61,7 @@ export enum PaymentProvider {
   AFTERPAY = "afterpay",
   SEZZLE = "sezzle",
   PAYPAL_FOUR = "paypal_four",
+  CASHAPP = "cashapp",
 }
 
 export enum FlightStatus {
