@@ -73,9 +73,9 @@ export class AfterpayService implements BnplStrategy {
       const { token, redirectCheckoutUrl } = response.data;
 
       return {
-        checkoutUrl: redirectCheckoutUrl,
-        reference: reference, // we return our own reference to track it
-        token: token // optional, returning for consistency
+        url: 'afterpay_sdk', // Matches frontend expectations
+        reference: token, // token used to start the checkout
+        checkoutUrl: redirectCheckoutUrl // original
       };
     } catch (error) {
       this.logger.error(`Afterpay initialization failed: ${error?.response?.data?.message || error.message}`);
@@ -83,6 +83,35 @@ export class AfterpayService implements BnplStrategy {
         this.logger.error(JSON.stringify(error.response.data));
       }
       throw new BadRequestException('Failed to initialize Afterpay checkout.');
+    }
+  }
+
+  async authorizePayment(checkoutToken: string, bookingId: string, amount: number, currency: string): Promise<boolean> {
+    try {
+      this.logger.log(`Capturing Afterpay payment for token ${checkoutToken}`);
+      const authKey = Buffer.from(`${this.merchantId}:${this.secretKey}`).toString('base64');
+      const response = await axios.post(
+        `${this.apiUrl}/v2/payments/capture`,
+        {
+          token: checkoutToken,
+          merchantReference: bookingId
+        },
+        {
+          headers: {
+            'Authorization': `Basic ${authKey}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        }
+      );
+
+      return response.data.status === 'APPROVED';
+    } catch (error) {
+      this.logger.error(`Failed to capture Afterpay payment: ${error?.response?.data?.message || error.message}`);
+      if (error.response?.data) {
+        this.logger.error(JSON.stringify(error.response.data));
+      }
+      return false;
     }
   }
 
