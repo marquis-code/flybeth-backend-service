@@ -61,9 +61,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /root/flybeth/backend
+            # Pull latest code (includes docker-compose.yml changes)
+            git pull origin main
             # Pull the latest image
             docker compose pull
-            # Restart the services
+            # Full tear-down to ensure Traefik picks up new config
+            docker compose down
+            # Bring everything up fresh
             docker compose up -d
             # Clean up old images
             docker image prune -f

@@ -70,22 +70,24 @@ async function bootstrap() {
   app.use(cookieParser());
 
   // ─── AGGRESSIVE CORS FIX ─────────────────────────────────────────────────────
-  // Remove NestJS app.enableCors() to prevent duplicate header issues.
-  // We handle it entirely via this raw middleware to ensure error responses
-  // and preflight requests get the correct headers.
+  // Handle CORS entirely via raw middleware. NestJS app.enableCors() is NOT used
+  // to prevent duplicate header issues with Traefik.
+  // IMPORTANT: When Allow-Credentials is "true", Allow-Origin CANNOT be "*".
+  //            We MUST echo the requesting origin exactly.
   app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-    } else {
-      res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin || '*';
+    res.setHeader("Access-Control-Allow-Origin", origin);
+
+    // Only set credentials header when we have a real origin (not *)
+    if (req.headers.origin) {
+      res.setHeader("Access-Control-Allow-Credentials", "true");
     }
-    res.setHeader("Access-Control-Allow-Credentials", "true");
+
     res.setHeader(
       "Access-Control-Allow-Methods",
       "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     );
-    
+
     // Reflect requested headers or use a permissive default
     const reqHeaders = req.headers["access-control-request-headers"];
     if (reqHeaders) {
@@ -98,8 +100,9 @@ async function bootstrap() {
           "x-nuxt-upgrade-edge, sentry-trace, baggage",
       );
     }
-    
+
     res.setHeader("Access-Control-Expose-Headers", "set-cookie");
+    res.setHeader("Access-Control-Max-Age", "86400");
 
     if (req.method === "OPTIONS") {
       res.statusCode = 204;
