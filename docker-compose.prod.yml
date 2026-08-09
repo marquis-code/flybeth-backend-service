@@ -7,9 +7,9 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entryPoints.web.address=:80"
       - "--entryPoints.websecure.address=:443"
-      - "--certificatesresolvers.clozaresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.clozaresolver.acme.email=hello@getcloza.com"
-      - "--certificatesresolvers.clozaresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.flybethresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.flybethresolver.acme.email=abahmarquis@gmail.com"
+      - "--certificatesresolvers.flybethresolver.acme.storage=/letsencrypt/acme.json"
     ports:
       - "80:80"
       - "443:443"
@@ -17,7 +17,7 @@ services:
       - "./letsencrypt:/letsencrypt"
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     networks:
-      - cloza-net
+      - flybeth-net
     labels:
       - "traefik.enable=true"
       # HTTP-to-HTTPS Redirect
@@ -33,7 +33,7 @@ services:
     volumes:
       - redis_data:/var/lib/redis/data
     networks:
-      - cloza-net
+      - flybeth-net
 
   api:
     image: "ghcr.io/viyn-labs/cloza-backend:main"
@@ -45,23 +45,19 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
     networks:
-      - cloza-net
+      - flybeth-net
     labels:
       - "traefik.enable=true"
-      # CORS middleware
-      - "traefik.http.middlewares.corsMiddleware.headers.accesscontrolallowheaders=X-Requested-With, Content-Type, Content-Length, Authorization, Accept"
-      - "traefik.http.middlewares.corsMiddleware.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.corsMiddleware.headers.accesscontrolallowmethods=GET, POST, PATCH, DELETE, OPTIONS"
-      - "traefik.http.middlewares.corsMiddleware.headers.accesscontrolmaxage=120"
+      # ─── NO CORS middleware at Traefik level ───
+      # CORS is handled entirely by NestJS to avoid duplicate headers.
       # HTTPS router
-      - "traefik.http.routers.api.rule=Host(`api.getcloza.com`)"
+      - "traefik.http.routers.api.rule=Host(`api.flybeth.com`)"
       - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls.certresolver=clozaresolver"
-      - "traefik.http.routers.api.middlewares=corsMiddleware"
+      - "traefik.http.routers.api.tls.certresolver=flybethresolver"
       - "traefik.http.services.api.loadbalancer.server.port=3000"
 
 networks:
-  cloza-net:
+  flybeth-net:
 
 volumes:
   redis_data:
