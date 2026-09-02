@@ -38,7 +38,6 @@ export class StripeProvider {
 
     try {
       const session = await this.stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
         customer_email: params.email,
         line_items: [
           {
@@ -47,6 +46,7 @@ export class StripeProvider {
               product_data: {
                 name: "Flybeth Booking",
                 description: `Booking Reference: ${params.bookingId}`,
+                tax_code: 'txcd_20030000', // Passenger Transportation
               },
               unit_amount: finalAmount,
             },

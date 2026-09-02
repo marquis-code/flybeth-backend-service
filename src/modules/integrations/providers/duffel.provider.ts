@@ -79,6 +79,16 @@ export class DuffelProvider implements AirlineAdapter {
         }
       }
 
+      // Validate that all departure dates are today or in the future
+      const today = new Date().toISOString().split('T')[0];
+      const invalidSlices = slices.filter(s => s.departure_date < today);
+      if (invalidSlices.length > 0) {
+        this.logger.warn(
+          `Duffel search: Removing ${invalidSlices.length} slice(s) with past departure date(s): ${invalidSlices.map(s => s.departure_date).join(', ')} (today is ${today})`,
+        );
+        slices = slices.filter(s => s.departure_date >= today);
+      }
+
       if (slices.length === 0) {
         this.logger.warn("Duffel search skipped: No valid slices provided");
         return [];
