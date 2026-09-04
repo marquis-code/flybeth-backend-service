@@ -569,6 +569,14 @@ export class PaymentsService {
       // Fallback to basic confirmation if fulfillment service fails but payment is good
       await this.bookingsService.confirmBooking(bookingId);
     }
+
+    // Send booking confirmation email with invoice AFTER payment is confirmed
+    try {
+      const confirmedBooking = await this.bookingsService.findById(bookingId);
+      await this.bookingsService.sendBookingConfirmationEmail(confirmedBooking);
+    } catch (emailError) {
+      this.logger.error(`Failed to send confirmation email for booking ${bookingId}: ${emailError.message}`);
+    }
     
     this.logger.log(`Payment successful and fulfillment triggered for booking: ${bookingId}`);
   }

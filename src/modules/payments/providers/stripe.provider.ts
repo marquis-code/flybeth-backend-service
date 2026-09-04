@@ -61,6 +61,9 @@ export class StripeProvider {
           ? `${params.callbackUrl.replace('status=success', 'status=cancelled')}&reference=${params.reference}`
           : `${params.callbackUrl}?status=cancelled&reference=${params.reference}`,
         client_reference_id: params.reference,
+        managed_payments: {
+          enabled: false,
+        },
         metadata: {
           bookingId: params.bookingId,
           reference: params.reference
@@ -73,9 +76,9 @@ export class StripeProvider {
         url: session.url,
         reference: params.reference,
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error("Failed to create Stripe session", error);
-      throw new BadRequestException("Failed to initialize Stripe payment");
+      throw new BadRequestException(`Failed to initialize Stripe payment: ${error.message || error}`);
     }
   }
 

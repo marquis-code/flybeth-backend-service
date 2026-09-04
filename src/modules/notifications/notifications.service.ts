@@ -538,8 +538,8 @@ export class NotificationsService {
                   <td align="right">
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                       <tr>
-                        <td style="background-color: ${booking.paymentStatus === 'pending' ? '#FEF9C3' : '#F0FDF4'}; border-radius: 20px; padding: 4px 12px;">
-                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: ${booking.paymentStatus === 'pending' ? '#CA8A04' : '#16A34A'}; font-weight: 700;">${booking.paymentStatus === 'pending' ? '&#8987; Pending' : '&#10003; Paid'}</span>
+                        <td style="background-color: ${booking.payment?.status === 'pending' ? '#FEF9C3' : '#F0FDF4'}; border-radius: 20px; padding: 4px 12px;">
+                          <span style="font-family: -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; font-size: 11px; color: ${booking.payment?.status === 'pending' ? '#CA8A04' : '#16A34A'}; font-weight: 700;">${booking.payment?.status === 'pending' ? '&#8987; Pending' : '&#10003; Paid'}</span>
                         </td>
                       </tr>
                     </table>

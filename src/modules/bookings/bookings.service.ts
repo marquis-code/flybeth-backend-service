@@ -442,6 +442,12 @@ export class BookingsService {
             "payment.provider": "wallet",
             "payment.paidAt": new Date(),
           });
+
+          // Send confirmation email after successful wallet payment
+          const walletPopulated = await this.findById(saved._id.toString());
+          this.sendBookingConfirmationEmail(walletPopulated).catch(err => {
+            this.logger.error(`Failed to send confirmation email for ${saved.pnr}: ${err.message}`);
+          });
         } catch (err) {
           this.logger.error(`Wallet payment failed for booking ${saved.pnr}: ${err.message}`);
           // Status remains pending
@@ -475,6 +481,12 @@ export class BookingsService {
               
               this.notificationsService.emitBookingSuccess(saved.toObject());
               this.logger.log(`Duffel booking paid and ticketed for ${saved.pnr}`);
+
+              // Send confirmation email after successful Duffel payment
+              const duffelPopulated = await this.findById(saved._id.toString());
+              this.sendBookingConfirmationEmail(duffelPopulated).catch(err => {
+                this.logger.error(`Failed to send confirmation email for ${saved.pnr}: ${err.message}`);
+              });
             }
           }
         } catch (err) {
@@ -515,9 +527,9 @@ export class BookingsService {
 
     const populated = await this.findById(saved._id.toString());
 
-    // Send notifications
-    this.sendAgentBookingNotifications(populated).catch(err => {
-        this.logger.error(`Failed to send booking notifications for ${populated.pnr}: ${err.message}`);
+    // Send admin notification only (customer email is sent after payment succeeds)
+    this.sendAdminBookingAlert(populated).catch(err => {
+        this.logger.error(`Failed to send admin booking alert for ${populated.pnr}: ${err.message}`);
     });
 
     // Calculate risk score asynchronously (but we'll wait or use a hook)
@@ -983,6 +995,67 @@ export class BookingsService {
       },
       tenantId: params.tenantId,
     });
+  }
+
+  /**
+   * Send the booking confirmation email with PDF invoice to the customer.
+   * This should ONLY be called after payment is confirmed.
+   * Uses the well-designed email template from notifications service.
+   */
+  async sendBookingConfirmationEmail(booking: BookingDocument) {
+    const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "flybethweb@gmail.com";
+    const agentEmail = booking.user ? (booking.user as any).email : booking.contactDetails.email;
+    const agentName = booking.user ? (booking.user as any).firstName : (booking.contactDetails.name || 'Guest');
+
+    // Generate PDF Invoice
+    const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking);
+
+    // 1. Send customer confirmation email with well-designed template
+    await this.notificationsService.sendBookingConfirmation({
+      email: agentEmail,
+      booking: booking,
+      attachments: [{ filename: `Invoice_${booking.pnr}.pdf`, content: pdfBuffer }],
+    });
+
+    // 2. Notify admin about the confirmed payment
+    const adminSubject = `Payment Confirmed: ${booking.pnr}`;
+    const adminHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>Payment Confirmed ✅</h2>
+            <p><strong>Customer:</strong> ${agentName} (${agentEmail})</p>
+            <p><strong>PNR:</strong> ${booking.pnr}</p>
+            <p><strong>Total Amount:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
+            <p><strong>Payment Status:</strong> Paid</p>
+            <hr />
+            <p>Confirmation email with invoice has been sent to the customer.</p>
+        </div>
+    `;
+    await this.notificationsService.sendEmail(adminEmail, adminSubject, adminHtml);
+  }
+
+  /**
+   * Send admin-only notification about a new booking (no customer email).
+   * Called at order creation time, before payment.
+   */
+  private async sendAdminBookingAlert(booking: BookingDocument) {
+    const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "flybethweb@gmail.com";
+    const agentEmail = booking.user ? (booking.user as any).email : booking.contactDetails.email;
+    const agentName = booking.user ? (booking.user as any).firstName : (booking.contactDetails.name || 'Guest');
+
+    const adminSubject = `New Booking Order: ${booking.pnr}`;
+    const adminHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+            <h2>New Booking Order</h2>
+            <p><strong>Customer:</strong> ${agentName} (${agentEmail})</p>
+            <p><strong>PNR:</strong> ${booking.pnr}</p>
+            <p><strong>Total Amount:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
+            <p><strong>Payment Status:</strong> Pending</p>
+            <p><strong>Payment Model:</strong> ${booking.paymentModel}</p>
+            <hr />
+            <p>The customer has not yet paid. Confirmation email will be sent after payment is completed.</p>
+        </div>
+    `;
+    await this.notificationsService.sendEmail(adminEmail, adminSubject, adminHtml);
   }
 
   private async sendAgentBookingNotifications(booking: BookingDocument) {
