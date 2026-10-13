@@ -173,7 +173,6 @@ export class BookingsService {
     // 2. Process Stays
     if (createBookingDto.stays) {
       for (const stayDto of createBookingDto.stays) {
-        const room = await this.staysService.getRoomById(stayDto.roomId);
         const checkIn = new Date(stayDto.checkIn);
         const checkOut = new Date(stayDto.checkOut);
         const nights = Math.max(
@@ -183,23 +182,87 @@ export class BookingsService {
           ),
         );
 
-        const stayPrice = room.pricePerNight * nights * stayDto.occupancy.rooms;
-        totalBaseFare += stayPrice;
-        totalTaxes += stayPrice * 0.1; // 10% hospitality tax
+        const isPlatformStay =
+          !stayDto.provider || stayDto.provider === 'flybeth';
 
-        bookingStays.push({
-          stay: new Types.ObjectId(stayDto.hotelId),
-          room: new Types.ObjectId(stayDto.roomId),
-          checkIn,
-          checkOut,
-          occupancy: stayDto.occupancy,
+        if (isPlatformStay) {
+          // Platform-owned inventory: price authoritatively from the database
+          // and reserve the room.
+          const room = await this.staysService.getRoomById(stayDto.roomId);
+          const stayPrice =
+            room.pricePerNight * nights * (stayDto.occupancy?.rooms || 1);
+          totalBaseFare += stayPrice;
+          // Rates quoted by the search pipeline already include the platform
+          // commission, so no hidden per-vertical tax is added here.
+
+          bookingStays.push({
+            stay: new Types.ObjectId(stayDto.hotelId),
+            room: new Types.ObjectId(stayDto.roomId),
+            checkIn,
+            checkOut,
+            occupancy: stayDto.occupancy,
+            provider: stayDto.provider || 'flybeth',
+            name: stayDto.name,
+          });
+
+          await this.staysService.updateRoomAvailability(
+            stayDto.roomId,
+            stayDto.occupancy.rooms,
+          );
+        } else {
+          // Externally supplied stay: the supplier quote is the source of truth
+          // (it was already confirmed by POST /stays/quote).
+          const stayPrice = Number(stayDto.price) || 0;
+          totalBaseFare += stayPrice;
+
+          bookingStays.push({
+            checkIn,
+            checkOut,
+            occupancy: stayDto.occupancy,
+            provider: stayDto.provider,
+            quoteId: stayDto.quoteId,
+            name: stayDto.name,
+            price: stayPrice,
+          });
+        }
+      }
+    }
+
+    // 2b. Process Transfers
+    const bookingTransfers: any[] = [];
+    if (createBookingDto.transfers?.length) {
+      for (const transferDto of createBookingDto.transfers) {
+        const price = Number(transferDto.price) || 0;
+        totalBaseFare += price;
+
+        bookingTransfers.push({
+          offerId: transferDto.offerId,
+          provider: transferDto.provider,
+          name: transferDto.name,
+          price,
+          currency: transferDto.currency || createBookingDto.currency || 'USD',
+          supplierStatus: 'confirmed',
         });
+      }
+    }
 
-        // Reserve room
-        await this.staysService.updateRoomAvailability(
-          stayDto.roomId,
-          stayDto.occupancy.rooms,
-        );
+    // 2c. Process Activities / Experiences
+    const bookingExperiences: any[] = [];
+    if (createBookingDto.experiences?.length) {
+      for (const experienceDto of createBookingDto.experiences) {
+        const price = Number(experienceDto.price) || 0;
+        totalBaseFare += price;
+
+        bookingExperiences.push({
+          experienceId: experienceDto.experienceId,
+          provider: experienceDto.provider,
+          name: experienceDto.name,
+          price,
+          currency: experienceDto.currency || createBookingDto.currency || 'USD',
+          activityDate: experienceDto.date
+            ? new Date(experienceDto.date)
+            : undefined,
+        });
       }
     }
 
@@ -208,15 +271,27 @@ export class BookingsService {
       for (const carDto of createBookingDto.cars) {
         const car = await this.carsService.findById(carDto.carId);
 
-        // For rental, price might be per day. For ride, it might be flat.
-        const carPrice = car.pricing.baseRate;
+        const pickUp = new Date(carDto.pickUpDate);
+        const dropOff = new Date(carDto.dropOffDate);
+        const rentalDays =
+          Number.isFinite(pickUp.getTime()) &&
+          Number.isFinite(dropOff.getTime()) &&
+          dropOff.getTime() > pickUp.getTime()
+            ? Math.max(1, Math.ceil((dropOff.getTime() - pickUp.getTime()) / 86400000))
+            : 1;
+
+        // Rental rates are per day; rides are a flat fee.
+        const dailyRate =
+          (car as any).pricing?.baseRate ?? (car as any).pricing?.basePrice ?? 0;
+        const carPrice =
+          car.type === 'ride' ? dailyRate : dailyRate * rentalDays;
+
         totalBaseFare += carPrice;
-        totalTaxes += carPrice * 0.05; // 5% car tax
 
         bookingCars.push({
           car: new Types.ObjectId(carDto.carId),
-          pickUpDate: new Date(carDto.pickUpDate),
-          dropOffDate: new Date(carDto.dropOffDate),
+          pickUpDate: pickUp,
+          dropOffDate: dropOff,
           pickUpLocation: carDto.pickUpLocation,
           dropOffLocation: carDto.dropOffLocation,
         });
@@ -265,20 +340,31 @@ export class BookingsService {
       }
     }
 
-    // Apply Package Discount if applicable
-    let discount = 0;
+    // ── Package pricing ───────────────────────────────────────────────────
+    // A package's `totalPrice` is already the customer-facing price (it already
+    // has the advertised discount applied), so it is charged as-is and is NOT
+    // marked up again. The mapped flight/stay records are kept for operations
+    // only.
+    let packagePrice = 0;
+    let advertisedDiscount = 0;
     if (createBookingDto.packageId) {
-      const pkg = await this.packagesService.findById(
-        createBookingDto.packageId,
+      // Dynamic packages are generated on the fly by the packages service and
+      // carry a synthetic "dyn_…" id, so they are not persisted documents.
+      const isDynamicPackage = String(createBookingDto.packageId).startsWith(
+        'dyn_',
       );
+      const pkg = isDynamicPackage
+        ? null
+        : await this.packagesService
+            .findById(createBookingDto.packageId)
+            .catch(() => null);
 
-      // If no explicit flights/stays were mapped, use the package's base price multiplied by passenger count
-      if (totalBaseFare === 0) {
-        totalBaseFare = pkg.basePrice * (createBookingDto.passengerDetails?.length || 1);
+      if (pkg) {
+        packagePrice = Number(pkg.totalPrice) || Number(pkg.basePrice) || 0;
+        advertisedDiscount = Number(pkg.basePrice)
+          ? Math.max(0, Number(pkg.basePrice) - packagePrice)
+          : 0;
       }
-
-      // Apply the discount percentage defined in the package
-      discount = totalBaseFare * (pkg.discountPercentage / 100);
     }
 
     // Calculate tenant markup
@@ -298,18 +384,32 @@ export class BookingsService {
     const isB2C = !createBookingDto.tenantId && userId; // If no tenantId, it's direct consumer
     const isB2B = !!createBookingDto.tenantId;
 
-    // Platform Commission (B2B or B2C)
+    // ── Customer price model ──────────────────────────────────────────────
+    // `totalBaseFare` holds the NET supplier price for commissionable items
+    // (flights, platform stays, platform cars, transfers, experiences). The
+    // platform commission is applied exactly once so the charged amount matches
+    // the `priceWithCommission` the traveller was shown in search results.
+    //
+    // The additional "ancillary margin" is tracked for reporting only and is
+    // deliberately NOT added to the charged total — adding it silently made the
+    // final charge up to 15% higher than the displayed price.
+    const commissionableNet = totalBaseFare;
     const platformCommissionPercent = isB2B ? config.b2bCommission : config.b2cCommission;
-    const platformCommission = totalBaseFare * (platformCommissionPercent / 100);
-    
-    // Ancillary Margin for external flights
+    const platformCommission = commissionableNet * (platformCommissionPercent / 100);
+
     let platformAncillaryMargin = 0;
     if (bookingFlights.some(f => f.provider && f.provider !== 'manual')) {
-      platformAncillaryMargin = totalBaseFare * ((config.ancillaryMargin || 0) / 100);
+      platformAncillaryMargin = commissionableNet * ((config.ancillaryMargin || 0) / 100);
     }
 
-    // Hide platform commission and ancillary margin inside the base fare as requested
-    totalBaseFare += platformCommission + platformAncillaryMargin;
+    // The traveller's chosen extras (seats, bags, insurance…) are priced in the
+    // checkout UI and sent as `pricing.fees`, so the charge matches the summary
+    // the user actually approved.
+    const clientFees = Number(createBookingDto.pricing?.fees) || 0;
+
+    // Hide the platform commission inside the base fare (it is the difference
+    // between the net rate and the displayed customer rate).
+    totalBaseFare = commissionableNet + platformCommission;
 
     let totalPassengers =
       (bookingFlights.reduce(
@@ -325,28 +425,42 @@ export class BookingsService {
       totalPassengers = createBookingDto.passengerDetails?.length || 1;
     }
 
+    // Transfers, activities and car rentals do not carry a passenger manifest,
+    // so fall back to the number of travellers supplied at checkout.
+    if (totalPassengers === 0 && (bookingTransfers.length || bookingExperiences.length || bookingCars.length)) {
+      totalPassengers = createBookingDto.passengerDetails?.length || 1;
+    }
+
     const isBatchBooking = totalPassengers > 1;
     const batchLabel = isBatchBooking ? (createBookingDto.notes || `Team Trip: ${totalPassengers} pax`) : null;
 
     const agentServiceFee = createBookingDto.agentServiceFee || 0;
     const adultMarkup = createBookingDto.adultMarkup || 0;
-    
-    // Dynamic Ancillary pricing from config
+
+    // Ancillary values are recorded from configuration for reporting/ops. They
+    // are not added on top of `clientFees`, which already covers the selection.
     const hasInsurance = createBookingDto.hasInsurance || false;
     const insuranceAmount = hasInsurance ? (config.ancillaryPrices?.insurance || 25) * totalPassengers : 0;
-    
+
     const hasVipSupport = createBookingDto.hasVipSupport || false;
     const vipSupportAmount = hasVipSupport ? (config.ancillaryPrices?.vipSupport || 15) : 0;
-    
+
     const extraBaggageCount = createBookingDto.extraBaggageCount || 0;
     const baggageAmount = extraBaggageCount * (config.ancillaryPrices?.bags || 25);
-    
+
     const premiumSeatCount = createBookingDto.premiumSeatCount || 0;
     const seatAmount = premiumSeatCount * (config.ancillaryPrices?.seats || 15);
 
-    const totalAncillaries = insuranceAmount + vipSupportAmount + baggageAmount + seatAmount;
+    const totalAmount =
+      totalBaseFare +
+      totalTaxes +
+      packagePrice +
+      tenantMarkup +
+      agentServiceFee +
+      (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) +
+      clientFees;
 
-    const totalAmount = totalBaseFare + totalTaxes + tenantMarkup + agentServiceFee + (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) + totalAncillaries - discount;
+    const discount = advertisedDiscount;
 
     const booking = new this.bookingModel({
       pnr: pnr.toUpperCase(),
@@ -355,17 +469,21 @@ export class BookingsService {
         ? new Types.ObjectId(createBookingDto.tenantId)
         : null,
       package: createBookingDto.packageId
-        ? new Types.ObjectId(createBookingDto.packageId)
+        ? Types.ObjectId.isValid(createBookingDto.packageId)
+          ? new Types.ObjectId(createBookingDto.packageId)
+          : null
         : null,
       flights: bookingFlights,
       stays: bookingStays,
       cars: bookingCars,
+      transfers: bookingTransfers,
+      experiences: bookingExperiences,
       cruises: bookingCruises,
       contactDetails: createBookingDto.contactDetails,
       pricing: {
         baseFare: totalBaseFare,
         taxes: totalTaxes,
-        fees: 0,
+        fees: clientFees,
         tenantMarkup,
         agentServiceFee,
         adultMarkup,
@@ -815,7 +933,9 @@ export class BookingsService {
       throw new BadRequestException("Guest bookings cannot be cancelled online. Please contact support.");
     }
 
-    if (booking.user.toString() !== userId) {
+    // `@CurrentUser("_id")` yields a Mongo ObjectId, while `booking.user` is
+    // stored as one too — compare them as strings or every owner is rejected.
+    if (booking.user.toString() !== String(userId)) {
       throw new BadRequestException("You can only cancel your own bookings");
     }
 
@@ -832,21 +952,35 @@ export class BookingsService {
       refundAmount = booking.pricing.totalAmount * 0.8; // 20% cancellation fee
     }
 
-    // Restore seats
+    // Restore seats — only for inventory we actually hold (our own flights).
     for (const f of booking.flights) {
-      await this.flightsService.restoreSeatAvailability(
-        f.flight.toString(),
-        f.class,
-        f.passengers.length,
-      );
+      const flightId = f.flight?.toString();
+      if (!flightId || !Types.ObjectId.isValid(flightId)) continue;
+      try {
+        await this.flightsService.restoreSeatAvailability(
+          flightId,
+          f.class,
+          f.passengers.length,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Could not restore seats for flight ${flightId}: ${err.message}`,
+        );
+      }
     }
 
-    // Restore rooms
-    if (booking.stays) {
-      for (const s of booking.stays) {
+    // Restore rooms — externally supplied stays have no internal room record.
+    for (const s of booking.stays || []) {
+      const roomId = s.room?.toString();
+      if (!roomId || !Types.ObjectId.isValid(roomId)) continue;
+      try {
         await this.staysService.updateRoomAvailability(
-          s.room.toString(),
+          roomId,
           -s.occupancy.rooms,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Could not restore room ${roomId}: ${err.message}`,
         );
       }
     }

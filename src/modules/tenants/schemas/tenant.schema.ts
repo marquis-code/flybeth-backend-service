@@ -1,6 +1,6 @@
 // src/modules/tenants/schemas/tenant.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import { TenantStatus } from "../../../common/constants/roles.constant";
 
 export type TenantDocument = Tenant & Document;
@@ -147,7 +147,7 @@ export class Tenant {
   @Prop({ default: false })
   termsAgreed: boolean;
 
-  @Prop({ type: Types.ObjectId, ref: "User" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User" })
   createdBy: Types.ObjectId;
 
   @Prop({ default: 0 })

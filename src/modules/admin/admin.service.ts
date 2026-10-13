@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
@@ -9,6 +9,8 @@ import { Payment } from "../payments/schemas/payment.schema";
 import { TenantsService } from "../tenants/tenants.service";
 import { UsersService } from "../users/users.service";
 import { BookingsService } from "../bookings/bookings.service";
+import { CreateBookingDto } from "../bookings/dto/booking.dto";
+import { CreateAdminBookingDto } from "./dto/create-admin-booking.dto";
 import { PaginationDto } from "../../common/dto/pagination.dto";
 import { Invitation } from "./schemas/invitation.schema";
 import { NotificationsService } from "../notifications/notifications.service";
@@ -322,6 +324,73 @@ export class AdminService {
 
   async getBookings(paginationDto: PaginationDto) {
     return this.bookingsService.getAllBookings(paginationDto);
+  }
+
+  /**
+   * Manual admin record entry: creates a booking on behalf of a customer.
+   *
+   * Delegates to the canonical `BookingsService.create(...)` so PNR generation,
+   * fraud checks, expiry, pricing and notifications behave exactly as they do
+   * for a customer-initiated booking. A manual entry has no supplier line
+   * items, so the amount the admin entered is recorded as the booking's client
+   * fee — `BookingsService` derives `pricing.totalAmount` from `fees` when
+   * there are no flights/stays/cars/cruises.
+   */
+  async createManualBooking(dto: CreateAdminBookingDto, adminUserId?: string) {
+    const amount = Number(dto.amount);
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new BadRequestException("A valid non-negative amount is required");
+    }
+
+    // Link the record to the customer account when one exists for the email;
+    // otherwise keep it as a guest record with the supplied contact details.
+    const customer = await this.usersService
+      .findByEmail(dto.email)
+      .catch(() => null);
+
+    const createBookingDto: CreateBookingDto = {
+      contactDetails: {
+        email: dto.email,
+        // `phone` is required by the booking schema; manual entries may not
+        // have one on file.
+        phone: dto.phone || "N/A",
+        name: dto.customer,
+        state: dto.state,
+      },
+      pricing: {
+        baseFare: 0,
+        taxes: 0,
+        fees: amount,
+      },
+      currency: dto.currency || "USD",
+      paymentModel: "on_hold",
+      paymentProvider: "manual",
+      notes: [
+        "Manual admin record entry",
+        dto.type ? `service: ${dto.type}` : null,
+        dto.date ? `service date: ${dto.date}` : null,
+        dto.notes || null,
+      ]
+        .filter(Boolean)
+        .join(" | "),
+      paymentMetadata: {
+        source: "admin_manual_entry",
+        serviceType: dto.type,
+        serviceDate: dto.date,
+        enteredBy: adminUserId,
+      },
+    };
+
+    const booking = await this.bookingsService.create(
+      customer ? String((customer as any)._id) : undefined,
+      createBookingDto,
+    );
+
+    this.logger.log(
+      `Manual booking ${booking.pnr} created by admin ${adminUserId ?? "unknown"}`,
+    );
+
+    return booking;
   }
 
   async inviteTeamMember(inviteDto: InviteDto, invitedBy: string) {

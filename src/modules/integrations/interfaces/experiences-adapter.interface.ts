@@ -15,10 +15,20 @@ export interface ExperienceSearchResult {
   shortDescription?: string;
   photos: string[];
   price: number;
+  /** Customer-facing price (net + platform commission). */
+  priceWithCommission?: number;
+  /** Net supplier price, kept for reporting/accounting. */
+  netPrice?: number;
   currency: string;
   rating?: number;
   bookingLink?: string;
   minimumDuration?: string;
+  /** Presentation helpers consumed directly by the user app. */
+  city?: string;
+  countryCode?: string;
+  latitude?: number;
+  longitude?: number;
+  categories?: string[];
 }
 
 export interface ExperiencesAdapter {

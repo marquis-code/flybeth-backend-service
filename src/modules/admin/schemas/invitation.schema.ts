@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import { Role, Permission } from "../../../common/constants/roles.constant";
 
 export type InvitationDocument = Invitation & Document;
@@ -9,7 +9,7 @@ export class Invitation {
   @Prop({ required: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'RoleEntity', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'RoleEntity', required: true })
   role: Types.ObjectId;
 
   @Prop({ type: [String], default: [] })
@@ -24,10 +24,10 @@ export class Invitation {
   @Prop({ enum: ["pending", "accepted", "expired"], default: "pending" })
   status: string;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   invitedBy: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant" })
   tenant: Types.ObjectId;
 }
 

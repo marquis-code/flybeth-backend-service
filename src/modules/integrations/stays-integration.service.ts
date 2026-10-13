@@ -9,6 +9,10 @@ import {
 import { DuffelStaysProvider } from "./providers/duffel-stays.provider";
 import { AmadeusHotelsProvider } from "./providers/amadeus-hotels.provider";
 import { HotelbedsProvider } from "./providers/hotelbeds.provider";
+import {
+  LocalStaysProvider,
+  LOCAL_STAYS_PROVIDER,
+} from "./providers/local-stays.provider";
 import { ProviderConfigService } from "./provider-config.service";
 
 @Injectable()
@@ -20,11 +24,15 @@ export class StaysIntegrationService {
     private duffelStaysProvider: DuffelStaysProvider,
     private amadeusHotelsProvider: AmadeusHotelsProvider,
     private hotelbedsProvider: HotelbedsProvider,
+    private localStaysProvider: LocalStaysProvider,
     private providerConfigService: ProviderConfigService,
   ) {
     this.registerAdapter(duffelStaysProvider);
     this.registerAdapter(amadeusHotelsProvider);
     this.registerAdapter(hotelbedsProvider);
+    // Registered last so live inventory always wins the de-duplication pass,
+    // while our own contracted rooms guarantee a non-empty result set.
+    this.registerAdapter(localStaysProvider);
   }
 
   registerAdapter(adapter: StaysAdapter) {
@@ -52,6 +60,10 @@ export class StaysIntegrationService {
       activeProviderNames = activeProviderNames.filter(
         (name) => name === query.provider,
       );
+    } else if (!activeProviderNames.includes(LOCAL_STAYS_PROVIDER)) {
+      // Platform inventory is always available; it is not part of the togglable
+      // external provider configuration.
+      activeProviderNames = [...activeProviderNames, LOCAL_STAYS_PROVIDER];
     }
 
     if (activeProviderNames.length === 0) {
@@ -96,17 +108,22 @@ export class StaysIntegrationService {
       hotelbeds: 1,
       amadeus: 2,
       duffel: 3,
+      [LOCAL_STAYS_PROVIDER]: 50,
     };
 
-    // Flatten and apply commission first
-    const flattened = allResults.flat().map((result) => ({
-      ...result,
-      priceWithCommission: this.providerConfigService.applyCommission(
-        result.cheapestPrice,
-        config,
-      ),
-      providerWeight: providerWeights[result.provider] || 99,
-    }));
+    // Flatten and apply the customer-facing commission first. This MUST use the
+    // same rate the bookings module charges (segmented b2c/b2b commission), so
+    // the price the traveller sees equals the price they are charged.
+    const flattened = await Promise.all(
+      allResults.flat().map(async (result) => ({
+        ...result,
+        priceWithCommission: await this.providerConfigService.applySegmentedCommission(
+          result.cheapestPrice,
+          'customer',
+        ),
+        providerWeight: providerWeights[result.provider] || 99,
+      })),
+    );
 
     // De-duplication Logic
     // We use a combination of normalized name and rounded coordinates to identify duplicates
@@ -172,20 +189,24 @@ export class StaysIntegrationService {
       throw new Error(`Provider ${provider} does not support fetchRates`);
     }
 
-    const config = await this.providerConfigService.getConfig();
     const rooms = await adapter.fetchRates(searchResultId, query);
 
-    // Apply commission to all rates
-    return rooms.map((room) => ({
-      ...room,
-      rates: room.rates.map((rate) => ({
-        ...rate,
-        priceWithCommission: this.providerConfigService.applyCommission(
-          rate.price,
-          config,
+    // Apply the same customer-facing commission used for search results.
+    return Promise.all(
+      rooms.map(async (room) => ({
+        ...room,
+        rates: await Promise.all(
+          room.rates.map(async (rate) => ({
+            ...rate,
+            priceWithCommission:
+              await this.providerConfigService.applySegmentedCommission(
+                rate.price,
+                'customer',
+              ),
+          })),
         ),
       })),
-    }));
+    );
   }
 
   /**
@@ -196,7 +217,23 @@ export class StaysIntegrationService {
     if (!adapter?.createQuote) {
       throw new Error(`Provider ${provider} does not support createQuote`);
     }
-    return adapter.createQuote(rateId);
+    const quote = await adapter.createQuote(rateId);
+    if (!quote || typeof quote !== 'object') return quote;
+
+    // Expose the customer-facing price (net + commission) so the quote can be
+    // shown directly, and keep the net figure for accounting.
+    const net = Number(quote.price ?? quote.totalAmount ?? 0);
+    if (!net) return quote;
+
+    const customerPrice =
+      await this.providerConfigService.applySegmentedCommission(net, 'customer');
+
+    return {
+      ...quote,
+      netPrice: net,
+      totalAmount: customerPrice,
+      price: customerPrice,
+    };
   }
 
   /**

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type CommissionDocument = Commission & Document;
 
@@ -20,7 +20,7 @@ export class Commission {
   @Prop({ default: true })
   isActive: boolean;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
 }
 

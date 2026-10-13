@@ -1,12 +1,12 @@
 // src/modules/flights/schemas/recent-search.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Schema as MongooseSchema } from "mongoose";
 
 export type RecentSearchDocument = RecentSearch & Document;
 
 @Schema({ timestamps: true })
 export class RecentSearch {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: false })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: false })
   userId?: string;
 
   @Prop({ type: Object, required: true })

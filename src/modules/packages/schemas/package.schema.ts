@@ -1,6 +1,6 @@
 // src/modules/packages/schemas/package.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type PackageDocument = Package & Document;
 
@@ -32,14 +32,14 @@ export class Package {
 
   // Flight component (could be a specific flight ID or a route)
   // For simplicity, we'll link to a specific flight for now
-  @Prop({ type: Types.ObjectId, ref: "Flight" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Flight" })
   flight: Types.ObjectId;
 
   // Stay component
-  @Prop({ type: Types.ObjectId, ref: "Stay" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Stay" })
   stay: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Car" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Car" })
   car: Types.ObjectId;
 
   @Prop({

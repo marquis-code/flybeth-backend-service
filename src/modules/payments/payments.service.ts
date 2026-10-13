@@ -46,6 +46,21 @@ export class PaymentsService {
     private bnplFactory: BnplFactory,
     private orderFulfillmentService: OrderFulfillmentService,
   ) {}
+
+  /**
+   * Appends query parameters to a callback URL that may or may not already
+   * carry a query string.
+   */
+  private appendQuery(
+    url: string | undefined,
+    params: Record<string, string>,
+  ): string {
+    const base = url || "https://flybeth.com/callback";
+    const separator = base.includes("?") ? "&" : "?";
+    const query = new URLSearchParams(params).toString();
+    return `${base}${separator}${query}`;
+  }
+
   /**
    * Determine which payment provider to use based on currency.
    * Paystack for NGN, Stripe for everything else (PayPal as legacy/manual override).
@@ -55,18 +70,29 @@ export class PaymentsService {
     forcedProvider?: string,
   ): PaymentProvider {
     if (forcedProvider) {
-      if (forcedProvider === "manual") return PaymentProvider.MANUAL;
-      if (forcedProvider === "wallet") return PaymentProvider.WALLET;
-      if (forcedProvider === "credpal") return PaymentProvider.CREDPAL;
-      if (forcedProvider === "affirm") return PaymentProvider.AFFIRM;
-      if (forcedProvider === "klarna") return PaymentProvider.KLARNA;
-      if (forcedProvider === "paypal_four") return PaymentProvider.PAYPAL_FOUR;
-      if (forcedProvider === "paypal") return PaymentProvider.PAYPAL;
-      if (forcedProvider === "cashapp") return PaymentProvider.CASHAPP;
-      
-      return forcedProvider === "paystack"
-        ? PaymentProvider.PAYSTACK
-        : PaymentProvider.STRIPE;
+      const normalized = String(forcedProvider).toLowerCase().trim();
+      const direct: Record<string, PaymentProvider> = {
+        manual: PaymentProvider.MANUAL,
+        wallet: PaymentProvider.WALLET,
+        credpal: PaymentProvider.CREDPAL,
+        affirm: PaymentProvider.AFFIRM,
+        klarna: PaymentProvider.KLARNA,
+        paypal_four: PaymentProvider.PAYPAL_FOUR,
+        paypal: PaymentProvider.PAYPAL,
+        cashapp: PaymentProvider.CASHAPP,
+        afterpay: PaymentProvider.AFTERPAY,
+        sezzle: PaymentProvider.SEZZLE,
+        paystack: PaymentProvider.PAYSTACK,
+        stripe: PaymentProvider.STRIPE,
+      };
+
+      const provider = direct[normalized];
+      if (provider) return provider;
+
+      // An unrecognised explicit choice must not silently become a card charge.
+      throw new BadRequestException(
+        `Unsupported payment provider: ${forcedProvider}`,
+      );
     }
 
     return currency.toUpperCase() === "NGN"
@@ -170,6 +196,7 @@ export class PaymentsService {
         PaymentProvider.KLARNA,
         PaymentProvider.PAYPAL_FOUR,
         PaymentProvider.AFTERPAY,
+        PaymentProvider.SEZZLE,
       ].includes(provider)
     ) {
       const bnplStrategy = this.bnplFactory.getStrategy(provider);
@@ -196,14 +223,31 @@ export class PaymentsService {
         instruction:
           "Please transfer the exact amount to any of the provided bank accounts.",
         reference,
-        url: `${dto.callbackUrl}&status=pending_payment&reference=${reference}`,
+        url: this.appendQuery(dto.callbackUrl, {
+          status: "pending_payment",
+          reference,
+        }),
       };
     }
 
-    // Create payment record
+    // Create payment record.
+    //
+    // `/payments/initialize` is public so guests can pay, which means there is
+    // no authenticated user on the request. Attribute the payment to the user
+    // who owns the booking when one exists, and allow `null` for genuine guest
+    // checkouts instead of failing validation.
+    const ownerId =
+      userId && Types.ObjectId.isValid(userId)
+        ? userId
+        : booking.user
+          ? booking.user.toString()
+          : null;
+
     const payment = new this.paymentModel({
-      booking: new Types.ObjectId(dto.bookingId),
-      user: new Types.ObjectId(userId),
+      booking: new Types.ObjectId(bookingId),
+      user: ownerId && Types.ObjectId.isValid(ownerId)
+        ? new Types.ObjectId(ownerId)
+        : null,
       tenant: booking.tenant
         ? new Types.ObjectId(booking.tenant.toString())
         : null,

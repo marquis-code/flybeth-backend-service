@@ -1,6 +1,6 @@
 // src/modules/tracking/schemas/tracking-event.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type TrackingEventDocument = TrackingEvent & Document;
 
@@ -19,7 +19,7 @@ export class TrackingEvent {
   @Prop({ type: Object })
   metadata: Record<string, any>;
 
-  @Prop({ type: Types.ObjectId, ref: "User" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User" })
   user?: Types.ObjectId;
 
   @Prop()

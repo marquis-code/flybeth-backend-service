@@ -1,6 +1,6 @@
 // src/modules/finance/schemas/transaction.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type TransactionDocument = Transaction & Document;
 
@@ -18,10 +18,10 @@ export enum TransactionStatus {
 
 @Schema({ timestamps: true })
 export class Transaction {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   user: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant" })
   tenant: Types.ObjectId;
 
   @Prop({ required: true })
@@ -45,7 +45,7 @@ export class Transaction {
   @Prop({ type: Object })
   metadata: Record<string, any>;
 
-  @Prop({ type: Types.ObjectId, ref: "Booking" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Booking" })
   booking: Types.ObjectId;
 }
 

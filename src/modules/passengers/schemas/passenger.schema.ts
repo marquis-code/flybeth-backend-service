@@ -1,12 +1,12 @@
 // src/modules/passengers/schemas/passenger.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type PassengerDocument = Passenger & Document;
 
 @Schema({ timestamps: true, collection: "passengers" })
 export class Passenger {
-  @Prop({ type: Types.ObjectId, ref: "User", required: false })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: false })
   user?: Types.ObjectId;
 
   @Prop({ required: true, trim: true })

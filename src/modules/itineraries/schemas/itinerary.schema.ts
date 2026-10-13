@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 
 export type ItineraryDocument = Itinerary & Document;
 
@@ -31,10 +31,10 @@ export class ItineraryDay {
 
 @Schema({ timestamps: true })
 export class Itinerary {
-  @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Tenant', required: true })
   tenant: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   agent: Types.ObjectId;
 
   @Prop({ required: true })

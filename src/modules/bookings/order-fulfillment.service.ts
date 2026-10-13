@@ -4,6 +4,8 @@ import { Model, Connection, Types } from 'mongoose';
 import { Booking, BookingDocument } from './schemas/booking.schema';
 import { FlightsIntegrationService } from '../integrations/flights-integration.service';
 import { StaysIntegrationService } from '../integrations/stays-integration.service';
+import { TransfersIntegrationService } from '../integrations/transfers-integration.service';
+import { ExperiencesIntegrationService } from '../integrations/experiences-integration.service';
 import { InsuranceIntegrationService } from '../integrations/insurance-integration.service';
 import { PassengersService } from '../passengers/passengers.service';
 import { BookingStatus, PaymentStatus } from '../../common/constants/roles.constant';
@@ -17,6 +19,8 @@ export class OrderFulfillmentService {
     @InjectConnection() private readonly connection: Connection,
     private readonly flightsIntegrationService: FlightsIntegrationService,
     private readonly staysIntegrationService: StaysIntegrationService,
+    private readonly transfersIntegrationService: TransfersIntegrationService,
+    private readonly experiencesIntegrationService: ExperiencesIntegrationService,
     private readonly insuranceIntegrationService: InsuranceIntegrationService,
     private readonly passengersService: PassengersService,
   ) {}
@@ -87,24 +91,81 @@ export class OrderFulfillmentService {
         }
       }
 
-      // 2. Handle Stays (Hotelbeds / Duffel Stays)
+      // 2. Handle Stays (external suppliers only — platform inventory is
+      //    already reserved by the bookings service)
       if (booking.stays?.length > 0) {
-        const stay = booking.stays[0];
-        if (stay.stay && stay.room && (stay as any).provider) {
-           const guestDetails = {
-             firstName: booking.contactDetails.name.split(' ')[0],
-             lastName: booking.contactDetails.name.split(' ').slice(1).join(' ') || 'Guest',
-             email: booking.contactDetails.email,
-             phone: booking.contactDetails.phone
-           };
-           
-           const stayResult = await this.staysIntegrationService.createBooking(
-             (stay as any).quoteId || stay.room.toString(),
-             guestDetails,
-             (stay as any).provider
-           );
-           
-           supplierReference = (stayResult as any).id || stayResult.reference || supplierReference;
+        for (const stay of booking.stays) {
+          const stayProvider = (stay as any).provider;
+          if (!stayProvider || stayProvider === 'flybeth') continue;
+
+          const guestDetails = {
+            firstName: booking.contactDetails.name.split(' ')[0],
+            lastName: booking.contactDetails.name.split(' ').slice(1).join(' ') || 'Guest',
+            email: booking.contactDetails.email,
+            phone: booking.contactDetails.phone,
+          };
+
+          const stayResult = await this.staysIntegrationService.createBooking(
+            (stay as any).quoteId || (stay as any).supplierReference,
+            guestDetails,
+            stayProvider,
+          );
+
+          supplierReference =
+            (stayResult as any).id ||
+            (stayResult as any).reference ||
+            supplierReference;
+        }
+      }
+
+      // 3. Handle Transfers (external suppliers only)
+      if ((booking as any).transfers?.length > 0) {
+        for (const transfer of (booking as any).transfers) {
+          if (!transfer.provider || transfer.provider === 'flybeth-transfers') {
+            continue;
+          }
+          try {
+            const result = await this.transfersIntegrationService.createOrder(
+              transfer.offerId,
+              transfer.provider,
+              {
+                firstName: booking.contactDetails.name.split(' ')[0],
+                lastName: booking.contactDetails.name.split(' ').slice(1).join(' ') || 'Guest',
+                email: booking.contactDetails.email,
+                phone: booking.contactDetails.phone,
+              },
+            );
+            transfer.reference =
+              (result as any).confirmationNumber || (result as any).orderId;
+          } catch (err) {
+            this.logger.warn(
+              `Transfer supplier sync failed for ${transfer.offerId}: ${err.message}`,
+            );
+          }
+        }
+      }
+
+      // 4. Handle Activities (external suppliers only)
+      if ((booking as any).experiences?.length > 0) {
+        for (const experience of (booking as any).experiences) {
+          if (!experience.provider || experience.provider === 'flybeth-activities') {
+            continue;
+          }
+          try {
+            const result = await this.experiencesIntegrationService.createBooking(
+              {
+                experienceId: experience.experienceId,
+                provider: experience.provider,
+                date: experience.activityDate,
+              },
+              experience.provider,
+            );
+            experience.reference = (result as any)?.reference;
+          } catch (err) {
+            this.logger.warn(
+              `Activity supplier sync failed for ${experience.experienceId}: ${err.message}`,
+            );
+          }
         }
       }
 

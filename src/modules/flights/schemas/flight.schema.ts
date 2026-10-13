@@ -1,6 +1,6 @@
 // src/modules/flights/schemas/flight.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import {
   FlightStatus,
   FlightClass,
@@ -103,7 +103,7 @@ export class Flight {
   @Prop({ enum: FlightStatus, default: FlightStatus.SCHEDULED })
   status: FlightStatus;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
 
   @Prop({ default: false })

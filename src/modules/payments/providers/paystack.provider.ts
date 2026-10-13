@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   InternalServerErrorException,
+  BadRequestException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import axios from "axios";
@@ -67,8 +68,10 @@ export class PaystackProvider {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message;
       this.logger.error(`Paystack initialization failed: ${errorMessage}`);
-      throw new InternalServerErrorException(
-        errorMessage || "Paystack initialization failed",
+      // Surface this as a client-facing gateway error rather than a 500 so the
+      // checkout can prompt the traveller to pick another method.
+      throw new BadRequestException(
+        "Paystack is currently unavailable. Please choose another payment method.",
       );
     }
   }

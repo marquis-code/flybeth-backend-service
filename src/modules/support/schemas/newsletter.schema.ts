@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 
 export type NewsletterSubscriptionDocument = NewsletterSubscription & Document;
 
@@ -8,7 +8,7 @@ export class NewsletterSubscription {
   @Prop({ required: true, lowercase: true, trim: true })
   email: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Tenant', required: true })
   tenant: Types.ObjectId;
 
   @Prop({ default: 'active', enum: ['active', 'unsubscribed'] })

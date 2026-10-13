@@ -43,12 +43,26 @@ export interface StaysSearchResult {
   chain?: string;
   expiresAt?: string;
   searchResultId?: string; // For fetching rates
+  /**
+   * Presentation helpers. The user app renders these directly, so every
+   * adapter should populate them when it can.
+   */
+  type?: string; // hotel | apartment | villa | resort | cabin
+  city?: string;
+  country?: string;
+  nights?: number;
+  rooms?: number;
 }
 
 export interface StaysRoomResult {
   name: string;
   photos: string[];
   beds: Array<{ type: string; count: number }>;
+  /**
+   * Internal inventory id. Present only for platform-owned rooms; the user app
+   * sends it back when creating a booking against our own database.
+   */
+  roomId?: string;
   rates: StaysRateResult[];
 }
 

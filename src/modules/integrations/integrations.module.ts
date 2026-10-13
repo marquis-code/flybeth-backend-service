@@ -12,6 +12,14 @@ import {
   FlightProviderConfigSchema,
 } from "./schemas/flight-provider-config.schema";
 import { Booking, BookingSchema } from "../bookings/schemas/booking.schema";
+import { Stay, StaySchema } from "../stays/schemas/stay.schema";
+import { Room, RoomSchema } from "../stays/schemas/room.schema";
+import {
+  TransferInventory,
+  TransferInventorySchema,
+  ExperienceInventory,
+  ExperienceInventorySchema,
+} from "./schemas/local-inventory.schema";
 
 // Services
 import { FlightsIntegrationService } from "./flights-integration.service";
@@ -46,6 +54,11 @@ import { TraveltekProvider } from "./providers/traveltek.provider";
 import { WelcomePickupsProvider } from "./providers/welcome-pickups.provider";
 import { DuffelIdentityService } from "./duffel-identity.service";
 
+// Platform-owned inventory adapters
+import { LocalStaysProvider } from "./providers/local-stays.provider";
+import { LocalTransfersProvider } from "./providers/local-transfers.provider";
+import { LocalExperiencesProvider } from "./providers/local-experiences.provider";
+
 // Processors
 import { DuffelWebhooksProcessor } from "./duffel-webhooks.processor";
 
@@ -71,6 +84,12 @@ import { DuffelUtilitiesController } from "./duffel-utilities.controller";
         name: Booking.name,
         schema: BookingSchema,
       },
+      // Platform-owned inventory is served through the same adapter contract as
+      // the live providers, so the local adapters need these models here.
+      { name: Stay.name, schema: StaySchema },
+      { name: Room.name, schema: RoomSchema },
+      { name: TransferInventory.name, schema: TransferInventorySchema },
+      { name: ExperienceInventory.name, schema: ExperienceInventorySchema },
     ]),
     forwardRef(() => UsersModule),
     forwardRef(() => AirportsModule),
@@ -99,16 +118,19 @@ import { DuffelUtilitiesController } from "./duffel-utilities.controller";
     DuffelStaysProvider,
     AmadeusHotelsProvider,
     HotelbedsProvider,
+    LocalStaysProvider,
 
     // Transfer providers
     AmadeusTransfersProvider,
     HotelbedsTransfersProvider,
     WelcomePickupsProvider,
+    LocalTransfersProvider,
 
     // Experience providers
     AmadeusExperiencesProvider,
     HotelbedsExperiencesProvider,
     ViatorExperiencesProvider,
+    LocalExperiencesProvider,
 
     // Insurance providers
     XCoverInsuranceProvider,

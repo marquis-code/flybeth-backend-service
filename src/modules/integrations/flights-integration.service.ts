@@ -1,5 +1,5 @@
 // src/modules/integrations/flights-integration.service.ts
-import { Injectable, Logger, Inject } from "@nestjs/common";
+import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import {
@@ -10,6 +10,7 @@ import {
 import { AmadeusProvider } from "./providers/amadeus.provider";
 import { DuffelProvider } from "./providers/duffel.provider";
 import { ProviderConfigService } from "./provider-config.service";
+import { AirportsService } from "../airports/airports.service";
 
 @Injectable()
 export class FlightsIntegrationService {
@@ -20,6 +21,8 @@ export class FlightsIntegrationService {
     private amadeusProvider: AmadeusProvider,
     private duffelProvider: DuffelProvider,
     private providerConfigService: ProviderConfigService,
+    @Inject(forwardRef(() => AirportsService))
+    private airportsService: AirportsService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {
     this.registerAdapter(amadeusProvider);
@@ -404,12 +407,140 @@ export class FlightsIntegrationService {
    * Search for locations (cities/airports) across providers
    */
   async searchLocations(keyword: string, countryCode?: string): Promise<any[]> {
-    // For locations, we primarily use Amadeus as it's the most robust
-    const amadeus = this.adapters.get("amadeus");
-    if (amadeus && amadeus.searchLocations) {
-      return amadeus.searchLocations(keyword, countryCode);
+    const term = (keyword || "").trim();
+    if (!term) return [];
+
+    // LAYER 1 — Amadeus (kept first for accounts that still have access).
+    try {
+      const amadeus = this.adapters.get("amadeus");
+      if (amadeus && (amadeus as any).searchLocations) {
+        const results = await (amadeus as any).searchLocations(term, countryCode);
+        if (Array.isArray(results) && results.length) {
+          return results;
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Amadeus location search unavailable: ${err.message}`);
     }
-    return [];
+
+    // LAYER 2 — Duffel place suggestions (authoritative airport + city search).
+    const duffelResults = await this.searchLocationsViaDuffel(term, countryCode);
+    if (duffelResults.length) return duffelResults;
+
+    // LAYER 3 — our own airport reference data.
+    return this.searchLocationsViaLocalDb(term);
+  }
+
+  /**
+   * Normalises Duffel place suggestions into the Amadeus-ish shape the user app
+   * already understands (iataCode / address.cityName / geoCode.latitude).
+   */
+  private async searchLocationsViaDuffel(
+    keyword: string,
+    countryCode?: string,
+  ): Promise<any[]> {
+    try {
+      const response = await this.duffelProvider.getPlacesSuggestions({
+        query: keyword,
+      });
+      const places = response?.data;
+      if (!Array.isArray(places)) return [];
+
+      const out: any[] = [];
+      const seen = new Set<string>();
+
+      for (const place of places) {
+        const airports = Array.isArray(place.airports) ? place.airports : [];
+        for (const airport of airports) {
+          const code = airport.iata_code;
+          if (!code || seen.has(code)) continue;
+          if (
+            countryCode &&
+            airport.iata_country_code &&
+            airport.iata_country_code.toUpperCase() !== countryCode.toUpperCase()
+          ) {
+            continue;
+          }
+          seen.add(code);
+          out.push({
+            iataCode: code,
+            name: airport.name || place.name || "",
+            detailedName: `${airport.name || ""} (${code})`,
+            subType: "AIRPORT",
+            address: {
+              cityName: airport.city_name || place.city_name || "",
+              countryCode: airport.iata_country_code || "",
+            },
+            geoCode: {
+              latitude: airport.latitude,
+              longitude: airport.longitude,
+            },
+            latitude: airport.latitude,
+            longitude: airport.longitude,
+            timeZone: airport.time_zone,
+            provider: "duffel",
+          });
+        }
+
+        // Make the city itself selectable ("all airports").
+        const cityCode = place.iata_city_code;
+        if (cityCode && !seen.has(cityCode)) {
+          seen.add(cityCode);
+          const firstAirport = airports[0];
+          out.push({
+            iataCode: cityCode,
+            name: place.name || place.city_name || cityCode,
+            detailedName: `${place.name || cityCode} (All Airports)`,
+            subType: "CITY",
+            address: {
+              cityName: place.name || place.city_name || "",
+              countryCode: place.iata_country_code || "",
+            },
+            geoCode: {
+              latitude: firstAirport?.latitude,
+              longitude: firstAirport?.longitude,
+            },
+            latitude: firstAirport?.latitude,
+            longitude: firstAirport?.longitude,
+            provider: "duffel",
+          });
+        }
+      }
+
+      return out;
+    } catch (err) {
+      this.logger.warn(`Duffel location search failed: ${err.message}`);
+      return [];
+    }
+  }
+
+  private async searchLocationsViaLocalDb(keyword: string): Promise<any[]> {
+    try {
+      const airports = (await this.airportsService.searchAirports(
+        keyword,
+        10,
+      )) as any[];
+      return (airports || []).map((a: any) => ({
+        iataCode: a.code,
+        name: a.name,
+        detailedName: `${a.name} (${a.code})`,
+        subType: "AIRPORT",
+        address: {
+          cityName: a.city || "",
+          countryCode: a.countryCode || a.country || "",
+        },
+        geoCode: {
+          latitude: a.latitude ?? a.location?.latitude,
+          longitude: a.longitude ?? a.location?.longitude,
+        },
+        latitude: a.latitude ?? a.location?.latitude,
+        longitude: a.longitude ?? a.location?.longitude,
+        provider: "flybeth",
+      }));
+    } catch (err) {
+      this.logger.warn(`Local airport search failed: ${err.message}`);
+      return [];
+    }
   }
 
   /**

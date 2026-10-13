@@ -1,6 +1,6 @@
 // src/modules/notifications/schemas/notification.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import {
   NotificationType,
   NotificationChannel,
@@ -10,10 +10,10 @@ export type NotificationDocument = Notification & Document;
 
 @Schema({ timestamps: true, collection: "notifications" })
 export class Notification {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   user: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
 
   @Prop({ enum: NotificationType, required: true })

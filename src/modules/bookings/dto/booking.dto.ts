@@ -22,6 +22,26 @@ class BookingStayDto {
   @IsString()
   roomId: string;
 
+  @ApiPropertyOptional({ description: "Inventory provider (flybeth, duffel, hotelbeds…)" })
+  @IsOptional()
+  @IsString()
+  provider?: string;
+
+  @ApiPropertyOptional({ description: "Provider quote id for external inventory" })
+  @IsOptional()
+  @IsString()
+  quoteId?: string;
+
+  @ApiPropertyOptional({ description: "Quoted total for externally supplied stays" })
+  @IsOptional()
+  @IsNumber()
+  price?: number;
+
+  @ApiPropertyOptional({ description: "Property name snapshot" })
+  @IsOptional()
+  @IsString()
+  name?: string;
+
   @ApiProperty()
   @IsString()
   checkIn: string;
@@ -34,6 +54,59 @@ class BookingStayDto {
   @ValidateNested()
   @Type(() => OccupancyDto)
   occupancy: OccupancyDto;
+}
+
+class BookingTransferDto {
+  @ApiProperty({ description: "Supplier offer id" })
+  @IsString()
+  offerId: string;
+
+  @ApiProperty({ description: "Inventory provider" })
+  @IsString()
+  provider: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ description: "Quoted price in the booking currency" })
+  @IsNumber()
+  price: number;
+
+  @ApiPropertyOptional({ default: "USD" })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+}
+
+class BookingExperienceDto {
+  @ApiProperty({ description: "Activity / experience id" })
+  @IsString()
+  experienceId: string;
+
+  @ApiProperty({ description: "Inventory provider" })
+  @IsString()
+  provider: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @ApiProperty({ description: "Quoted price in the booking currency" })
+  @IsNumber()
+  price: number;
+
+  @ApiPropertyOptional({ default: "USD" })
+  @IsOptional()
+  @IsString()
+  currency?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  date?: string;
 }
 
 class BookingCarDto {
@@ -199,6 +272,20 @@ export class CreateBookingDto {
   @ValidateNested({ each: true })
   @Type(() => BookingCarDto)
   cars?: BookingCarDto[];
+
+  @ApiPropertyOptional({ type: [BookingTransferDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BookingTransferDto)
+  transfers?: BookingTransferDto[];
+
+  @ApiPropertyOptional({ type: [BookingExperienceDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => BookingExperienceDto)
+  experiences?: BookingExperienceDto[];
 
   @ApiPropertyOptional({ type: [BookingCruiseDto] })
   @IsOptional()

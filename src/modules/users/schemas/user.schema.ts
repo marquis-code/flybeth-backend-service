@@ -1,6 +1,6 @@
 // src/modules/users/schemas/user.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import {
   Role,
   Permission,
@@ -127,7 +127,7 @@ export class User {
   @Prop({ enum: AgentStatus, default: AgentStatus.PENDING })
   agentStatus: AgentStatus;
 
-  @Prop({ type: Types.ObjectId, ref: "RoleEntity", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "RoleEntity", default: null })
   role: Types.ObjectId | any;
 
   @Prop({ type: AgentProfile })
@@ -136,7 +136,7 @@ export class User {
   @Prop({ type: [String], default: [] })
   permissions: string[];
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
 
   @Prop({ type: UserPreferences, default: () => ({}) })
@@ -157,7 +157,7 @@ export class User {
   @Prop({ type: [FrequentFlyer], default: [] })
   frequentFlyers: FrequentFlyer[];
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: "Passenger" }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: "Passenger" }], default: [] })
   savedPassengers: Types.ObjectId[];
 
   // OTP fields

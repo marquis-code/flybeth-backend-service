@@ -23,6 +23,7 @@ import { PermissionsGuard } from "../../common/guards/permissions.guard";
 import { Role, Permission } from "../../common/constants/roles.constant";
 import { InviteDto } from "./dto/invite.dto";
 import { CreateAdminUserDto } from "./dto/create-admin-user.dto";
+import { CreateAdminBookingDto } from "./dto/create-admin-booking.dto";
 import { Public } from "../../common/decorators/public.decorator";
 import { CommissionDto } from "./dto/commission.dto";
 import { CampaignDto } from "./dto/campaign.dto";
@@ -103,6 +104,18 @@ export class AdminController {
   @ApiOperation({ summary: "List all bookings" })
   getBookings(@Query() paginationDto: PaginationDto) {
     return this.adminService.getBookings(paginationDto);
+  }
+
+  @Post("bookings")
+  @ApiOperation({
+    summary: "Create a booking on behalf of a customer (manual record entry)",
+  })
+  @Roles(Role.SUPER_ADMIN, Role.STAFF)
+  createBooking(@Body() dto: CreateAdminBookingDto, @Req() req: any) {
+    return this.adminService.createManualBooking(
+      dto,
+      req.user?._id || req.user?.sub,
+    );
   }
 
   @Get("system-health")

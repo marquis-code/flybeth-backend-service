@@ -1,6 +1,6 @@
 // src/modules/stays/schemas/stay.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type StayDocument = Stay & Document;
 
@@ -38,7 +38,7 @@ export class Stay {
   @Prop({ min: 1, max: 5 })
   rating: number;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant" })
   tenant: Types.ObjectId;
 
   @Prop({ default: true })

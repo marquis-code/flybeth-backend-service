@@ -42,22 +42,33 @@ export class AuthController {
   ) {
     const isProd = this.configService.get("NODE_ENV") === "production";
 
-    // Cookie options for both tokens
+    // These SPAs (user, agent, admin, vip) read the access token from a
+    // JS-readable cookie to build the `Authorization: Bearer …` header, and
+    // their own `persistSession`/`setUser` helpers write these same cookie
+    // names. A cookie written with `httpOnly: true` CANNOT be read or
+    // overwritten from JavaScript, so the browser silently discarded the
+    // client's write and the client saw no token at all — which bounced every
+    // freshly logged-in user straight back to the sign-in page. Keep the
+    // cookies script-readable so the intended flow works.
+    //
+    // `sameSite: 'lax'` (rather than 'strict') keeps the tokens usable on the
+    // cross-site API calls these portals make; `secure` still applies in
+    // production so the cookie never travels over plain HTTP.
     const cookieOptions = {
-      httpOnly: true,
+      httpOnly: false,
       secure: isProd,
-      sameSite: isProd ? ("strict" as const) : ("lax" as const),
+      sameSite: "lax" as const,
       path: "/",
     };
 
     res.cookie("accessToken", tokens.accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000, // 15 mins
+      maxAge: 7 * 24 * 60 * 60 * 1000, // align with the 7-day client cookie
     });
 
     res.cookie("refreshToken", tokens.refreshToken, {
       ...cookieOptions,
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      maxAge: 30 * 24 * 60 * 60 * 1000, // align with the 30-day client cookie
     });
   }
 

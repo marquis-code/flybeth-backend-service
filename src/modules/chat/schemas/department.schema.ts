@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type DepartmentDocument = Department & Document;
 
@@ -14,7 +14,7 @@ export class Department {
   @Prop({ default: "" })
   description: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: "User" }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: "User" }], default: [] })
   members: Types.ObjectId[];
 
   @Prop({ default: true })

@@ -19,6 +19,10 @@ export interface TransferSearchResult {
   vehicleCode: string;
   vehicleDescription: string;
   price: number;
+  /** Customer-facing price (net + platform commission). */
+  priceWithCommission?: number;
+  /** Net supplier price, kept for reporting/accounting. */
+  netPrice?: number;
   currency: string;
   convertedPrice?: number;
   convertedCurrency?: string;
@@ -28,6 +32,13 @@ export interface TransferSearchResult {
   };
   duration?: string;
   cancellationPolicy?: string;
+  /** Presentation helpers consumed directly by the user app. */
+  name?: string;
+  images?: string[];
+  startLocationCode?: string;
+  city?: string;
+  maxPassengers?: number;
+  maxLuggage?: number;
 }
 
 export interface TransferBookingResult {

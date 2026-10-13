@@ -8,6 +8,11 @@ import {
 import { AmadeusExperiencesProvider } from "./providers/amadeus-experiences.provider";
 import { HotelbedsExperiencesProvider } from "./providers/hotelbeds-experiences.provider";
 import { ViatorExperiencesProvider } from "./providers/viator-experiences.provider";
+import {
+  LocalExperiencesProvider,
+  LOCAL_EXPERIENCES_PROVIDER,
+} from "./providers/local-experiences.provider";
+import { ProviderConfigService } from "./provider-config.service";
 
 @Injectable()
 export class ExperiencesIntegrationService {
@@ -18,10 +23,13 @@ export class ExperiencesIntegrationService {
     private amadeusExperiencesProvider: AmadeusExperiencesProvider,
     private hotelbedsExperiencesProvider: HotelbedsExperiencesProvider,
     private viatorExperiencesProvider: ViatorExperiencesProvider,
+    private localExperiencesProvider: LocalExperiencesProvider,
+    private providerConfigService: ProviderConfigService,
   ) {
     this.registerAdapter(amadeusExperiencesProvider);
     this.registerAdapter(hotelbedsExperiencesProvider);
     this.registerAdapter(viatorExperiencesProvider);
+    this.registerAdapter(localExperiencesProvider);
   }
 
   registerAdapter(adapter: ExperiencesAdapter) {
@@ -38,7 +46,14 @@ export class ExperiencesIntegrationService {
     };
   }> {
     const startTime = Date.now();
-    const activeProviderNames = ["amadeus", "hotelbeds-activities", "viator"];
+    // Platform inventory always participates so the activities page is never
+    // empty when a partner needs credentials we do not have.
+    const activeProviderNames = [
+      "amadeus",
+      "hotelbeds-activities",
+      "viator",
+      LOCAL_EXPERIENCES_PROVIDER,
+    ];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))
@@ -46,7 +61,12 @@ export class ExperiencesIntegrationService {
       .map((adapter) =>
         adapter!
           .searchExperiences(query)
-          .then((results) => results)
+          .then((results) => {
+            this.logger.log(
+              `${adapter!.providerName} experiences returned ${results.length} results`,
+            );
+            return results;
+          })
           .catch((err) => {
             this.logger.error(
               `Experiences adapter ${adapter!.providerName} failed: ${err.message}`,
@@ -57,13 +77,41 @@ export class ExperiencesIntegrationService {
 
     const allResults = await Promise.all(promises);
     const merged = allResults.flat();
+
+    // Publish the customer-facing price alongside the net supplier price, using
+    // the same commission the bookings module applies.
+    const priced = await Promise.all(
+      merged.map(async (item) => ({
+        ...item,
+        netPrice: item.price,
+        priceWithCommission:
+          await this.providerConfigService.applySegmentedCommission(
+            item.price,
+            'customer',
+          ),
+      })),
+    );
+
+    const weights: Record<string, number> = {
+      amadeus: 1,
+      "hotelbeds-activities": 2,
+      viator: 3,
+      [LOCAL_EXPERIENCES_PROVIDER]: 50,
+    };
+    priced.sort((a, b) => {
+      const wa = weights[a.provider] ?? 99;
+      const wb = weights[b.provider] ?? 99;
+      if (wa !== wb) return wa - wb;
+      return a.price - b.price;
+    });
+
     const searchTime = Date.now() - startTime;
 
     return {
-      results: merged,
+      results: priced,
       meta: {
         providersQueried: activeProviderNames,
-        totalResults: merged.length,
+        totalResults: priced.length,
         searchTime,
       },
     };

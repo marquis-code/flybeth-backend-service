@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type EmailTemplateDocument = EmailTemplate & Document;
 
@@ -20,7 +20,7 @@ export class EmailTemplate {
   @Prop({ type: [String], default: [] })
   availableVariables: string[];
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", required: false })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", required: false })
   tenant: Types.ObjectId;
 
   @Prop({ default: true })

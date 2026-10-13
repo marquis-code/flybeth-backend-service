@@ -8,6 +8,10 @@ import {
 import { AmadeusTransfersProvider } from "./providers/amadeus-transfers.provider";
 import { HotelbedsTransfersProvider } from "./providers/hotelbeds-transfers.provider";
 import { WelcomePickupsProvider } from "./providers/welcome-pickups.provider";
+import {
+  LocalTransfersProvider,
+  LOCAL_TRANSFERS_PROVIDER,
+} from "./providers/local-transfers.provider";
 import { ProviderConfigService } from "./provider-config.service";
 
 @Injectable()
@@ -19,11 +23,13 @@ export class TransfersIntegrationService {
     private amadeusTransfersProvider: AmadeusTransfersProvider,
     private hotelbedsTransfersProvider: HotelbedsTransfersProvider,
     private welcomePickupsProvider: WelcomePickupsProvider,
+    private localTransfersProvider: LocalTransfersProvider,
     private providerConfigService: ProviderConfigService,
   ) {
     this.registerAdapter(amadeusTransfersProvider);
     this.registerAdapter(hotelbedsTransfersProvider);
     this.registerAdapter(welcomePickupsProvider);
+    this.registerAdapter(localTransfersProvider);
   }
 
   registerAdapter(adapter: TransfersAdapter) {
@@ -40,7 +46,14 @@ export class TransfersIntegrationService {
     };
   }> {
     const startTime = Date.now();
-    const activeProviderNames = ["amadeus", "hotelbeds-transfers", "welcome-pickups"];
+    // Platform inventory runs alongside the external partners so the transfer
+    // funnel is never empty when a partner is unconfigured.
+    const activeProviderNames = [
+      "amadeus",
+      "hotelbeds-transfers",
+      "welcome-pickups",
+      LOCAL_TRANSFERS_PROVIDER,
+    ];
 
     const promises = activeProviderNames
       .map((name) => this.adapters.get(name))
@@ -48,7 +61,12 @@ export class TransfersIntegrationService {
       .map((adapter) =>
         adapter!
           .searchTransfers(query)
-          .then((results) => results)
+          .then((results) => {
+            this.logger.log(
+              `${adapter!.providerName} transfers returned ${results.length} results`,
+            );
+            return results;
+          })
           .catch((err) => {
             this.logger.error(
               `Transfers adapter ${adapter!.providerName} failed: ${err.message}`,
@@ -59,13 +77,42 @@ export class TransfersIntegrationService {
 
     const allResults = await Promise.all(promises);
     const merged = allResults.flat();
+
+    // Publish the customer-facing price alongside the net supplier price, using
+    // the same commission the bookings module applies.
+    const priced = await Promise.all(
+      merged.map(async (item) => ({
+        ...item,
+        netPrice: item.price,
+        priceWithCommission:
+          await this.providerConfigService.applySegmentedCommission(
+            item.price,
+            'customer',
+          ),
+      })),
+    );
+
+    // Highest quality first: external partners, then our own inventory, then price.
+    const weights: Record<string, number> = {
+      amadeus: 1,
+      "hotelbeds-transfers": 2,
+      "welcome-pickups": 3,
+      [LOCAL_TRANSFERS_PROVIDER]: 50,
+    };
+    priced.sort((a, b) => {
+      const wa = weights[a.provider] ?? 99;
+      const wb = weights[b.provider] ?? 99;
+      if (wa !== wb) return wa - wb;
+      return a.price - b.price;
+    });
+
     const searchTime = Date.now() - startTime;
 
     return {
-      results: merged,
+      results: priced,
       meta: {
         providersQueried: activeProviderNames,
-        totalResults: merged.length,
+        totalResults: priced.length,
         searchTime,
       },
     };

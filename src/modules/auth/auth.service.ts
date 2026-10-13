@@ -29,6 +29,7 @@ import {
 } from "./dto/auth.dto";
 import { comparePassword, generateOTP } from "../../common/utils/crypto.util";
 import { FirebaseAdminService } from "./firebase-admin.service";
+import { AccessControlService } from "../access-control/access-control.service";
 import { SocialLoginDto } from "./dto/auth.dto";
 
 import { v4 as uuidv4 } from "uuid";
@@ -46,6 +47,7 @@ export class AuthService {
     private invitationModel: Model<InvitationDocument>,
     private tenantsService: TenantsService,
     private firebaseAdminService: FirebaseAdminService,
+    private accessControlService: AccessControlService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -87,8 +89,27 @@ export class AuthService {
           throw new ForbiddenException("Email does not match the invitation");
         }
 
-        if (invitation.role.toString() !== registerDto.role) {
+        // `invitation.role` is an ObjectId reference to a RoleEntity, while the
+        // DTO carries a role *name*. Resolve the entity so the two are actually
+        // comparable (previously an ObjectId was compared to a name string, so
+        // every invited signup was rejected).
+        const invitedRole = await this.accessControlService
+          .findRoleById(invitation.role?.toString())
+          .catch(() => null);
+        const invitedRoleName = invitedRole?.name;
+
+        if (
+          registerDto.role &&
+          invitedRoleName &&
+          registerDto.role !== invitedRoleName &&
+          invitation.role?.toString() !== String(registerDto.role)
+        ) {
           throw new ForbiddenException("Role does not match the invitation");
+        }
+
+        // The invitation is authoritative for the granted role.
+        if (invitedRoleName) {
+          registerDto.role = invitedRoleName as any;
         }
       }
     }
@@ -374,8 +395,10 @@ export class AuthService {
       // In a real system, we might send an alert email here
     }
 
-    // Mandatory 2FA: Always send OTP for security as requested
-    const otp = user.email === 'admin@flybeth.com' ? '123456' : generateOTP();
+    // Mandatory 2FA: Always send a freshly generated OTP for security.
+    // NOTE: never hardcode an OTP for any account/environment — that would
+    // bypass 2FA for everyone who knows the constant.
+    const otp = generateOTP();
     await this.usersService.setOTP(user._id.toString(), otp);
 
     await this.notificationsService.sendOtpEmail(

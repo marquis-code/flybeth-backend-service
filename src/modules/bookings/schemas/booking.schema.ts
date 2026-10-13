@@ -1,6 +1,6 @@
 // src/modules/bookings/schemas/booking.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 import {
   BookingStatus,
   PaymentStatus,
@@ -16,7 +16,7 @@ export class BookingFlight {
   @Prop({ required: true })
   class: string;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: "Passenger" }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: "Passenger" }], default: [] })
   passengers: Types.ObjectId[];
 
   @Prop()
@@ -36,10 +36,12 @@ export class BookingFlight {
 
 @Schema({ _id: false })
 export class BookingStay {
-  @Prop({ type: Types.ObjectId, ref: "Stay", required: true })
+  // Platform-owned stays reference our Stay/Room collections; externally
+  // supplied stays (Duffel, Hotelbeds…) only carry the supplier quote.
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Stay", required: false })
   stay: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Room", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Room", required: false })
   room: Types.ObjectId;
 
   @Prop({ required: true })
@@ -55,11 +57,28 @@ export class BookingStay {
     children: number;
     childAges?: number[];
   };
+
+  @Prop()
+  provider: string;
+
+  @Prop()
+  quoteId: string;
+
+  @Prop()
+  supplierReference: string;
+
+  @Prop()
+  name: string;
+
+  @Prop({ min: 0 })
+  price: number;
 }
 
 @Schema({ _id: false })
 export class BookingCar {
-  @Prop({ type: Types.ObjectId, required: true })
+  // `ref` is required for `populate("cars.car")` to resolve a model — without
+  // it the booking list/detail views showed raw ObjectIds.
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Car", required: true })
   car: Types.ObjectId;
 
   @Prop({ required: true })
@@ -75,9 +94,74 @@ export class BookingCar {
   dropOffLocation: string;
 }
 
+/**
+ * Ground transfer leg. Transfers are sold from platform inventory or an
+ * external supplier, so the supplier reference is stored alongside a
+ * denormalised name/price snapshot for the invoice and receipt.
+ */
+@Schema({ _id: false })
+export class BookingTransfer {
+  @Prop({ required: true })
+  offerId: string;
+
+  @Prop({ required: true })
+  provider: string;
+
+  @Prop()
+  name: string;
+
+  @Prop({ required: true, min: 0 })
+  price: number;
+
+  @Prop({ default: "USD" })
+  currency: string;
+
+  @Prop()
+  reference: string;
+
+  @Prop({ enum: ["pending", "confirmed", "cancelled"], default: "confirmed" })
+  supplierStatus: string;
+
+  @Prop({ type: Date })
+  pickupAt: Date;
+
+  @Prop()
+  notes: string;
+}
+
+/**
+ * Activity / experience line item.
+ */
+@Schema({ _id: false })
+export class BookingExperience {
+  @Prop({ required: true })
+  experienceId: string;
+
+  @Prop({ required: true })
+  provider: string;
+
+  @Prop()
+  name: string;
+
+  @Prop({ required: true, min: 0 })
+  price: number;
+
+  @Prop({ default: "USD" })
+  currency: string;
+
+  @Prop()
+  reference: string;
+
+  @Prop({ type: Date })
+  activityDate: Date;
+
+  @Prop({ type: Object })
+  metadata?: Record<string, any>;
+}
+
 @Schema({ _id: false })
 export class BookingCruise {
-  @Prop({ type: Types.ObjectId, ref: "Cruise", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Cruise", required: true })
   cruise: Types.ObjectId;
 
   @Prop({ required: true })
@@ -86,7 +170,7 @@ export class BookingCruise {
   @Prop({ required: true })
   departureDate: Date;
 
-  @Prop({ type: [{ type: Types.ObjectId, ref: "Passenger" }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: "Passenger" }], default: [] })
   passengers: Types.ObjectId[];
 }
 
@@ -197,13 +281,13 @@ export class Booking {
   @Prop({ required: true, unique: true })
   pnr: string;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: false, default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: false, default: null })
   user: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant", default: null })
   tenant: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Package", default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Package", default: null })
   package: Types.ObjectId;
 
   @Prop({ type: [BookingFlight], default: [] })
@@ -214,6 +298,12 @@ export class Booking {
 
   @Prop({ type: [BookingCar], default: [] })
   cars: BookingCar[];
+
+  @Prop({ type: [BookingTransfer], default: [] })
+  transfers: BookingTransfer[];
+
+  @Prop({ type: [BookingExperience], default: [] })
+  experiences: BookingExperience[];
 
   @Prop({ type: [BookingCruise], default: [] })
   cruises: BookingCruise[];

@@ -1,12 +1,12 @@
 // src/modules/audit/schemas/audit-log.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type AuditLogDocument = AuditLog & Document;
 
 @Schema({ timestamps: true, collection: "audit_logs" })
 export class AuditLog {
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   user: Types.ObjectId;
 
   @Prop({ required: true })

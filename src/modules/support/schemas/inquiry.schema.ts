@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Types, Schema as MongooseSchema } from 'mongoose';
 
 export type ContactInquiryDocument = ContactInquiry & Document;
 
@@ -17,7 +17,7 @@ export class ContactInquiry {
   @Prop({ required: true, trim: true })
   message: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'Tenant', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Tenant', required: true })
   tenant: Types.ObjectId;
 
   @Prop({ default: 'new', enum: ['new', 'read', 'replied', 'archived'] })

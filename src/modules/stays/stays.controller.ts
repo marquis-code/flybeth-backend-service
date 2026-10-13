@@ -138,6 +138,21 @@ export class StaysController {
     return this.staysService.search(query);
   }
 
+  // Declared before ":id" so the literal path wins over the parameterised one.
+  @Public()
+  @Get("search")
+  @ApiOperation({ summary: "Search platform stays by city/country" })
+  searchPlatformStays(@Query() query: StaySearchDto) {
+    return this.staysService.search(query);
+  }
+
+  @Public()
+  @Get("rooms/:id")
+  @ApiOperation({ summary: "Get a room by ID" })
+  getRoomById(@Param("id") id: string) {
+    return this.staysService.getRoomById(id);
+  }
+
   @Public()
   @Get(":id")
   @ApiOperation({ summary: "Get stay by ID" })

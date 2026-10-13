@@ -1,12 +1,12 @@
 // src/modules/stays/schemas/room.schema.ts
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type RoomDocument = Room & Document;
 
 @Schema({ timestamps: true })
 export class Room {
-  @Prop({ type: Types.ObjectId, ref: "Stay", required: true, index: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Stay", required: true, index: true })
   stay: Types.ObjectId;
 
   @Prop({ required: true })

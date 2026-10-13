@@ -1,11 +1,11 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type ChatRoomDocument = ChatRoom & Document;
 
 @Schema({ timestamps: true })
 export class ChatRoom {
-  @Prop({ type: [{ type: Types.ObjectId, ref: "User" }], default: [] })
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: "User" }], default: [] })
   participants: Types.ObjectId[];
 
   @Prop({ enum: ["direct", "group", "support"], default: "direct" })
@@ -14,10 +14,10 @@ export class ChatRoom {
   @Prop()
   name?: string;
 
-  @Prop({ type: Types.ObjectId, ref: "ChatMessage" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "ChatMessage" })
   lastMessage?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "Tenant" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "Tenant" })
   tenant?: Types.ObjectId;
 
   @Prop({ type: Object, default: {} })
@@ -32,7 +32,7 @@ export class ChatRoom {
   @Prop()
   ticketNumber?: string;
 
-  @Prop({ type: Types.ObjectId, ref: "User" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User" })
   assignedAgent?: Types.ObjectId;
 }
 

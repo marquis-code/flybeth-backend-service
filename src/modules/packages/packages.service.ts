@@ -29,17 +29,51 @@ export class PackagesService {
   async findAll(query: any): Promise<PackageDocument[]> {
     const filter: any = { isActive: true };
 
-    // Date validity check
+    // Date validity check (a missing validFrom/validUntil means "always valid")
     const now = new Date();
-    filter.validFrom = { $lte: now };
-    filter.validUntil = { $gte: now };
+    filter.$and = [
+      {
+        $or: [
+          { validFrom: { $exists: false } },
+          { validFrom: null },
+          { validFrom: { $lte: now } },
+        ],
+      },
+      {
+        $or: [
+          { validUntil: { $exists: false } },
+          { validUntil: null },
+          { validUntil: { $gte: now } },
+        ],
+      },
+    ];
 
     if (query.maxPrice) {
-      filter.totalPrice = { $lte: query.maxPrice };
+      filter.totalPrice = { $lte: Number(query.maxPrice) };
     }
 
     if (query.packageType) {
       filter.packageType = query.packageType;
+    }
+
+    if (query.duration) {
+      const duration = parseInt(query.duration, 10);
+      if (!Number.isNaN(duration)) {
+        // Treat the chosen duration as an upper bound so "5 nights" still
+        // surfaces 3- and 4-night breaks.
+        filter.duration = { $lte: duration };
+      }
+    }
+
+    const keyword = query.q || query.destination || query.search;
+    if (keyword) {
+      const rx = new RegExp(this.escapeRegex(String(keyword).trim()), "i");
+      filter.$or = [
+        { name: rx },
+        { destination: rx },
+        { description: rx },
+        { inclusions: rx },
+      ];
     }
 
     return this.packageModel
@@ -51,16 +85,31 @@ export class PackagesService {
       .exec();
   }
 
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
   async searchDynamic(query: any): Promise<any[]> {
-    const origin = query.origin || "JFK"; // Default or requires input
-    const destination = query.destination || "DXB";
-    const departureDate = query.departureDate || new Date().toISOString().split('T')[0];
-    const duration = parseInt(query.duration) || 5;
-    
+    const origin = (query.origin || "").trim().toUpperCase();
+    const destination = (query.destination || query.destinationCode || "")
+      .trim()
+      .toUpperCase();
+
+    // Dynamic packaging needs a concrete route and dates. Without them we would
+    // have to invent a JFK→DXB trip and bill the user for it, so return nothing
+    // and let the curated catalogue answer the request.
+    if (!origin || !destination) {
+      return [];
+    }
+
+    const departureDate =
+      query.departureDate || new Date().toISOString().split("T")[0];
+    const duration = parseInt(query.duration, 10) || 5;
+
     // Calculate return date
     const depDateObj = new Date(departureDate);
     depDateObj.setDate(depDateObj.getDate() + duration);
-    const returnDate = depDateObj.toISOString().split('T')[0];
+    const returnDate = depDateObj.toISOString().split("T")[0];
 
     const flightsQuery = {
       origin,
@@ -68,11 +117,17 @@ export class PackagesService {
       departureDate,
       returnDate,
       adults: query.adults ? parseInt(query.adults) : 2,
-      class: "economy"
+      cabinClass: query.cabinClass || "economy",
     };
 
     const staysQuery = {
-      location: { latitude: 0, longitude: 0, radius: 50 }, // Fallback, normally Stays needs coords or city code
+      location: query.latitude
+        ? {
+            latitude: Number(query.latitude),
+            longitude: Number(query.longitude),
+            radius: 25,
+          }
+        : undefined,
       checkInDate: departureDate,
       checkOutDate: returnDate,
       rooms: 1,

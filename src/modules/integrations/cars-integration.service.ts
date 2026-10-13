@@ -71,14 +71,17 @@ export class CarsIntegrationService {
     const allResults = await Promise.all(promises);
     const merged = allResults.flat();
 
-    // Apply commission
-    const withCommission = merged.map((result) => ({
-      ...result,
-      priceWithCommission: this.providerConfigService.applyCommission(
-        result.price.totalAmount,
-        config,
-      ),
-    }));
+    // Apply the same customer-facing commission the bookings module charges.
+    const withCommission = await Promise.all(
+      merged.map(async (result) => ({
+        ...result,
+        priceWithCommission:
+          await this.providerConfigService.applySegmentedCommission(
+            result.price.totalAmount,
+            'customer',
+          ),
+      })),
+    );
 
     // Sort by price
     withCommission.sort(

@@ -12,19 +12,31 @@ export class AirportsController {
   @Public()
   @Get("search")
   @ApiOperation({ summary: "Search airports by name, city, or code" })
-  searchAirports(@Query("q") query: string, @Query("limit") limit?: number) {
-    return this.airportsService.searchAirports(query, limit);
+  searchAirports(
+    @Query("q") q: string,
+    @Query("limit") limit?: number,
+    @Query("query") query?: string,
+    @Query("keyword") keyword?: string,
+  ) {
+    // Accept the spelling used by each client (q / query / keyword).
+    return this.airportsService.searchAirports(q || query || keyword || "", limit);
   }
 
   @Public()
   @Get("cities/search")
   @ApiOperation({ summary: "Search cities by keyword" })
   searchCities(
-    @Query("q") keyword: string,
+    @Query("q") q: string,
     @Query("limit") limit?: number,
     @Query("countryCode") countryCode?: string,
+    @Query("query") query?: string,
+    @Query("keyword") keyword?: string,
   ) {
-    return this.airportsService.searchCities(keyword, limit, countryCode);
+    return this.airportsService.searchCities(
+      q || query || keyword || "",
+      limit,
+      countryCode,
+    );
   }
 
   @Public()

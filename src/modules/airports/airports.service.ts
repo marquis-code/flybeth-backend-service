@@ -1,5 +1,5 @@
 // src/modules/airports/airports.service.ts
-import { Injectable, Inject, NotFoundException } from "@nestjs/common";
+import { Injectable, Inject, NotFoundException, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model } from "mongoose";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
@@ -14,6 +14,8 @@ import {
 
 @Injectable()
 export class AirportsService {
+  private readonly logger = new Logger(AirportsService.name);
+
   constructor(
     @InjectModel(Airport.name) private airportModel: Model<AirportDocument>,
     @InjectModel(Airline.name) private airlineModel: Model<AirlineDocument>,
@@ -22,7 +24,14 @@ export class AirportsService {
   ) {}
 
   async searchAirports(query: string, limit: number = 10) {
-    const cacheKey = `airports:search:${query}:${limit}`;
+    const term = (query || "").trim();
+
+    // An empty term must not reach MongoDB's $text operator (it throws).
+    if (!term) {
+      return this.airportModel.find().limit(limit).lean().exec();
+    }
+
+    const cacheKey = `airports:search:${term}:${limit}`;
     try {
       const cached = await this.cacheManager.get(cacheKey);
       if (cached) return cached;
@@ -30,16 +39,23 @@ export class AirportsService {
       // Ignore cache error
     }
 
-    const results = await this.airportModel
-      .find({ $text: { $search: query } }, { score: { $meta: "textScore" } })
-      .sort({ score: { $meta: "textScore" } })
-      .limit(limit)
-      .lean()
-      .exec();
+    let results: any[] = [];
+    try {
+      results = await this.airportModel
+        .find({ $text: { $search: term } }, { score: { $meta: "textScore" } })
+        .sort({ score: { $meta: "textScore" } })
+        .limit(limit)
+        .lean()
+        .exec();
+    } catch (err) {
+      // Missing text index — fall through to the regex search below.
+      this.logger.warn(`Airport text search failed, using regex: ${err.message}`);
+      results = [];
+    }
 
     // Fallback to regex search if no text search results
     if (results.length === 0) {
-      const regex = new RegExp(query, "i");
+      const regex = new RegExp(this.escapeRegex(term), "i");
       const regexResults = await this.airportModel
         .find({
           $or: [
@@ -63,6 +79,10 @@ export class AirportsService {
 
     await this.cacheManager.set(cacheKey, results, 86400000);
     return results;
+  }
+
+  private escapeRegex(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
   async getAirportByCode(code: string): Promise<AirportDocument> {
@@ -166,11 +186,47 @@ export class AirportsService {
       // Ignore cache error
     }
 
-    const results = await this.amadeusHelper.searchCities(
-      keyword,
-      limit,
-      countryCode,
-    );
+    let results: any[] = [];
+    try {
+      results = await this.amadeusHelper.searchCities(
+        keyword,
+        limit,
+        countryCode,
+      );
+    } catch (err) {
+      this.logger.warn(`Amadeus city search unavailable: ${err.message}`);
+      results = [];
+    }
+
+    // Derive city results from our own airport reference data when the live
+    // provider is unavailable (Amadeus Self-Service was retired).
+    if (!Array.isArray(results) || results.length === 0) {
+      try {
+        const airports = (await this.searchAirports(keyword, limit)) as any[];
+        const seen = new Set<string>();
+        results = (airports || [])
+          .filter((a: any) => {
+            const key = `${a.city}|${a.countryCode || a.country}`.toLowerCase();
+            if (!a.city || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map((a: any) => ({
+            name: a.city,
+            cityCode: a.cityCode || a.code,
+            countryCode: a.countryCode || a.country,
+            countryName: a.country,
+            geoCode: {
+              latitude: a.latitude ?? a.location?.latitude,
+              longitude: a.longitude ?? a.location?.longitude,
+            },
+            provider: "flybeth",
+          }));
+      } catch (err) {
+        this.logger.warn(`Local city search failed: ${err.message}`);
+      }
+    }
+
     try {
       await this.cacheManager.set(cacheKey, results, 86400000); // 24h cache
     } catch (err) {

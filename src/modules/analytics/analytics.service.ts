@@ -18,12 +18,18 @@ export class AnalyticsService {
   ) {}
 
   async getBookingAnalytics(tenantId?: string, days: number = 30) {
-    const cacheKey = `analytics:bookings:${tenantId || "all"}:${days}`;
+    // Guard against NaN/strings arriving from query params — date arithmetic
+    // with a non-numeric value produces an Invalid Date.
+    const safeDays = Math.min(
+      365,
+      Math.max(1, Number.parseInt(String(days), 10) || 30),
+    );
+    const cacheKey = `analytics:bookings:${tenantId || "all"}:${safeDays}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - safeDays);
 
     const matchStage: any = { createdAt: { $gte: startDate } };
     if (tenantId) matchStage.tenant = new Types.ObjectId(tenantId);
@@ -75,12 +81,16 @@ export class AnalyticsService {
   }
 
   async getRevenueAnalytics(tenantId?: string, days: number = 30) {
-    const cacheKey = `analytics:revenue:${tenantId || "all"}:${days}`;
+    const safeDays = Math.min(
+      365,
+      Math.max(1, Number.parseInt(String(days), 10) || 30),
+    );
+    const cacheKey = `analytics:revenue:${tenantId || "all"}:${safeDays}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - safeDays);
 
     const matchStage: any = {
       status: "success",
@@ -136,7 +146,15 @@ export class AnalyticsService {
   }
 
   async getPopularRoutes(limit: number = 10, tenantId?: string) {
-    const cacheKey = `analytics:routes:${tenantId || "all"}:${limit}`;
+    // Query params arrive as strings (and can be NaN after implicit
+    // conversion), so always coerce to a bounded integer before it reaches
+    // `$limit`, which rejects non-numeric arguments.
+    const safeLimit = Math.min(
+      100,
+      Math.max(1, Number.parseInt(String(limit), 10) || 10),
+    );
+
+    const cacheKey = `analytics:routes:${tenantId || "all"}:${safeLimit}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) return cached;
 
@@ -168,7 +186,7 @@ export class AnalyticsService {
           },
         },
         { $sort: { count: -1 } },
-        { $limit: limit },
+        { $limit: safeLimit },
       ])
       .exec();
 

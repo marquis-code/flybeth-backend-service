@@ -1,14 +1,14 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type ChatMessageDocument = ChatMessage & Document;
 
 @Schema({ timestamps: true })
 export class ChatMessage {
-  @Prop({ type: Types.ObjectId, ref: "ChatRoom", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "ChatRoom", required: true })
   room: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: false })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: false })
   sender?: Types.ObjectId;
 
   @Prop({ required: false })
@@ -26,7 +26,7 @@ export class ChatMessage {
   @Prop({ type: Object })
   metadata?: Record<string, any>;
 
-  @Prop({ type: Types.ObjectId, ref: "ChatMessage" })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "ChatMessage" })
   replyTo?: Types.ObjectId;
 
   @Prop({ default: false })

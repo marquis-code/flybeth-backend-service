@@ -48,6 +48,7 @@ export class CarsController {
     return this.carsService.create(createCarDto);
   }
 
+  @Public()
   @Get()
   @ApiOperation({ summary: "List all cars" })
   async findAll() {

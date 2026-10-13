@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { Document, Types } from "mongoose";
+import { Document, Types, Schema as MongooseSchema } from "mongoose";
 
 export type CampaignDocument = Campaign & Document;
 
@@ -32,7 +32,7 @@ export class Campaign {
   @Prop()
   targetBookingReference: string;
 
-  @Prop({ type: [Types.ObjectId], ref: "User", default: [] })
+  @Prop({ type: [MongooseSchema.Types.ObjectId], ref: "User", default: [] })
   specificUsers: Types.ObjectId[];
 
   @Prop({ type: [String], default: [] })
@@ -41,7 +41,7 @@ export class Campaign {
   @Prop()
   imageUrl: string;
 
-  @Prop({ type: Types.ObjectId, ref: "User", required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: "User", required: true })
   createdBy: Types.ObjectId;
 }
 

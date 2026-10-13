@@ -21,12 +21,25 @@ export class ProviderConfigService {
    * Get or create the singleton config document
    */
   async getConfig(): Promise<FlightProviderConfigDocument> {
-    let config = await this.configModel.findOne().exec();
+    const count = await this.configModel.estimatedDocumentCount();
+    const config = await this.configModel
+      .findOne()
+      .sort({ updatedAt: -1 })
+      .exec();
+
     if (!config) {
       this.logger.log("No provider config found, creating default...");
-      config = await this.configModel.create({});
+      const created = await this.configModel.create({});
       this.logger.log("Default provider config created");
+      return created;
     }
+
+    if (count > 1) {
+      this.logger.warn(
+        `Found ${count} provider config documents; using the most recently updated one.`,
+      );
+    }
+
     return config;
   }
 
