@@ -334,7 +334,7 @@ export function renderBookingConfirmation(
 
   return renderEmail({
     preheader: `Booking ${pnr} confirmed — ${slices[0]?.originCode ?? ''} to ${slices[0]?.destCode ?? ''}, ${bookingDate}.`,
-    eyebrow: 'Booking confirmed',
+    eyebrow: needsTransfer ? 'Booking reserved' : 'Booking confirmed',
     heading: `You're going to ${
       slices[0]?.destCity || slices[0]?.destCode || 'your destination'
     }`,
