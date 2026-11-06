@@ -2,6 +2,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Resend } from "resend";
+import { renderEmail } from "./email/layout";
 
 @Injectable()
 export class ResendService {
@@ -111,73 +112,17 @@ export class ResendService {
   /**
    * Flybeth Brand Wrapper for emails
    */
+  /**
+   * Wraps pre-rendered content in the current email design.
+   *
+   * Prefer the renderers in ./email/templates — this exists for callers that
+   * still pass raw HTML and for backward compatibility.
+   */
   public brandWrapper(title: string, content: string): string {
-    const logoUrl = this.configService.get("APP_LOGO_URL") || "https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png";
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="IE=edge">
-        <title>${title}</title>
-      </head>
-      <body style="margin: 0; padding: 0; background-color: #F3EEE2; font-family: Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
-        <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F3EEE2; padding: 40px 16px;">
-          <tr>
-            <td align="center">
-              <!-- Main Email Container -->
-              <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 20px rgba(20,33,61,0.05);">
-                
-                <!-- Header -->
-                <tr>
-                  <td style="padding: 32px; border-bottom: 3px solid #2F9E68; background-color: #FFFFFF;">
-                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="left" valign="middle">
-                          <img src="${logoUrl}" alt="Flybeth Global" style="height: 36px; display: block;" />
-                        </td>
-                        <td align="right" valign="middle">
-                          <p style="margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #6B7280; font-weight: 600;">Notification</p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 32px;">
-                    ${content}
-                  </td>
-                </tr>
-
-                <!-- Footer -->
-                <tr>
-                  <td style="padding: 0 32px 32px 32px; text-align: center;">
-                    <p style="margin: 0; font-size: 13px; color: #6B7280; line-height: 1.6;">
-                      Ready for your next journey? <a href="https://flybeth.com" style="color: #C9A24B; text-decoration: none; font-weight: 600;">Explore more</a><br>
-                      FLYBETH GLOBAL LLC &bull; 1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- App Disclaimer -->
-              <table width="100%" max-width="600" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; margin-top: 16px;">
-                <tr>
-                  <td align="center" style="padding: 16px;">
-                    <p style="margin: 0; font-size: 11px; color: #A0AABF; text-transform: uppercase; letter-spacing: 1px;">
-                      This is an automated message. Please do not reply directly to this email.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </body>
-      </html>
-    `;
+    return renderEmail({
+      preheader: title,
+      heading: title,
+      body: content,
+    });
   }
 }
