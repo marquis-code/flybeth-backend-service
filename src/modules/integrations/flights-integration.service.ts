@@ -754,6 +754,131 @@ export class FlightsIntegrationService {
   }
 
   /**
+   * Cheapest live offer per destination, for the landing-page deal rails.
+   *
+   * Every deal is a real supplier search (roughly 5–10s per route), so results are
+   * cached and the routes are searched with a small concurrency window. City names
+   * come from our own airport reference data rather than being hard-coded.
+   */
+  async getFeaturedDeals(
+    origin: string = "LOS",
+    tripType: string = "round-trip",
+    limit: number = 8,
+  ): Promise<
+    {
+      origin: string;
+      destination: string;
+      city: string;
+      price: number;
+      currency: string;
+      airline: string;
+      airlineLogo?: string;
+      departureDate: string;
+      returnDate?: string;
+      provider: string;
+      offerId: string;
+      lastFoundAt: string;
+    }[]
+  > {
+    const originCode = (origin || "LOS").toUpperCase();
+    const isRoundTrip = !/^one-?way$/i.test(tripType || "");
+    const safeLimit = Math.min(Math.max(Number(limit) || 8, 1), 12);
+    const cacheKey = `flights:featured-deals:${originCode}:${isRoundTrip ? "rt" : "ow"}:${safeLimit}`;
+
+    try {
+      const cached = await this.cacheManager.get<any[]>(cacheKey);
+      if (Array.isArray(cached) && cached.length) return cached;
+    } catch (err) {
+      this.logger.warn(`Featured deals cache get failed: ${err.message}`);
+    }
+
+    // Server-side route set: Nigerian domestic first, then popular international.
+    const candidates = [
+      "ABV", "PHC", "ENU", "KAN",
+      "LHR", "DXB", "JFK", "ACC", "NBO", "JNB",
+    ]
+      .filter((code) => code !== originCode)
+      .slice(0, Math.max(safeLimit, 6));
+
+    const addDays = (days: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split("T")[0];
+    };
+    const departureDate = addDays(21);
+    const returnDate = isRoundTrip ? addDays(28) : undefined;
+
+    const deals: any[] = [];
+    const concurrency = 3;
+
+    for (let i = 0; i < candidates.length; i += concurrency) {
+      const batch = candidates.slice(i, i + concurrency);
+      const settled = await Promise.allSettled(
+        batch.map(async (destination) => {
+          const searchResult = await this.search({
+            origin: originCode,
+            destination,
+            departureDate,
+            ...(returnDate ? { returnDate } : {}),
+            adults: 1,
+            class: "ECONOMY",
+          });
+          const cheapest = [...searchResult.results].sort(
+            (a, b) => a.priceWithCommission - b.priceWithCommission,
+          )[0];
+          if (!cheapest) return null;
+          return {
+            origin: originCode,
+            destination,
+            city: destination,
+            price: cheapest.priceWithCommission,
+            currency: cheapest.currency || "USD",
+            airline: cheapest.airline,
+            airlineLogo: cheapest.airlineLogo,
+            departureDate,
+            ...(returnDate ? { returnDate } : {}),
+            provider: cheapest.provider,
+            offerId: cheapest.offerId,
+            lastFoundAt: new Date().toISOString(),
+          };
+        }),
+      );
+      for (const outcome of settled) {
+        if (outcome.status === "fulfilled" && outcome.value) deals.push(outcome.value);
+      }
+    }
+
+    // Resolve city names from our airport reference data (best effort).
+    await Promise.all(
+      deals.map(async (deal) => {
+        try {
+          const airport: any = await this.airportsService.getAirportByCode(deal.destination);
+          if (airport?.city) deal.city = airport.city;
+        } catch {
+          /* unknown code — the IATA code is a fine fallback */
+        }
+      }),
+    );
+
+    const result = deals
+      .sort((a, b) => a.price - b.price)
+      .slice(0, safeLimit);
+
+    if (result.length) {
+      try {
+        await this.cacheManager.set(cacheKey, result, 3 * 60 * 60 * 1000); // 3h
+      } catch (err) {
+        this.logger.warn(`Featured deals cache set failed: ${err.message}`);
+      }
+    }
+
+    this.logger.log(
+      `Featured deals for ${originCode} (${isRoundTrip ? "round-trip" : "one-way"}): ${result.length} route(s)`,
+    );
+    return result;
+  }
+
+  /**
    * Get live deals for a specific origin
    * This fetches real-time offers for 6-8 popular destinations
    */

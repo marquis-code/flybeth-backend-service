@@ -97,6 +97,25 @@ export class FlightsController {
   }
 
   @Public()
+  @Get("deals/featured")
+  @ApiOperation({
+    summary: "Featured live deals for the landing page",
+    description:
+      "Cheapest real offer per route from the given origin, cached for 3 hours. City names come from our airport reference data.",
+  })
+  getFeaturedDeals(
+    @Query("origin") origin: string = "LOS",
+    @Query("tripType") tripType: string = "round-trip",
+    @Query("limit") limit?: string,
+  ) {
+    return this.flightsIntegrationService.getFeaturedDeals(
+      origin,
+      tripType,
+      limit ? Number(limit) : 8,
+    );
+  }
+
+  @Public()
   @Get("deals/live")
   @ApiOperation({
     summary: "Get live flight deals based on origin (real-time data)",
