@@ -86,6 +86,17 @@ export class FlightsController {
   }
 
   @Public()
+  @Get("providers/health")
+  @ApiOperation({
+    summary: "Check that each configured flight provider is reachable and authenticated",
+    description:
+      "Use this when search results drop to suspiciously few airlines. A provider that fails here is contributing zero offers.",
+  })
+  getProviderHealth() {
+    return this.flightsIntegrationService.checkProviders();
+  }
+
+  @Public()
   @Get("deals/live")
   @ApiOperation({
     summary: "Get live flight deals based on origin (real-time data)",

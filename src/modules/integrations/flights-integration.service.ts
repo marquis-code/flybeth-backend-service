@@ -11,6 +11,7 @@ import { AmadeusProvider } from "./providers/amadeus.provider";
 import { DuffelProvider } from "./providers/duffel.provider";
 import { ProviderConfigService } from "./provider-config.service";
 import { AirportsService } from "../airports/airports.service";
+import { isNigerianOrigin } from "./constants/nigeria-origins.constant";
 
 @Injectable()
 export class FlightsIntegrationService {
@@ -41,6 +42,15 @@ export class FlightsIntegrationService {
     results: FlightSearchResult[];
     meta: {
       providersQueried: string[];
+      providersSkipped: string[];
+      providersWithNoResults: string[];
+      providers: {
+        name: string;
+        status: "ok" | "empty" | "failed";
+        results: number;
+        durationMs: number;
+        error?: string;
+      }[];
       totalResults: number;
       searchTime: number;
     };
@@ -56,11 +66,23 @@ export class FlightsIntegrationService {
         results: [],
         meta: {
           providersQueried: [],
+          providersSkipped: [],
+          providersWithNoResults: [],
+          providers: [],
           totalResults: 0,
           searchTime: 0,
         },
       };
     }
+
+    // Amadeus is contracted for Nigerian-origin traffic only; everything else is Duffel.
+    const { selected: providerNames, skipped: skippedProviderNames } =
+      this.resolveProviderNames(query, activeProviderNames);
+    this.logger.log(
+      `Provider routing for ${query.origin || query.slices?.[0]?.origin}→${query.destination || query.slices?.[0]?.destination}: ` +
+        `using [${providerNames.join(", ") || "none"}]` +
+        (skippedProviderNames.length ? `, skipped [${skippedProviderNames.join(", ")}]` : ""),
+    );
 
     // Generate combinations if flexible dates are enabled or comma-separated dates are passed
     const generateQueries = (baseQuery: FlightSearchQuery): FlightSearchQuery[] => {
@@ -108,12 +130,18 @@ export class FlightsIntegrationService {
     const searchQueries = generateQueries(query);
     this.logger.log(`Generated ${searchQueries.length} query combinations for flexible dates`);
 
-    // Search all active providers concurrently
-    const promises = activeProviderNames
+    // Search the routed providers concurrently, keeping per-provider telemetry so a
+    // provider that has silently gone dark (expired credentials, retired API host,
+    // empty content) is visible in the response instead of just shrinking the list.
+    const promises = providerNames
       .map((name) => this.adapters.get(name))
       .filter(Boolean)
       .map(async (adapter) => {
+        const providerName = adapter!.providerName;
         const results: FlightSearchResult[] = [];
+        const errors: string[] = [];
+        const providerStart = Date.now();
+
         // Run sequentially per provider to avoid rate limits
         for (const q of searchQueries) {
           try {
@@ -124,15 +152,39 @@ export class FlightsIntegrationService {
               await new Promise(resolve => setTimeout(resolve, 500));
             }
           } catch (err) {
-            this.logger.error(`Adapter ${adapter!.providerName} failed on date ${q.departureDate}: ${err.message}`);
+            const message = `${q.departureDate}: ${err.message}`;
+            errors.push(message);
+            this.logger.error(`Adapter ${providerName} failed on date ${message}`);
           }
         }
-        this.logger.log(`${adapter!.providerName} returned ${results.length} total results across ${searchQueries.length} dates`);
-        return results;
+
+        const durationMs = Date.now() - providerStart;
+        this.logger.log(
+          `${providerName} returned ${results.length} results across ${searchQueries.length} date(s) in ${durationMs}ms`,
+        );
+
+        if (results.length === 0) {
+          this.logger.warn(
+            `${providerName} returned no offers for ${query.origin || query.slices?.[0]?.origin}→${query.destination || query.slices?.[0]?.destination}. ` +
+              `If this provider should have content, check GET /flights/providers/health.`,
+          );
+        }
+
+        return {
+          name: providerName,
+          status: (errors.length > 0 && results.length === 0
+            ? "failed"
+            : results.length > 0
+              ? "ok"
+              : "empty") as "ok" | "empty" | "failed",
+          results,
+          durationMs,
+          error: errors.length > 0 ? errors.join("; ") : undefined,
+        };
       });
 
-    const allResults = await Promise.all(promises);
-    const merged = allResults.flat();
+    const providerRuns = await Promise.all(promises);
+    const merged = providerRuns.flatMap((run) => run.results);
 
     // Apply commission to all results based on user segment
     const withCommission = await Promise.all(merged.map(async (result) => ({
@@ -150,17 +202,126 @@ export class FlightsIntegrationService {
 
     const searchTime = Date.now() - startTime;
     this.logger.log(
-      `Aggregated ${withCommission.length} results from ${activeProviderNames.length} providers in ${searchTime}ms`,
+      `Aggregated ${withCommission.length} results from ${providerRuns.length} provider(s) in ${searchTime}ms`,
     );
 
     return {
       results: withCommission,
       meta: {
-        providersQueried: activeProviderNames,
+        providersQueried: providerNames,
+        providersSkipped: skippedProviderNames,
+        providersWithNoResults: providerRuns
+          .filter((run) => run.status !== "ok")
+          .map((run) => run.name),
+        providers: providerRuns.map((run) => ({
+          name: run.name,
+          status: run.status,
+          results: run.results.length,
+          durationMs: run.durationMs,
+          ...(run.error ? { error: run.error } : {}),
+        })),
         totalResults: withCommission.length,
         searchTime,
       },
     };
+  }
+
+  /**
+   * Decide which providers should serve a search.
+   *
+   * Amadeus content is contracted for Nigerian-origin traffic only, so it is
+   * called only when the itinerary starts in Nigeria; every other market is
+   * served by Duffel. Amadeus also has no multi-city support (it returns no
+   * offers for slices), so multi-city searches are Duffel-only by design.
+   */
+  private resolveProviderNames(
+    query: FlightSearchQuery,
+    activeProviderNames: string[],
+  ): { selected: string[]; skipped: string[] } {
+    const isMultiCity = Boolean(query.slices && query.slices.length > 0);
+    const originCodes = isMultiCity
+      ? (query.slices || []).map((slice) => slice.origin)
+      : [query.origin];
+
+    const startsInNigeria = originCodes.some((code) => isNigerianOrigin(code));
+    const useAmadeus = startsInNigeria && !isMultiCity;
+
+    const selected = activeProviderNames.filter((name) =>
+      name === "amadeus" ? useAmadeus : true,
+    );
+    const skipped = activeProviderNames.filter(
+      (name) => !selected.includes(name),
+    );
+
+    return { selected, skipped };
+  }
+
+  /**
+   * Verify that every configured flight provider is actually reachable/authenticated.
+   * Amadeus silently returning nothing (e.g. retired API host or expired key) otherwise
+   * looks identical to "no flights on this route".
+   */
+  async checkProviders(): Promise<{
+    providers: {
+      name: string;
+      enabled: boolean;
+      scope: string;
+      ok: boolean;
+      durationMs: number;
+      message?: string;
+    }[];
+  }> {
+    const config = await this.providerConfigService.getConfig();
+    const enabled = new Set(
+      config.providers.filter((p) => p.enabled).map((p) => p.name),
+    );
+    const scopes: Record<string, string> = {
+      amadeus: "Nigerian-origin flights only",
+      duffel: "all origins",
+    };
+
+    const results = await Promise.all(
+      this.adaptersArray().map(async (adapter) => {
+        const startedAt = Date.now();
+        const base = {
+          name: adapter.providerName,
+          enabled: enabled.has(adapter.providerName),
+          scope: scopes[adapter.providerName] || "all origins",
+        };
+        if (!adapter.healthCheck) {
+          return {
+            ...base,
+            ok: true,
+            durationMs: 0,
+            message: "no health check implemented",
+          };
+        }
+        try {
+          const health = await adapter.healthCheck();
+          return {
+            ...base,
+            ok: health.ok,
+            durationMs: Date.now() - startedAt,
+            message: health.message,
+          };
+        } catch (err) {
+          return {
+            ...base,
+            ok: false,
+            durationMs: Date.now() - startedAt,
+            message: err.message,
+          };
+        }
+      }),
+    );
+
+    return {
+      providers: results.sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  }
+
+  private adaptersArray(): AirlineAdapter[] {
+    return Array.from(this.adapters.values());
   }
 
   /**

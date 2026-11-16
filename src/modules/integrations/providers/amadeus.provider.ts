@@ -15,6 +15,26 @@ export class AmadeusProvider implements AirlineAdapter {
   constructor(private amadeusHelper: AmadeusHelperService) {}
 
   /**
+   * Cheap health check: can we reach the configured Amadeus host and authenticate?
+   * Catches the "provider silently returns []" class of outage.
+   */
+  async healthCheck(): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const token = await this.amadeusHelper.getAccessToken();
+      return {
+        ok: Boolean(token),
+        message: `authenticated against ${this.amadeusHelper.baseUrl}`,
+      };
+    } catch (error) {
+      const cause = (error as any)?.cause?.message;
+      return {
+        ok: false,
+        message: `auth failed against ${this.amadeusHelper.baseUrl}: ${error.message}${cause ? ` (${cause})` : ""}`,
+      };
+    }
+  }
+
+  /**
    * Search flights using Amadeus Flight Offers Search API
    */
   async searchFlights(query: FlightSearchQuery): Promise<FlightSearchResult[]> {

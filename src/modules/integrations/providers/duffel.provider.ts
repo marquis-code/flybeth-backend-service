@@ -32,6 +32,25 @@ export class DuffelProvider implements AirlineAdapter {
   }
 
   /**
+   * Cheap health check against a reference endpoint (no flight search, no quota use).
+   */
+  async healthCheck(): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/air/airlines?limit=1`, {
+        headers: this.getHeaders(),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) {
+        const body = await response.text();
+        return { ok: false, message: `HTTP ${response.status}: ${body.slice(0, 200)}` };
+      }
+      return { ok: true, message: `reachable (${this.baseUrl})` };
+    } catch (error) {
+      return { ok: false, message: `${this.baseUrl}: ${error.message}` };
+    }
+  }
+
+  /**
    * Search flights via Duffel Offer Requests API
    */
   async searchFlights(query: FlightSearchQuery): Promise<FlightSearchResult[]> {

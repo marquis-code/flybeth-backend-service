@@ -79,9 +79,19 @@ export interface FlightSearchResult {
   rawOffer?: any;
 }
 
+export interface ProviderHealth {
+  ok: boolean;
+  message?: string;
+}
+
 export interface AirlineAdapter {
   providerName: string;
   searchFlights(query: FlightSearchQuery): Promise<FlightSearchResult[]>;
+  /**
+   * Cheap connectivity/auth check used by the provider health endpoint.
+   * Should not perform a flight search or consume meaningful quota.
+   */
+  healthCheck?(): Promise<ProviderHealth>;
   priceOffer?(offer: any): Promise<any>;
   getSeatmap?(flightOffer: any): Promise<any>;
   getOfferDetails?(offerId: string): Promise<FlightSearchResult | null>;
