@@ -40,6 +40,26 @@ export class SystemConfig {
     bankName: string;
     instructions?: string;
   }[];
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: {
+      enabled: false,
+      programName: 'Flybeth Rewards',
+      maxDiscountPercent: 0,
+      maxDiscountCap: 0,
+      pointsPerDollar: 0,
+      benefits: [],
+    },
+  })
+  rewards: {
+    enabled: boolean;
+    programName: string;
+    maxDiscountPercent: number;
+    maxDiscountCap: number;
+    pointsPerDollar: number;
+    benefits: string[];
+  };
 }
 
 export const SystemConfigSchema = SchemaFactory.createForClass(SystemConfig);

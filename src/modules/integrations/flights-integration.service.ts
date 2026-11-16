@@ -711,11 +711,35 @@ export class FlightsIntegrationService {
     latitude: number,
     longitude: number,
   ): Promise<any[]> {
-    const amadeus = this.adapters.get("amadeus");
-    if (amadeus && amadeus.getNearestAirports) {
-      return amadeus.getNearestAirports(latitude, longitude);
+    // Amadeus first (authoritative), then our own reference data. The Amadeus
+    // self-service host is retired, so the local lookup is what actually serves
+    // this in practice — it must never blow up the endpoint.
+    try {
+      const amadeus = this.adapters.get("amadeus");
+      if (amadeus?.getNearestAirports) {
+        const results = await amadeus.getNearestAirports(latitude, longitude);
+        if (Array.isArray(results) && results.length) return results;
+      }
+    } catch (err) {
+      this.logger.warn(`Amadeus nearest-airport lookup failed: ${err.message}`);
     }
-    return [];
+
+    try {
+      const local = await this.airportsService.findNearest(latitude, longitude, 5);
+      return local.map((a: any) => ({
+        iataCode: a.code,
+        name: a.name,
+        detailedName: `${a.name} (${a.code})`,
+        subType: "AIRPORT",
+        address: { cityName: a.city, countryCode: a.country },
+        geoCode: { latitude: a.lat, longitude: a.lng },
+        distanceKm: a.distanceKm,
+        provider: "flybeth",
+      }));
+    } catch (err) {
+      this.logger.warn(`Local nearest-airport lookup failed: ${err.message}`);
+      return [];
+    }
   }
 
   /**

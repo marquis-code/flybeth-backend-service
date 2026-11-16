@@ -85,6 +85,44 @@ export class AirportsService {
     return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   }
 
+  /**
+   * Nearest airports to a coordinate, computed from our own reference data.
+   * Used as the fallback when the upstream (Amadeus) lookup is unavailable.
+   */
+  async findNearest(
+    latitude: number,
+    longitude: number,
+    limit: number = 5,
+    maxKm: number = 400,
+  ): Promise<any[]> {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+
+    const airports = (await this.airportModel
+      .find({ lat: { $exists: true, $ne: null }, lng: { $exists: true, $ne: null } })
+      .limit(5000)
+      .lean()
+      .exec()) as any[];
+
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const distanceKm = (a: any) => {
+      const R = 6371;
+      const dLat = toRad(Number(a.lat) - lat);
+      const dLng = toRad(Number(a.lng) - lng);
+      const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat)) * Math.cos(toRad(Number(a.lat))) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+    };
+
+    return airports
+      .map((a) => ({ ...a, distanceKm: Math.round(distanceKm(a) * 10) / 10 }))
+      .filter((a) => a.distanceKm <= maxKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, Math.min(Math.max(limit, 1), 10));
+  }
+
   async getAirportByCode(code: string): Promise<AirportDocument> {
     const airport = await this.airportModel
       .findOne({ code: code.toUpperCase() })
