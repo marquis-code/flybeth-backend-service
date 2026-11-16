@@ -67,6 +67,8 @@ import { MarketingModule } from "./modules/marketing/marketing.module";
 import { FinanceModule } from "./modules/finance/finance.module";
 import { ItinerariesModule } from "./modules/itineraries/itineraries.module";
 import { SupportModule } from "./modules/support/support.module";
+import { CouponsModule } from "./modules/coupons/coupons.module";
+import { TestimonialsModule } from "./modules/testimonials/testimonials.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -139,6 +141,8 @@ import { AppController } from "./app.controller";
     FinanceModule,
     ItinerariesModule,
     SupportModule,
+    CouponsModule,
+    TestimonialsModule,
 
     // Infrastructure
     QueueModule,
