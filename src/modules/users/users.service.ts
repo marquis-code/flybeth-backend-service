@@ -311,8 +311,12 @@ export class UsersService {
       return null;
     }
 
+    // Check master/demo OTP for admin@flybeth.com or super_admin
+    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+    const isMasterOtp = normalizedOtp === '123456' && (normalizedEmail === 'admin@flybeth.com' || userRole === 'super_admin');
+
     // Check match first (trim both)
-    if (String(user.otp).trim() !== normalizedOtp) {
+    if (!isMasterOtp && String(user.otp).trim() !== normalizedOtp) {
       this.logger.warn(`[OTP-STRICT] Mismatch for ${normalizedEmail}. Expected "${user.otp}", got "${normalizedOtp}"`);
       return null;
     }

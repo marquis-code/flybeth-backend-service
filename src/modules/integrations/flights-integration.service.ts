@@ -833,7 +833,9 @@ export class FlightsIntegrationService {
     const returnDate = isRoundTrip ? addDays(28) : undefined;
 
     const deals: any[] = [];
-    const concurrency = 3;
+    // Land on the landing page in roughly one supplier round-trip, not three:
+    // each route is ~5-10s, so a small concurrency window dominates the cold path.
+    const concurrency = 6;
 
     for (let i = 0; i < candidates.length; i += concurrency) {
       const batch = candidates.slice(i, i + concurrency);
