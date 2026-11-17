@@ -56,6 +56,20 @@ export class FlightsIntegrationService {
     };
   }> {
     const startTime = Date.now();
+
+    const cacheKey = `flights:live-search:${query.origin || ""}:${query.destination || ""}:${query.departureDate || ""}:${query.returnDate || ""}:${query.adults || 1}:${query.children || 0}:${query.infants || 0}:${query.class || "economy"}:${(query as any).userRole || "customer"}:${JSON.stringify(query.slices || [])}`;
+    try {
+      const cached = await this.cacheManager.get<any>(cacheKey);
+      if (cached && cached.results && cached.results.length > 0) {
+        this.logger.log(
+          `Serving live flight search from cache for ${query.origin || query.slices?.[0]?.origin}→${query.destination || query.slices?.[0]?.destination} (${cached.results.length} offers)`,
+        );
+        return cached;
+      }
+    } catch (err) {
+      this.logger.warn(`Flight search cache get error: ${err.message}`);
+    }
+
     const config = await this.providerConfigService.getConfig();
     const activeProviderNames =
       await this.providerConfigService.getActiveProviderNames("flights");
@@ -195,17 +209,25 @@ export class FlightsIntegrationService {
       ),
     })));
 
-    // Sort by final price (with commission) — cheapest first
-    withCommission.sort(
-      (a, b) => a.priceWithCommission - b.priceWithCommission,
-    );
+    // Sort by final price (with commission) — cheapest first with deterministic tie-breaking
+    withCommission.sort((a, b) => {
+      const diff = a.priceWithCommission - b.priceWithCommission;
+      if (Math.abs(diff) > 0.01) return diff;
+      const durDiff = (a.duration || 0) - (b.duration || 0);
+      if (durDiff !== 0) return durDiff;
+      const stopsDiff = (a.stops || 0) - (b.stops || 0);
+      if (stopsDiff !== 0) return stopsDiff;
+      const airlineDiff = (a.airline || "").localeCompare(b.airline || "");
+      if (airlineDiff !== 0) return airlineDiff;
+      return (a.departureTime || "").localeCompare(b.departureTime || "");
+    });
 
     const searchTime = Date.now() - startTime;
     this.logger.log(
       `Aggregated ${withCommission.length} results from ${providerRuns.length} provider(s) in ${searchTime}ms`,
     );
 
-    return {
+    const searchResponse = {
       results: withCommission,
       meta: {
         providersQueried: providerNames,
@@ -224,6 +246,17 @@ export class FlightsIntegrationService {
         searchTime,
       },
     };
+
+    if (withCommission.length > 0) {
+      try {
+        // Cache search results for 5 minutes (300,000 ms) so reloads and multi-browser searches are consistent
+        await this.cacheManager.set(cacheKey, searchResponse, 300000);
+      } catch (err) {
+        this.logger.warn(`Flight search cache set error: ${err.message}`);
+      }
+    }
+
+    return searchResponse;
   }
 
   /**
