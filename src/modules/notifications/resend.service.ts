@@ -20,8 +20,23 @@ export class ResendService {
     this.resend = new Resend(apiKey);
     const rawFrom =
       this.configService.get<string>("SMTP_FROM") ||
-      "Flybeth <noreply@flybeth.com>";
-    this.defaultFrom = rawFrom.replace(/^["']|["']$/g, "").trim();
+      "Flybeth <support@flybeth.com>";
+    this.defaultFrom = this.sanitizeFrom(rawFrom);
+  }
+
+  private sanitizeFrom(address: string): string {
+    let cleaned = (address || "").replace(/^["']|["']$/g, "").trim();
+    if (!cleaned) {
+      cleaned = "Flybeth <support@flybeth.com>";
+    }
+    // Proactively replace "noreply@" or "no-reply@" with "support@" to fix Resend insight warning & improve inbox delivery
+    cleaned = cleaned.replace(/no-?reply@/gi, "support@");
+
+    // Upgrade generic "Flight Booking" display name to official "Flybeth"
+    if (cleaned.toLowerCase().startsWith("flight booking")) {
+      cleaned = cleaned.replace(/^flight booking/i, "Flybeth");
+    }
+    return cleaned;
   }
 
   async sendEmail(params: {
@@ -29,12 +44,14 @@ export class ResendService {
     subject: string;
     html: string;
     from?: string;
+    replyTo?: string;
     text?: string;
     variables?: Record<string, any>;
     attachments?: Array<{ filename: string; content: any }>;
   }): Promise<any> {
     try {
-      let from = (params.from || this.defaultFrom).replace(/^["']|["']$/g, "").trim();
+      let from = this.sanitizeFrom(params.from || this.defaultFrom);
+      const replyTo = params.replyTo || "support@flybeth.com";
       let finalHtml = params.html;
       let finalSubject = params.subject;
 
@@ -53,6 +70,7 @@ export class ResendService {
       let response = await this.resend.emails.send({
         from,
         to: Array.isArray(params.to) ? params.to : [params.to],
+        replyTo,
         subject: finalSubject,
         html: finalHtml,
         text: finalText,
@@ -76,6 +94,7 @@ export class ResendService {
           response = await this.resend.emails.send({
             from: "onboarding@resend.dev",
             to: Array.isArray(params.to) ? params.to : [params.to],
+            replyTo,
             subject: finalSubject,
             html: finalHtml,
             text: finalText,
