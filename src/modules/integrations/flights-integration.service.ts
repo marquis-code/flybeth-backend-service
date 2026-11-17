@@ -200,12 +200,16 @@ export class FlightsIntegrationService {
     const providerRuns = await Promise.all(promises);
     const merged = providerRuns.flatMap((run) => run.results);
 
-    // Apply commission to all results based on user segment
+    // Apply commission to all results based on user segment and route context (domestic vs international)
     const withCommission = await Promise.all(merged.map(async (result) => ({
       ...result,
       priceWithCommission: await this.providerConfigService.applySegmentedCommission(
         result.price,
         (query as any).userRole || 'customer',
+        {
+          origin: (result as any).origin || query.origin,
+          destination: (result as any).destination || query.destination,
+        },
       ),
     })));
 
@@ -440,9 +444,24 @@ export class FlightsIntegrationService {
            basePrice = pricedOffer.price || 0;
        }
 
+       let offerOrigin: string | undefined;
+       let offerDestination: string | undefined;
+       if (provider === 'duffel') {
+           const firstSlice = pricedOffer.slices?.[0];
+           offerOrigin = firstSlice?.origin?.iata_code || firstSlice?.origin;
+           offerDestination = firstSlice?.destination?.iata_code || firstSlice?.destination;
+       } else if (provider === 'amadeus') {
+           const firstItin = pricedOffer.itineraries?.[0];
+           const firstSeg = firstItin?.segments?.[0];
+           const lastSeg = firstItin?.segments?.[firstItin.segments.length - 1];
+           offerOrigin = firstSeg?.departure?.iataCode;
+           offerDestination = lastSeg?.arrival?.iataCode;
+       }
+
        const newPrice = await this.providerConfigService.applySegmentedCommission(
            basePrice,
-           userRole
+           userRole,
+           { origin: offerOrigin, destination: offerDestination },
        );
 
        const ratio = newPrice / (basePrice || 1);

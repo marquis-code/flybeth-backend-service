@@ -6,6 +6,7 @@ import {
   FlightProviderConfigDocument,
 } from "./schemas/flight-provider-config.schema";
 import { SystemConfigService } from "../system-config/system-config.service";
+import { isNigerianOrigin } from "./constants/nigeria-origins.constant";
 
 @Injectable()
 export class ProviderConfigService {
@@ -93,13 +94,53 @@ export class ProviderConfigService {
   }
 
   /**
-   * Calculate price with commission based on user segment
+   * Calculate price with commission based on user segment and flight context (domestic vs international)
    */
   async applySegmentedCommission(
     basePrice: number,
     role: string = 'customer',
+    flightContext?: { origin?: string; destination?: string; isDomestic?: boolean },
   ): Promise<number> {
     const systemConfig = await this.systemConfigService.getConfig();
+
+    if (flightContext && (systemConfig as any).flightFees) {
+      const isDomestic = flightContext.isDomestic !== undefined
+        ? flightContext.isDomestic
+        : (isNigerianOrigin(flightContext.origin) && isNigerianOrigin(flightContext.destination));
+
+      const feeRules = isDomestic
+        ? (systemConfig as any).flightFees.domestic
+        : (systemConfig as any).flightFees.international;
+
+      if (feeRules) {
+        let price = basePrice;
+
+        // Apply general margin first if configured
+        if (feeRules.marginValue > 0) {
+          if (feeRules.marginType === 'fixed') {
+            price += feeRules.marginValue;
+          } else {
+            price = price * (1 + feeRules.marginValue / 100);
+          }
+        }
+
+        // Apply role fee (B2B vs B2C)
+        const isB2b = role === 'agent' || role === 'tenant_admin';
+        const feeType = isB2b ? feeRules.b2bType : feeRules.b2cType;
+        const feeValue = isB2b ? feeRules.b2bValue : feeRules.b2cValue;
+
+        if (feeValue > 0) {
+          if (feeType === 'fixed') {
+            price += feeValue;
+          } else {
+            price = price * (1 + feeValue / 100);
+          }
+        }
+
+        return Math.round(price * 100) / 100;
+      }
+    }
+
     const rate = role === 'agent' || role === 'tenant_admin' 
         ? systemConfig.b2bCommission 
         : systemConfig.b2cCommission;

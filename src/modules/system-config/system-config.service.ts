@@ -38,6 +38,25 @@ export class SystemConfigService implements OnModuleInit {
 
     const defaultAncillaryPrices = { bags: 25, seats: 15, insurance: 12, vipSupport: 15 };
 
+    const defaultFlightFees: SystemConfig['flightFees'] = {
+      domestic: {
+        b2cType: 'percentage',
+        b2cValue: 10,
+        b2bType: 'percentage',
+        b2bValue: 5,
+        marginType: 'percentage',
+        marginValue: 15,
+      },
+      international: {
+        b2cType: 'percentage',
+        b2cValue: 10,
+        b2bType: 'percentage',
+        b2bValue: 5,
+        marginType: 'percentage',
+        marginValue: 15,
+      },
+    };
+
     const defaultBankAccounts = [
       {
         currency: 'NGN',
@@ -95,6 +114,12 @@ export class SystemConfigService implements OnModuleInit {
           insurance: config.ancillaryPrices?.insurance || defaultAncillaryPrices.insurance,
           vipSupport: config.ancillaryPrices?.vipSupport || defaultAncillaryPrices.vipSupport,
         };
+        needsUpdate = true;
+      }
+
+      if (!config.flightFees || !config.flightFees.domestic || !config.flightFees.international) {
+        this.logger.warn('No granular Flight Fees detected. Seeding defaults...');
+        config.flightFees = defaultFlightFees;
         needsUpdate = true;
       }
 

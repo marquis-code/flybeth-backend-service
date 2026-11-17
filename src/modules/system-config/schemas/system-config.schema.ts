@@ -26,6 +26,46 @@ export class SystemConfig {
   @Prop({ default: 15, required: true })
   ancillaryMargin: number;
 
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: {
+      domestic: {
+        b2cType: 'percentage',
+        b2cValue: 10,
+        b2bType: 'percentage',
+        b2bValue: 5,
+        marginType: 'percentage',
+        marginValue: 15,
+      },
+      international: {
+        b2cType: 'percentage',
+        b2cValue: 10,
+        b2bType: 'percentage',
+        b2bValue: 5,
+        marginType: 'percentage',
+        marginValue: 15,
+      },
+    },
+  })
+  flightFees: {
+    domestic: {
+      b2cType: 'percentage' | 'fixed';
+      b2cValue: number;
+      b2bType: 'percentage' | 'fixed';
+      b2bValue: number;
+      marginType: 'percentage' | 'fixed';
+      marginValue: number;
+    };
+    international: {
+      b2cType: 'percentage' | 'fixed';
+      b2cValue: number;
+      b2bType: 'percentage' | 'fixed';
+      b2bValue: number;
+      marginType: 'percentage' | 'fixed';
+      marginValue: number;
+    };
+  };
+
   @Prop({ 
     type: MongooseSchema.Types.Mixed,
     default: { bags: 25, seats: 15, insurance: 12, vipSupport: 15 } 

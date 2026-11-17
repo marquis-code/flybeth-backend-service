@@ -23,6 +23,7 @@ import { NotificationsService } from "../notifications/notifications.service";
 import { FraudService } from "../fraud/fraud.service";
 import { SystemConfigService } from "../system-config/system-config.service";
 import { ConfigService } from "@nestjs/config";
+import { isNigerianOrigin } from "../integrations/constants/nigeria-origins.constant";
 import { InvoiceService } from "./invoice.service";
 import { WalletService } from "../finance/wallet.service";
 import { FlightsIntegrationService } from "../integrations/flights-integration.service";
@@ -394,8 +395,33 @@ export class BookingsService {
     // deliberately NOT added to the charged total — adding it silently made the
     // final charge up to 15% higher than the displayed price.
     const commissionableNet = totalBaseFare;
-    const platformCommissionPercent = isB2B ? config.b2bCommission : config.b2cCommission;
-    const platformCommission = commissionableNet * (platformCommissionPercent / 100);
+
+    let platformCommission = 0;
+    if (bookingFlights.length > 0 && (config as any).flightFees) {
+      const firstF: any = bookingFlights[0];
+      const orig = firstF.departureAirport || firstF.origin;
+      const dest = firstF.arrivalAirport || firstF.destination;
+      const isDomesticFlight = isNigerianOrigin(orig) && isNigerianOrigin(dest);
+      const feeRules = isDomesticFlight
+        ? (config as any).flightFees.domestic
+        : (config as any).flightFees.international;
+
+      if (feeRules) {
+        const feeType = isB2B ? feeRules.b2bType : feeRules.b2cType;
+        const feeValue = isB2B ? feeRules.b2bValue : feeRules.b2cValue;
+        if (feeType === 'fixed') {
+          platformCommission = feeValue;
+        } else {
+          platformCommission = commissionableNet * (feeValue / 100);
+        }
+      } else {
+        const platformCommissionPercent = isB2B ? config.b2bCommission : config.b2cCommission;
+        platformCommission = commissionableNet * (platformCommissionPercent / 100);
+      }
+    } else {
+      const platformCommissionPercent = isB2B ? config.b2bCommission : config.b2cCommission;
+      platformCommission = commissionableNet * (platformCommissionPercent / 100);
+    }
 
     let platformAncillaryMargin = 0;
     if (bookingFlights.some(f => f.provider && f.provider !== 'manual')) {
