@@ -1,5 +1,5 @@
 // src/modules/notifications/notifications.service.ts
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Model, Types } from "mongoose";
 import { ConfigService } from "@nestjs/config";
@@ -47,7 +47,7 @@ import { NotificationsGateway } from "./notifications.gateway";
 import { SystemConfigService } from "../system-config/system-config.service";
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
@@ -63,6 +63,14 @@ export class NotificationsService {
     private readonly chatGateway: ChatGateway,
     private readonly notificationsGateway: NotificationsGateway,
   ) { }
+
+  async onModuleInit() {
+    try {
+      await this.seedDefaultTemplates();
+    } catch (err: any) {
+      this.logger.warn(`Could not auto-seed email templates on startup: ${err.message}`);
+    }
+  }
 
   async createNotification(params: {
     userId: string;

@@ -126,60 +126,60 @@ function extractSlices(booking: any): SliceView[] {
 }
 
 function sliceCard(slice: SliceView): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px;border:1px solid ${BRAND.line};border-radius:14px;overflow:hidden;">
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;border:1px solid ${BRAND.line};border-radius:16px;overflow:hidden;background-color:${BRAND.white};box-shadow:0 2px 8px rgba(15,23,42,0.04);">
     <tr>
-      <td style="padding:14px 18px;background-color:${BRAND.card};border-bottom:1px solid ${BRAND.line};">
+      <td style="padding:14px 20px;background-color:${BRAND.cardBg};border-bottom:1px solid ${BRAND.line};">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
-            <td align="left" style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${BRAND.navySoft};">${esc(
-              slice.label,
-            )}</td>
-            <td align="right" style="font-family:${SANS};font-size:11px;font-weight:600;color:${BRAND.muted};">${esc(
-              slice.depDate,
-            )}</td>
+            <td align="left">
+              <span style="display:inline-block;padding:3px 8px;background:${BRAND.primarySoft};border:1px solid ${BRAND.infoLine};border-radius:6px;font-family:${SANS};font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:${BRAND.primary};">
+                ${esc(slice.label)}
+              </span>
+            </td>
+            <td align="right" style="font-family:${SANS};font-size:12px;font-weight:700;color:${BRAND.muted};">
+              ${esc(slice.depDate)}
+            </td>
           </tr>
         </table>
       </td>
     </tr>
     <tr>
-      <td style="padding:20px 18px;">
+      <td style="padding:22px 20px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td class="fb-stack" width="38%" valign="top">
-              <p style="margin:0;font-family:${SANS};font-size:24px;font-weight:800;color:${BRAND.navy};letter-spacing:-.5px;">${esc(
+              <p style="margin:0;font-family:${SANS};font-size:26px;font-weight:900;color:${BRAND.primary};letter-spacing:-.5px;">${esc(
                 slice.originCode,
               )}</p>
-              <p style="margin:2px 0 0;font-family:${SANS};font-size:12px;color:${BRAND.muted};">${esc(
+              <p style="margin:3px 0 0;font-family:${SANS};font-size:12px;font-weight:500;color:${BRAND.muted};">${esc(
                 slice.originCity,
               )}</p>
-              <p style="margin:8px 0 0;font-family:${SANS};font-size:14px;font-weight:700;color:${BRAND.ink};">${esc(
+              <p style="margin:8px 0 0;font-family:${SANS};font-size:15px;font-weight:800;color:${BRAND.ink};">${esc(
                 slice.depTime,
               )}</p>
             </td>
             <td class="fb-stack" width="24%" align="center" valign="middle" style="font-family:${SANS};font-size:11px;color:${BRAND.muted};">
-              <div style="border-top:1px solid ${BRAND.line};margin:0 4px 6px;position:relative;"></div>
-              <span style="display:inline-block;font-size:13px;">&#9992;</span>
-              <p style="margin:4px 0 0;font-size:11px;">${esc(slice.stops)}</p>
+              <div style="border-top:2px dashed ${BRAND.line};margin:0 4px 6px;position:relative;"></div>
+              <span style="display:inline-block;font-size:16px;color:${BRAND.primary};transform:rotate(45deg);">&#9992;</span>
+              <p style="margin:4px 0 0;font-size:11px;font-weight:700;color:${BRAND.muted};">${esc(slice.stops)}</p>
             </td>
             <td class="fb-stack" width="38%" align="right" valign="top">
-              <p style="margin:0;font-family:${SANS};font-size:24px;font-weight:800;color:${BRAND.navy};letter-spacing:-.5px;">${esc(
+              <p style="margin:0;font-family:${SANS};font-size:26px;font-weight:900;color:${BRAND.primary};letter-spacing:-.5px;">${esc(
                 slice.destCode,
               )}</p>
-              <p style="margin:2px 0 0;font-family:${SANS};font-size:12px;color:${BRAND.muted};">${esc(
+              <p style="margin:3px 0 0;font-family:${SANS};font-size:12px;font-weight:500;color:${BRAND.muted};">${esc(
                 slice.destCity,
               )}</p>
-              <p style="margin:8px 0 0;font-family:${SANS};font-size:14px;font-weight:700;color:${BRAND.ink};">${esc(
+              <p style="margin:8px 0 0;font-family:${SANS};font-size:15px;font-weight:800;color:${BRAND.ink};">${esc(
                 slice.arrTime,
               )}</p>
             </td>
           </tr>
         </table>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;border-top:1px solid ${BRAND.line};">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:16px;padding-top:12px;border-top:1px solid ${BRAND.line};">
           <tr>
-            <td style="padding-top:12px;font-family:${SANS};font-size:12px;color:${BRAND.muted};">
-              ${esc(slice.airline)}${slice.flightNumber ? ` &middot; ${esc(slice.flightNumber)}` : ''} &middot; ${esc(
-                slice.cabin,
-              )}
+            <td style="font-family:${SANS};font-size:12px;font-weight:600;color:${BRAND.muted};">
+              <span style="color:${BRAND.ink};font-weight:700;">${esc(slice.airline)}</span>${slice.flightNumber ? ` &middot; Flight ${esc(slice.flightNumber)}` : ''} &middot; <span style="text-transform:capitalize;">${esc(slice.cabin)}</span>
             </td>
           </tr>
         </table>
