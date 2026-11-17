@@ -124,28 +124,48 @@ export class NotificationsService {
     variables?: Record<string, any>,
     attachments?: Array<{ filename: string; content: Buffer }>,
   ): Promise<void> {
+    let queued = false;
     try {
-      await this.emailQueue.add(
-        "send-email",
-        {
+      if (this.emailQueue) {
+        await this.emailQueue.add(
+          "send-email",
+          {
+            to,
+            subject,
+            html,
+            variables,
+            attachments,
+          },
+          {
+            attempts: 3,
+            backoff: {
+              type: "exponential",
+              delay: 5000,
+            },
+            removeOnComplete: true,
+          },
+        );
+        queued = true;
+        this.logger.log(`Email job added to queue for: ${to}`);
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to add email to queue (${error.message}). Falling back to direct Resend delivery for ${to}`);
+    }
+
+    // Resilient direct delivery if queue is down or failed
+    if (!queued) {
+      try {
+        await this.resendService.sendEmail({
           to,
           subject,
           html,
           variables,
           attachments,
-        },
-        {
-          attempts: 3,
-          backoff: {
-            type: "exponential",
-            delay: 5000,
-          },
-          removeOnComplete: true,
-        },
-      );
-      this.logger.log(`Email job added to queue for: ${to}`);
-    } catch (error) {
-      this.logger.error(`Failed to add email to queue: ${error.message}`);
+        });
+        this.logger.log(`Email sent directly via Resend to: ${to}`);
+      } catch (directErr) {
+        this.logger.error(`Direct Resend email delivery failed for ${to}: ${directErr.message}`);
+      }
     }
   }
 

@@ -18,9 +18,10 @@ export class ResendService {
       );
     }
     this.resend = new Resend(apiKey);
-    this.defaultFrom =
+    const rawFrom =
       this.configService.get<string>("SMTP_FROM") ||
-      "Flybeth <onboarding@resend.dev>";
+      "Flybeth <noreply@flybeth.com>";
+    this.defaultFrom = rawFrom.replace(/^["']|["']$/g, "").trim();
   }
 
   async sendEmail(params: {
@@ -33,7 +34,7 @@ export class ResendService {
     attachments?: Array<{ filename: string; content: any }>;
   }): Promise<any> {
     try {
-      const from = params.from || this.defaultFrom;
+      let from = (params.from || this.defaultFrom).replace(/^["']|["']$/g, "").trim();
       let finalHtml = params.html;
       let finalSubject = params.subject;
 
@@ -49,7 +50,7 @@ export class ResendService {
         `Sending email via Resend to: ${params.to} (${finalSubject}) from: ${from}`,
       );
 
-      const response = await this.resend.emails.send({
+      let response = await this.resend.emails.send({
         from,
         to: Array.isArray(params.to) ? params.to : [params.to],
         subject: finalSubject,
@@ -72,20 +73,30 @@ export class ResendService {
           this.logger.warn(
             `Attempting resilient fallback to onboarding@resend.dev due to: ${response.error.name}`,
           );
+          response = await this.resend.emails.send({
+            from: "onboarding@resend.dev",
+            to: Array.isArray(params.to) ? params.to : [params.to],
+            subject: finalSubject,
+            html: finalHtml,
+            text: finalText,
+            attachments: params.attachments,
+          });
         }
 
-        // Intercept Free Tier/Sandbox restriction so it doesn't fail the whole queue
-        if (
-          response.error.name === "validation_error" && 
-          response.error.message?.includes("testing emails to your own email address")
-        ) {
-          this.logger.warn(`Resend Sandbox Limitation hit for ${params.to}. Suppressing error to keep queue active.`);
-          return { id: "mock_id_dev_sandbox_limit" };
-        }
+        if (response.error) {
+          // Intercept Free Tier/Sandbox restriction so it doesn't fail the whole queue
+          if (
+            response.error.name === "validation_error" && 
+            response.error.message?.includes("testing emails to your own email address")
+          ) {
+            this.logger.warn(`Resend Sandbox Limitation hit for ${params.to}. Suppressing error to keep queue active.`);
+            return { id: "mock_id_dev_sandbox_limit" };
+          }
 
-        throw new Error(
-          response.error.message || "Resend API returned an unspecified error",
-        );
+          throw new Error(
+            response.error.message || "Resend API returned an unspecified error",
+          );
+        }
       }
 
       return response.data;
