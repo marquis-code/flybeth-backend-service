@@ -63,9 +63,22 @@ export class SystemConfigService implements OnModuleInit {
       },
     };
 
+    const defaultCompanyAddress = {
+      street: '1500 S Dairy Ashford Road',
+      suite: 'Suite 207 # 703',
+      city: 'Houston',
+      state: 'TX',
+      postalCode: '77077',
+      country: 'United States',
+      fullAddress: '1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077',
+      phone: '+1 (844) FLYBETH',
+      email: 'hello@flybeth.com'
+    };
+
     const defaultBankAccounts = [
       {
         currency: 'NGN',
+        label: 'Local Settlement Account (NGN)',
         accountName: 'Flybeth Limited',
         accountNumber: '0124034266',
         bankName: 'Wema Bank',
@@ -76,12 +89,13 @@ export class SystemConfigService implements OnModuleInit {
       },
       {
         currency: 'USD',
-        accountName: 'Flybeth Ltd',
+        label: 'Business Account for International Payments',
+        accountName: 'Flybeth Global LLC',
         accountNumber: '7288447936',
         bankName: 'Wema Bank',
         routingNumber: '111900659',
         swiftCode: '',
-        instructions: 'Zelle: payments@flybeth.com. Please include your Booking Reference in the transfer memo.',
+        instructions: 'Business account for International payments. Please include your Booking Reference in the transfer memo.',
         isActive: true
       }
     ];
@@ -98,6 +112,7 @@ export class SystemConfigService implements OnModuleInit {
         ancillaryPrices: defaultAncillaryPrices,
         ancillaryPricingTypes: defaultAncillaryPricingTypes,
         bankAccounts: defaultBankAccounts,
+        companyAddress: defaultCompanyAddress,
         platformName: 'Flybeth Global'
       });
       await config.save();
@@ -105,6 +120,12 @@ export class SystemConfigService implements OnModuleInit {
     } else {
       this.logger.log('Platform config audit in progress...');
       let needsUpdate = false;
+      
+      if (!config.companyAddress || !config.companyAddress.fullAddress) {
+        this.logger.log('Restoring company address in platform configuration...');
+        config.companyAddress = defaultCompanyAddress;
+        needsUpdate = true;
+      }
       
       if (!config.bankAccounts || config.bankAccounts.length === 0) {
         this.logger.warn('No bank accounts detected. Seeding defaults...');

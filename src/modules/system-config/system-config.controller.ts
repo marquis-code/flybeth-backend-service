@@ -19,6 +19,17 @@ export class SystemConfigController {
     const config = await this.configService.getConfig();
     return {
       platformName: config.platformName,
+      companyAddress: (config as any).companyAddress || {
+        street: '1500 S Dairy Ashford Road',
+        suite: 'Suite 207 # 703',
+        city: 'Houston',
+        state: 'TX',
+        postalCode: '77077',
+        country: 'United States',
+        fullAddress: '1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077',
+        phone: '+1 (844) FLYBETH',
+        email: 'hello@flybeth.com'
+      },
       ancillaryPrices: config.ancillaryPrices,
       ancillaryPricingTypes: config.ancillaryPricingTypes || {
         bags: 'fixed',

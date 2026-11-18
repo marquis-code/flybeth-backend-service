@@ -86,6 +86,7 @@ export class SystemConfig {
   @Prop({ type: MongooseSchema.Types.Mixed, default: [] })
   bankAccounts: { 
     currency: string; 
+    label?: string;
     accountName: string; 
     accountNumber: string; 
     bankName: string;
@@ -94,6 +95,28 @@ export class SystemConfig {
     instructions?: string;
     isActive?: boolean;
   }[];
+
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: {
+      street: '1500 S Dairy Ashford Road',
+      suite: 'Suite 207 # 703',
+      city: 'Houston',
+      state: 'TX',
+      postalCode: '77077',
+      country: 'United States',
+      fullAddress: '1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077'
+    }
+  })
+  companyAddress: {
+    street: string;
+    suite: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country: string;
+    fullAddress: string;
+  };
 
   @Prop({
     type: MongooseSchema.Types.Mixed,
