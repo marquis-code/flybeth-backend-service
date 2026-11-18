@@ -251,8 +251,7 @@ export class AdminService {
       const rate = grossRevenue > 0 ? (commissionEarned / grossRevenue) * 100 : 0; // Approximate average rate for display
       const payout = p.amount - (p.amount * (rate / 100));
       
-      // If status is just success, we treat it as settled for now, or mock unsettled randomly for UI
-      const isSettled = Math.random() > 0.2; 
+      const isSettled = (p as any).isSettled === true || (p.status === 'success' && (p as any).settlementStatus !== 'pending');
       if (!isSettled) pendingDisbursements += payout;
 
       return {

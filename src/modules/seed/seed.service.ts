@@ -43,9 +43,6 @@ export class SeedService implements OnModuleInit {
     await this.seedAirlines();
     await this.seedBankAccounts();
     await this.seedAdminUser();
-    await this.seedAgentUser();
-    await this.seedCustomerUser();
-    await this.seedTestUser();
     await this.seedDepartments();
   }
 

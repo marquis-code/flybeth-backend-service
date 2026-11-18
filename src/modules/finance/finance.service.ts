@@ -38,7 +38,7 @@ export class FinanceService {
       clearedPayouts: paid,
       overdueSettlements: overdue,
       totalVolume: unpaid + paid + overdue,
-      grossCommission: Math.round((paid + unpaid) * 0.1) // 10% demo commission
+      grossCommission: invoices.reduce((sum, i) => sum + (Number((i as any).commission) || 0), 0)
     };
   }
 }
