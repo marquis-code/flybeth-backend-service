@@ -464,22 +464,21 @@ export class FlightsIntegrationService {
            { origin: offerOrigin, destination: offerDestination },
        );
 
-       const ratio = newPrice / (basePrice || 1);
+       const agencyFee = Math.max(0, newPrice - basePrice);
 
        if (provider === 'duffel') {
            pricedOffer.total_amount = newPrice.toFixed(2);
+           pricedOffer.agency_fee = agencyFee.toFixed(2);
            if (pricedOffer.base_amount) {
-               pricedOffer.base_amount = (parseFloat(pricedOffer.base_amount) * ratio).toFixed(2);
+               pricedOffer.base_amount = (parseFloat(pricedOffer.base_amount)).toFixed(2);
            }
            if (pricedOffer.tax_amount) {
-               pricedOffer.tax_amount = (parseFloat(pricedOffer.tax_amount) * ratio).toFixed(2);
+               pricedOffer.tax_amount = (parseFloat(pricedOffer.tax_amount)).toFixed(2);
            }
        } else if (provider === 'amadeus') {
            if (pricedOffer.price?.total) pricedOffer.price.total = newPrice.toFixed(2);
            if (pricedOffer.price?.grandTotal) pricedOffer.price.grandTotal = newPrice.toFixed(2);
-           if (pricedOffer.price?.base) {
-               pricedOffer.price.base = (parseFloat(pricedOffer.price.base) * ratio).toFixed(2);
-           }
+           if (pricedOffer.price) pricedOffer.price.agency_fee = agencyFee.toFixed(2);
        }
 
        if (provider === 'duffel') {

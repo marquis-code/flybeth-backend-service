@@ -19,6 +19,8 @@ export class SystemConfigController {
     const config = await this.configService.getConfig();
     return {
       platformName: config.platformName,
+      agencyFeeLabel: (config as any).agencyFeeLabel || 'Agency Booking & Service Fee',
+      nonRefundableDisclaimer: (config as any).nonRefundableDisclaimer || 'Flybeth Agency Booking & Service Fees are charged for reservation management, ticketing technology, and 24/7 passenger concierge services, and are strictly 100% non-refundable under all circumstances, including voluntary cancellations and flight schedule changes. Airline base fares and government taxes remain subject to airline carrier fare rules.',
       companyAddress: (config as any).companyAddress || {
         street: '1500 S Dairy Ashford Road',
         suite: 'Suite 207 # 703',

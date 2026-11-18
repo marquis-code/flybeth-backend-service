@@ -535,7 +535,7 @@ export class BookingsService {
         taxes: totalTaxes,
         fees: clientFees,
         tenantMarkup,
-        agentServiceFee,
+        agentServiceFee: createBookingDto.pricing?.agentServiceFee || agentServiceFee || platformCommission,
         adultMarkup,
         insuranceAmount,
         vipSupportAmount,
@@ -546,6 +546,9 @@ export class BookingsService {
         discount,
         totalAmount,
         currency: createBookingDto.currency || "USD",
+        feeLabel: (createBookingDto.pricing as any)?.feeLabel || (config as any).agencyFeeLabel || 'Agency Booking & Service Fee',
+        isAgencyFeeRefundable: false,
+        nonRefundableDisclaimer: (config as any).nonRefundableDisclaimer || 'Flybeth Agency Booking & Service Fees are charged for reservation management, ticketing technology, and 24/7 passenger concierge services, and are strictly 100% non-refundable under all circumstances, including voluntary cancellations and flight schedule changes. Airline base fares and government taxes remain subject to airline carrier fare rules.',
       },
       payment: { 
         status: createBookingDto.paymentModel === 'on_hold' ? PaymentStatus.PENDING : PaymentStatus.PENDING 
@@ -1899,11 +1902,16 @@ export class BookingsService {
         <div class="meta-label">Total Charge</div>
         <div class="total-amount"><sup>${booking.pricing.currency}</sup>${booking.pricing.totalAmount.toLocaleString()}</div>
       </div>
-      <div class="line-item"><span>Base Fare</span><span>${booking.pricing.currency} ${booking.pricing.baseFare.toLocaleString()}</span></div>
-      <div class="line-item"><span>Taxes &amp; Surcharges</span><span>${booking.pricing.currency} ${booking.pricing.taxes.toLocaleString()}</span></div>
-      ${booking.pricing.agentServiceFee > 0 ? `<div class="line-item"><span>Service Fee</span><span>${booking.pricing.currency} ${booking.pricing.agentServiceFee.toLocaleString()}</span></div>` : ''}
+      <div class="line-item"><span>Airline Base Fare</span><span>${booking.pricing.currency} ${booking.pricing.baseFare.toLocaleString()}</span></div>
+      <div class="line-item"><span>Taxes &amp; Mandatory Fees</span><span>${booking.pricing.currency} ${booking.pricing.taxes.toLocaleString()}</span></div>
+      ${(booking.pricing.agentServiceFee > 0 || booking.pricing.platformCommission > 0) ? `<div class="line-item"><span>${booking.pricing.feeLabel || 'Agency Booking & Service Fee'} <strong style="color:#d97706; font-size:10px;">[NON-REFUNDABLE]</strong></span><span>${booking.pricing.currency} ${(booking.pricing.agentServiceFee || booking.pricing.platformCommission).toLocaleString()}</span></div>` : ''}
+      ${booking.pricing.fees > 0 ? `<div class="line-item"><span>Add-ons (Seats, Baggage)</span><span>${booking.pricing.currency} ${booking.pricing.fees.toLocaleString()}</span></div>` : ''}
       ${booking.pricing.insuranceAmount > 0 ? `<div class="line-item"><span>Travel Insurance</span><span>${booking.pricing.currency} ${booking.pricing.insuranceAmount.toLocaleString()}</span></div>` : ''}
       <div class="line-item total"><span>Total Paid</span><span>${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</span></div>
+    </div>
+    <div style="margin-top:14px; padding:12px 14px; background:#fffbeb; border:1px solid #fef3c7; border-radius:8px; font-size:11px; color:#92400e; line-height:1.45;">
+      <strong>Legal Disclosure &amp; Refund Policy:</strong><br>
+      Flybeth LLC acts solely as an independent ticketing and reservation agent. All airline base fares and mandatory taxes are subject to the fare rules, restrictions, and cancellation penalties of the issuing carrier. <strong>The Flybeth Agency Booking &amp; Ticketing Fee is charged for reservation management, ticketing technology, and 24/7 passenger support, and is strictly 100% non-refundable under all circumstances</strong>, including voluntary cancellations, airline schedule disruptions, and flight cancellations.
     </div>
   </div>
 

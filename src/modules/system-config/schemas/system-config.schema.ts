@@ -20,6 +20,14 @@ export class SystemConfig {
   @Prop({ default: 'Flybeth LLC' })
   platformName: string;
 
+  @Prop({ default: 'Agency Booking & Service Fee' })
+  agencyFeeLabel: string;
+
+  @Prop({ 
+    default: 'Flybeth Agency Booking & Service Fees are charged for reservation management, ticketing technology, and 24/7 passenger concierge services, and are strictly 100% non-refundable under all circumstances, including voluntary cancellations and flight schedule changes. Airline base fares and government taxes remain subject to airline carrier fare rules.' 
+  })
+  nonRefundableDisclaimer: string;
+
   @Prop({ type: MongooseSchema.Types.Mixed, default: [] })
   exchangeRates: any[];
 

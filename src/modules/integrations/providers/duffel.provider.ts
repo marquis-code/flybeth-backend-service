@@ -320,6 +320,8 @@ export class DuffelProvider implements AirlineAdapter {
         arrivalTime: firstItinerary?.arrivalTime,
         duration: firstItinerary?.duration,
         price,
+        baseAmount: parseFloat(offer.base_amount || "0"),
+        taxAmount: parseFloat(offer.tax_amount || "0"),
         priceWithCommission: price, // Will be set by integration service
         currency: offer.total_currency || "USD",
         seatsAvailable: offer.available_services?.length || undefined,

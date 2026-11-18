@@ -248,6 +248,16 @@ class BookingPricingDto {
   @IsOptional()
   @IsNumber()
   totalAmount?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  agentServiceFee?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  feeLabel?: string;
 }
 
 export class CreateBookingDto {

@@ -202,6 +202,16 @@ export class SystemConfigService implements OnModuleInit {
         needsUpdate = true;
       }
 
+      if (!(config as any).agencyFeeLabel) {
+        (config as any).agencyFeeLabel = 'Agency Booking & Service Fee';
+        needsUpdate = true;
+      }
+
+      if (!(config as any).nonRefundableDisclaimer) {
+        (config as any).nonRefundableDisclaimer = 'Flybeth Agency Booking & Service Fees are charged for reservation management, ticketing technology, and 24/7 passenger concierge services, and are strictly 100% non-refundable under all circumstances, including voluntary cancellations and flight schedule changes. Airline base fares and government taxes remain subject to airline carrier fare rules.';
+        needsUpdate = true;
+      }
+
       // Ensure bank accounts reflect Wells Fargo (US), Wema Bank (NGN & USD), and Zelle
       const hasOldWemaUSD = config.bankAccounts?.some((b: any) => b.bankName === 'Wema Bank' && b.accountNumber === '7288447936');
       const hasWellsFargo = config.bankAccounts?.some((b: any) => b.bankName === 'Wells Fargo' || b.bankName === 'WellsFargo');
