@@ -14,6 +14,10 @@ export class AmadeusProvider implements AirlineAdapter {
 
   constructor(private amadeusHelper: AmadeusHelperService) {}
 
+  isRateLimited(): boolean {
+    return this.amadeusHelper.isRateLimited();
+  }
+
   /**
    * Cheap health check: can we reach the configured Amadeus host and authenticate?
    * Catches the "provider silently returns []" class of outage.

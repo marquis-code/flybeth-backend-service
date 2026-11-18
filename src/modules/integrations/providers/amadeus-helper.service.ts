@@ -68,6 +68,7 @@ export class AmadeusHelperService {
           client_id: this.apiKey,
           client_secret: this.apiSecret,
         }),
+        signal: AbortSignal.timeout(3000),
       });
 
       if (!response.ok) {
@@ -75,6 +76,7 @@ export class AmadeusHelperService {
         this.logger.error(
           `Amadeus auth failed: ${response.status} ${errorText}`,
         );
+        this.markRateLimited(300_000);
         throw new Error(`Amadeus authentication failed: ${response.status}`);
       }
 
@@ -83,7 +85,8 @@ export class AmadeusHelperService {
       this.tokenExpiresAt = Date.now() + data.expires_in * 1000;
       this.logger.debug("Amadeus access token obtained");
       return this.accessToken!;
-    } catch (error) {
+    } catch (error: any) {
+      this.markRateLimited(300_000);
       this.logger.error(`Amadeus auth error: ${error.message}`);
       throw error;
     }

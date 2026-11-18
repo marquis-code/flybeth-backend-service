@@ -281,7 +281,7 @@ export class FlightsIntegrationService {
       : [query.origin];
 
     const startsInNigeria = originCodes.some((code) => isNigerianOrigin(code));
-    const useAmadeus = startsInNigeria && !isMultiCity;
+    const useAmadeus = startsInNigeria && !isMultiCity && !this.amadeusProvider.isRateLimited();
 
     const selected = activeProviderNames.filter((name) =>
       name === "amadeus" ? useAmadeus : true,
