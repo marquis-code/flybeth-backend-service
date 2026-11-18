@@ -750,7 +750,7 @@ export class BookingsService {
   }
 
   async findByPNR(pnr: string): Promise<BookingDocument> {
-    const booking = await this.bookingModel
+    const booking: any = await this.bookingModel
       .findOne({ pnr: pnr.toUpperCase() })
       .populate("user", "firstName lastName email phone")
       .populate("tenant", "name slug")
@@ -762,6 +762,32 @@ export class BookingsService {
       .exec();
 
     if (!booking) throw new NotFoundException("Booking not found");
+
+    // Ensure contactDetails full name is resolved from lead traveler / user if missing
+    if (booking) {
+      if (!booking.contactDetails) {
+        booking.contactDetails = {};
+      }
+      if (!booking.contactDetails.name || !booking.contactDetails.name.trim()) {
+        const u = booking.user;
+        const p0 = booking.flights?.[0]?.passengers?.[0] || booking.passengers?.[0];
+        if (u && (u.firstName || u.lastName)) {
+          booking.contactDetails.name = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+        } else if (p0 && (p0.firstName || p0.lastName)) {
+          booking.contactDetails.name = `${p0.firstName || ''} ${p0.lastName || ''}`.trim();
+        } else if (p0?.name) {
+          booking.contactDetails.name = p0.name;
+        } else if (booking.contactDetails.firstName || booking.contactDetails.lastName) {
+          booking.contactDetails.name = `${booking.contactDetails.firstName || ''} ${booking.contactDetails.lastName || ''}`.trim();
+        } else if (booking.contactDetails.email) {
+          const prefix = booking.contactDetails.email.split('@')[0];
+          booking.contactDetails.name = prefix.replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+        } else {
+          booking.contactDetails.name = 'Lead Passenger';
+        }
+      }
+    }
+
     return booking as unknown as BookingDocument;
   }
 
@@ -1062,6 +1088,11 @@ export class BookingsService {
   async generateReceiptPdf(pnr: string): Promise<Buffer> {
     const booking = await this.findByPNR(pnr);
     return this.invoiceService.generateInvoicePdf(booking);
+  }
+
+  async generateReceiptHtml(pnr: string): Promise<string> {
+    const booking = await this.findByPNR(pnr);
+    return this.invoiceService.generateInvoiceHtml(booking);
   }
 
   async cancelBooking(

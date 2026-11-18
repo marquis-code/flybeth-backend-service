@@ -1,5 +1,6 @@
 // src/modules/bookings/invoice.service.ts
 import { Injectable, Logger } from "@nestjs/common";
+import * as fs from "fs";
 import puppeteer from "puppeteer";
 import { BookingDocument } from "./schemas/booking.schema";
 
@@ -7,8 +8,7 @@ import { BookingDocument } from "./schemas/booking.schema";
 export class InvoiceService {
   private readonly logger = new Logger(InvoiceService.name);
 
-  async generateInvoicePdf(booking: BookingDocument): Promise<Buffer> {
-    this.logger.log(`Generating PDF invoice for booking: ${booking.pnr}`);
+  generateInvoiceHtml(booking: BookingDocument): string {
 
     let flightHtml = "";
     const firstFlight = booking.flights && (booking.flights[0] as any);
@@ -558,15 +558,52 @@ export class InvoiceService {
 </html>
     `;
 
+    return htmlContent;
+  }
+
+  async generateInvoicePdf(booking: BookingDocument): Promise<Buffer> {
+    this.logger.log(`Generating PDF invoice for booking: ${booking.pnr}`);
+    const htmlContent = this.generateInvoiceHtml(booking);
+
     try {
-      const browser = await puppeteer.launch({
+      const launchOptions: any = {
         headless: true,
-        executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-      });
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--no-zygote',
+          '--single-process',
+        ],
+      };
+
+      const candidatePaths = [
+        process.env.PUPPETEER_EXECUTABLE_PATH,
+        process.env.CHROME_BIN,
+        '/usr/bin/google-chrome',
+        '/usr/bin/google-chrome-stable',
+        '/usr/bin/chromium',
+        '/usr/bin/chromium-browser',
+        '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      ].filter(Boolean) as string[];
+
+      for (const p of candidatePaths) {
+        try {
+          if (fs.existsSync(p)) {
+            launchOptions.executablePath = p;
+            break;
+          }
+        } catch {
+          // ignore stat errors
+        }
+      }
+
+      const browser = await puppeteer.launch(launchOptions);
       const page = await browser.newPage();
       
-      // Wait for web fonts to load
+      // Wait for HTML & styles to load
       await page.setContent(htmlContent, { waitUntil: 'load' });
       
       const pdfBuffer = await page.pdf({
@@ -577,8 +614,8 @@ export class InvoiceService {
       
       await browser.close();
       return Buffer.from(pdfBuffer);
-    } catch (error) {
-      this.logger.error('Failed to generate PDF with puppeteer', error);
+    } catch (error: any) {
+      this.logger.error(`Failed to generate PDF with puppeteer for ${booking.pnr}: ${error.message}`);
       throw error;
     }
   }

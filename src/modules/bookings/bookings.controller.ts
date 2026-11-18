@@ -113,13 +113,34 @@ export class BookingsController {
   @Get("reference/:pnr/receipt")
   @ApiOperation({ summary: "Download booking receipt PDF by PNR" })
   async downloadReceipt(@Param("pnr") pnr: string, @Res() res: Response) {
-    const pdfBuffer = await this.bookingsService.generateReceiptPdf(pnr);
+    try {
+      const pdfBuffer = await this.bookingsService.generateReceiptPdf(pnr);
+      res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="Receipt_${pnr}.pdf"`,
+        'Content-Length': pdfBuffer.length,
+      });
+      return res.send(pdfBuffer);
+    } catch (err: any) {
+      // Graceful fallback: render high-fidelity print-ready HTML receipt
+      const html = await this.bookingsService.generateReceiptHtml(pnr);
+      res.set({
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Disposition': `inline; filename="Receipt_${pnr}.html"`,
+      });
+      return res.send(html);
+    }
+  }
+
+  @Public()
+  @Get("reference/:pnr/receipt/html")
+  @ApiOperation({ summary: "View booking receipt HTML by PNR" })
+  async getReceiptHtml(@Param("pnr") pnr: string, @Res() res: Response) {
+    const html = await this.bookingsService.generateReceiptHtml(pnr);
     res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="Receipt_${pnr}.pdf"`,
-      'Content-Length': pdfBuffer.length,
+      'Content-Type': 'text/html; charset=utf-8',
     });
-    res.send(pdfBuffer);
+    return res.send(html);
   }
 
   @Get("tenant/:tenantId")
