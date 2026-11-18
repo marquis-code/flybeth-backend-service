@@ -246,15 +246,23 @@ export function renderBookingConfirmation(
         )}</strong> using the details below.`,
       }),
     )
+    const transferDetails: [string, string][] = [
+      ['Bank', bank.bankName ?? '—'],
+      ['Account name', bank.accountName ?? '—'],
+      ['Account number', bank.accountNumber ?? '—'],
+    ];
+    if (bank.routingNumber) {
+      transferDetails.push(['Routing / Sort code', bank.routingNumber]);
+    }
+    if (bank.swiftCode) {
+      transferDetails.push(['SWIFT / BIC', bank.swiftCode]);
+    }
+    transferDetails.push(['Amount', money(totalAmount, currency)]);
+
     body.push(
       card(
         detailRows(
-          [
-            ['Bank', bank.bankName ?? '—'],
-            ['Account name', bank.accountName ?? '—'],
-            ['Account number', bank.accountNumber ?? '—'],
-            ['Amount', money(totalAmount, currency)],
-          ],
+          transferDetails,
           { mono: [2] },
         ),
         { title: 'Transfer details', tint: 'cream' },

@@ -11,6 +11,7 @@ import { Payment, PaymentSchema } from "./schemas/payment.schema";
 import { BankAccount, BankAccountSchema } from "./schemas/bank-account.schema";
 import { BookingsModule } from "../bookings/bookings.module";
 import { FinanceModule } from "../finance/finance.module";
+import { SystemConfigModule } from "../system-config/system-config.module";
 
 import { BnplFactory } from "./bnpl/bnpl.factory";
 import { CredpalService } from "./bnpl/services/credpal.service";
@@ -28,6 +29,7 @@ import { SezzleService } from "./bnpl/services/sezzle.service";
     ]),
     BookingsModule,
     FinanceModule,
+    SystemConfigModule,
   ],
   controllers: [PaymentsController],
   providers: [

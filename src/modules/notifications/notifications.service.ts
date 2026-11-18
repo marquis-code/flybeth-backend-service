@@ -191,17 +191,20 @@ export class NotificationsService implements OnModuleInit {
     const needsTransfer =
       booking?.paymentMethod === 'manual' ||
       booking?.paymentMethod === 'transfer' ||
-      booking?.paymentStatus === 'pending';
+      booking?.payment?.provider === 'manual' ||
+      booking?.paymentStatus === 'pending' ||
+      booking?.paymentModel === 'on_hold';
 
     if (needsTransfer) {
       try {
         const config = await this.systemConfigService.getConfig();
-        const currency = booking?.pricing?.currency || 'USD';
+        const currency = (booking?.pricing?.currency || 'USD').toUpperCase();
+        const activeAccounts = (config?.bankAccounts || []).filter((acc: any) => acc.isActive !== false);
         bankAccount =
-          config?.bankAccounts?.find((acc: any) => acc.currency === currency) ||
-          config?.bankAccounts?.[0];
-      } catch (error) {
-        this.logger.warn(`Could not load bank details for ${booking?.pnr}: ${error.message}`);
+          activeAccounts.find((acc: any) => acc.currency?.toUpperCase() === currency) ||
+          activeAccounts[0];
+      } catch (error: any) {
+        this.logger.warn(`Could not load bank details for ${booking?.pnr}: ${error?.message}`);
       }
     }
 

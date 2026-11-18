@@ -78,7 +78,10 @@ export class SystemConfig {
     accountName: string; 
     accountNumber: string; 
     bankName: string;
+    routingNumber?: string;
+    swiftCode?: string;
     instructions?: string;
+    isActive?: boolean;
   }[];
 
   @Prop({

@@ -28,6 +28,7 @@ import { generateReference } from "../../common/utils/crypto.util";
 import { WalletService } from "../finance/wallet.service";
 import { BnplFactory } from "./bnpl/bnpl.factory";
 import { OrderFulfillmentService } from "../bookings/order-fulfillment.service";
+import { SystemConfigService } from "../system-config/system-config.service";
 
 @Injectable()
 export class PaymentsService {
@@ -45,6 +46,7 @@ export class PaymentsService {
     private walletService: WalletService,
     private bnplFactory: BnplFactory,
     private orderFulfillmentService: OrderFulfillmentService,
+    private systemConfigService: SystemConfigService,
   ) {}
 
   /**
@@ -695,7 +697,23 @@ export class PaymentsService {
       .exec() as any;
   }
 
-  async getBanks(currency?: string): Promise<BankAccountDocument[]> {
+  async getBanks(currency?: string): Promise<any[]> {
+    if (this.systemConfigService) {
+      try {
+        const config = await this.systemConfigService.getConfig();
+        if (config?.bankAccounts && config.bankAccounts.length > 0) {
+          const accounts = config.bankAccounts.filter((b: any) => b.isActive !== false);
+          if (currency) {
+            const upper = currency.toUpperCase();
+            const matched = accounts.filter((b: any) => b.currency?.toUpperCase() === upper);
+            if (matched.length > 0) return matched;
+          }
+          return accounts;
+        }
+      } catch (err: any) {
+        this.logger.warn(`Failed to fetch bank accounts from SystemConfig: ${err?.message}`);
+      }
+    }
     const query: any = { isActive: true };
     if (currency) query.currency = currency.toUpperCase();
     return this.bankAccountModel.find(query).sort({ bankName: 1 }).exec();

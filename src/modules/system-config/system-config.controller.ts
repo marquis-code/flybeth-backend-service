@@ -21,6 +21,7 @@ export class SystemConfigController {
       platformName: config.platformName,
       ancillaryPrices: config.ancillaryPrices,
       exchangeRates: config.exchangeRates,
+      bankAccounts: (config.bankAccounts || []).filter((b: any) => b.isActive !== false),
       // Benefits programme copy for the landing page. Disabled until an admin
       // configures it, so the banner can never advertise an unconfigured offer.
       rewards: (config as any).rewards ?? { enabled: false },
