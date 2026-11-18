@@ -243,6 +243,11 @@ class BookingPricingDto {
   @IsOptional()
   @IsNumber()
   fees?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  totalAmount?: number;
 }
 
 export class CreateBookingDto {

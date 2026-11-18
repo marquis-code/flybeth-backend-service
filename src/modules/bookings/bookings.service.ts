@@ -477,7 +477,7 @@ export class BookingsService {
     const premiumSeatCount = createBookingDto.premiumSeatCount || 0;
     const seatAmount = premiumSeatCount * (config.ancillaryPrices?.seats || 15);
 
-    const totalAmount =
+    let totalAmount =
       totalBaseFare +
       totalTaxes +
       packagePrice +
@@ -485,6 +485,19 @@ export class BookingsService {
       agentServiceFee +
       (adultMarkup * (bookingFlights[0]?.passengers?.length || 1)) +
       clientFees;
+
+    // When the checkout screen sends an approved, itemized totalAmount, honor the exact client price
+    if (createBookingDto.pricing?.totalAmount) {
+      const clientTotal = Number(createBookingDto.pricing.totalAmount);
+      const calculatedExpected = Number(createBookingDto.pricing.baseFare || 0) + 
+                                 Number(createBookingDto.pricing.taxes || 0) + 
+                                 Number(createBookingDto.pricing.fees || 0);
+      if (Math.abs(clientTotal - calculatedExpected) <= 5) {
+        totalAmount = clientTotal;
+        totalBaseFare = Number(createBookingDto.pricing.baseFare || 0);
+        totalTaxes = Number(createBookingDto.pricing.taxes || 0);
+      }
+    }
 
     const discount = advertisedDiscount;
 
