@@ -34,7 +34,7 @@ async function bootstrap() {
       exchangeRates: defaultExchangeRates,
       ancillaryPrices: defaultAncillaryPrices,
       ancillaryMargin: 15,
-      platformName: 'Flybeth Global'
+      platformName: 'Flybeth LLC'
     });
 
     console.log('SUCCESS: System configuration seeded successfully.');

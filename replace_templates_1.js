@@ -88,10 +88,10 @@ content = content.replace(/const title = "Authentication Guard 🔒";[\s\S]*?"Pa
       "Password Reset Instructions - Flybeth",`);
 
 content = content.replace(/const title = "Welcome to the Inner Circle 🚀";[\s\S]*?"A formal B2B welcome from our CEO 💌", content\);/g,
-`const title = "Welcome to the Flybeth Global Network";
+`const title = "Welcome to the Flybeth LLC Network";
     const content = \`
       <p>Dearest <strong>\${firstName}</strong>,</p>
-      <p>I am thrilled to personally welcome your agency to the Flybeth Global Network. You are the bridge between explorers and the world, and we are here to amplify your brilliance.</p>
+      <p>I am thrilled to personally welcome your agency to the Flybeth LLC Network. You are the bridge between explorers and the world, and we are here to amplify your brilliance.</p>
       <p>Our ecosystem is built for speed, precision, and profit. We recognize the immense value you bring, and we've built the tools to match it.</p>
       
       <div style="margin: 32px 0; background: #f9fafb; border-radius: 8px; padding: 24px; border: 1px solid #e5e7eb;">

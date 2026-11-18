@@ -1439,7 +1439,7 @@ export class BookingsService {
     await this.notificationsService.sendEmail(adminEmail, adminSubject, adminHtml);
 
     // 2. Notify Agent with Invoice
-    const agentSubject = `Booking Confirmed: ${booking.pnr} - Flybeth Global`;
+    const agentSubject = `Booking Confirmed: ${booking.pnr} - Flybeth LLC`;
     
     const flightTimelineHtml = this.generateFlightEmailHtml(booking);
 
@@ -1927,7 +1927,7 @@ export class BookingsService {
       <span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span>
     </div>
     <div class="barcode-label">${booking.pnr}</div>
-    <div class="footer-note">Thank you for booking with <b>Flybeth Global</b>.<br>Your official PDF invoice is attached to this email.</div>
+    <div class="footer-note">Thank you for booking with <b>Flybeth LLC</b>.<br>Your official PDF invoice is attached to this email.</div>
   </div>
 
 </div>

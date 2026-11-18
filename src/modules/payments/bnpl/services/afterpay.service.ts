@@ -56,7 +56,7 @@ export class AfterpayService implements BnplStrategy {
         merchant: {
           redirectConfirmUrl: `${callbackUrl}&status=success&reference=${reference}&provider=afterpay`,
           redirectCancelUrl: `${callbackUrl}&status=cancelled&reference=${reference}&provider=afterpay`,
-          name: "Flybeth Global"
+          name: "Flybeth LLC"
         },
         mode: "standard"
       };

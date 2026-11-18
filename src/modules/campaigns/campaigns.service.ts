@@ -142,7 +142,7 @@ export class CampaignsService {
                 ${userContent}
               </div>
               <div class="footer">
-                <div class="footer-brand">Flybeth Global</div>
+                <div class="footer-brand">Flybeth LLC</div>
                 &copy; ${new Date().getFullYear()} Flybeth Travel. All rights reserved.<br>
                 1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077
               </div>

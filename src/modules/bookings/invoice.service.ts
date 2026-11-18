@@ -549,7 +549,7 @@ export class InvoiceService {
       <span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span><span style="height:14px"></span><span style="height:34px"></span><span style="height:22px"></span><span style="height:34px"></span>
     </div>
     <div class="barcode-label">${booking.pnr || "N/A"}</div>
-    <div class="footer-note">Thank you for booking with <b>Flybeth Global</b>.<br>Your official PDF invoice is attached to this email.</div>
+    <div class="footer-note">Thank you for booking with <b>Flybeth LLC</b>.<br>Your official PDF invoice is attached to this email.</div>
   </div>
 
 </div>

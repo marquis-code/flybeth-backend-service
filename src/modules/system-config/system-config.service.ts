@@ -90,7 +90,7 @@ export class SystemConfigService implements OnModuleInit {
       {
         currency: 'USD',
         label: 'Business Account for International Payments',
-        accountName: 'Flybeth Global LLC',
+        accountName: 'Flybeth LLC',
         accountNumber: '7288447936',
         bankName: 'Wema Bank',
         routingNumber: '111900659',
@@ -113,7 +113,7 @@ export class SystemConfigService implements OnModuleInit {
         ancillaryPricingTypes: defaultAncillaryPricingTypes,
         bankAccounts: defaultBankAccounts,
         companyAddress: defaultCompanyAddress,
-        platformName: 'Flybeth Global'
+        platformName: 'Flybeth LLC'
       });
       await config.save();
       this.logger.log('Platform blueprint successfully deployed.');
@@ -173,9 +173,18 @@ export class SystemConfigService implements OnModuleInit {
         needsUpdate = true;
       }
 
-      if (config.platformName === undefined) {
-        config.platformName = 'Flybeth Global';
+      if (config.platformName === undefined || config.platformName === 'Flybeth Global') {
+        config.platformName = 'Flybeth LLC';
         needsUpdate = true;
+      }
+
+      if (config.bankAccounts && Array.isArray(config.bankAccounts)) {
+        config.bankAccounts.forEach((acc: any) => {
+          if (acc.accountName === 'Flybeth Global LLC' || acc.accountName === 'Flybeth Global' || acc.accountName === 'Flybeth Global Travels') {
+            acc.accountName = 'Flybeth LLC';
+            needsUpdate = true;
+          }
+        });
       }
 
       if (needsUpdate) {

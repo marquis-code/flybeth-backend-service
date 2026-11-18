@@ -17,7 +17,7 @@ export class SystemConfig {
   @Prop({ default: true })
   isWhitelistingEnabled: boolean;
 
-  @Prop({ default: 'Flybeth Global' })
+  @Prop({ default: 'Flybeth LLC' })
   platformName: string;
 
   @Prop({ type: MongooseSchema.Types.Mixed, default: [] })

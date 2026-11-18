@@ -439,8 +439,8 @@ export function renderEmail(opts: EmailLayoutOptions): string {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid ${BRAND.line};padding-top:18px;">
                 <tr>
                   <td align="left" style="font-family:${SANS};font-size:11px;line-height:1.6;color:#94A3B8;">
-                    Flybeth Global LLC &bull; 1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077<br />
-                    &copy; ${year} Flybeth Global LLC. All rights reserved.
+                    Flybeth LLC &bull; 1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077<br />
+                    &copy; ${year} Flybeth LLC. All rights reserved.
                   </td>
                   <td align="right" valign="middle">
                     <span style="font-family:${SANS};font-size:11px;font-weight:800;color:${BRAND.primary};letter-spacing:1px;text-transform:uppercase;">

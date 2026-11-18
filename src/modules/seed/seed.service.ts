@@ -530,8 +530,8 @@ export class SeedService implements OnModuleInit {
       {
         bankName: "Chase Bank",
         accountNumber: "8810000001",
-        accountName: "FLYBETH GLOBAL USD",
-        beneficiaryName: "Flybeth Global",
+        accountName: "FLYBETH LLC USD",
+        beneficiaryName: "Flybeth LLC",
         currency: "USD",
         isActive: true,
         logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/JPMorgan_Chase_Logo_2008.svg/2560px-JPMorgan_Chase_Logo_2008.svg.png",

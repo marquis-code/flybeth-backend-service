@@ -99,7 +99,7 @@ async function seed() {
       ancillaryMargin: 15,
       exchangeRates,
       ancillaryPrices,
-      platformName: 'Flybeth Global'
+      platformName: 'Flybeth LLC'
     });
 
     await config.save();

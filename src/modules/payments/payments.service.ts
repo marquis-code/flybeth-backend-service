@@ -729,7 +729,7 @@ export class PaymentsService {
     const banks = await this.getBanks(upperCurrency);
     const primaryBank = banks?.[0] || {
       bankName: 'Wema Bank',
-      accountName: 'Flybeth Global Travels',
+      accountName: 'Flybeth LLC',
       accountNumber: '7288447936',
       routingNumber: '111900659',
       currency: upperCurrency
@@ -761,7 +761,7 @@ export class PaymentsService {
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Name:</td>
-                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.accountName || 'Flybeth Global Travels'}</td>
+                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.accountName || 'Flybeth LLC'}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Number:</td>
