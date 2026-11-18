@@ -191,6 +191,9 @@ export class User {
   @Prop({ default: 0 })
   failedLoginAttempts: number;
 
+  @Prop({ default: 0 })
+  failedOtpAttempts: number;
+
   @Prop({ type: Date })
   lockUntil: Date | null;
 

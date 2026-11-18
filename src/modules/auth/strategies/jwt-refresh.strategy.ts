@@ -27,21 +27,37 @@ export class JwtRefreshStrategy extends PassportStrategy(
         (request: Request) => (request?.body as any)?.refreshToken || null,
       ]),
       ignoreExpiration: false,
+      passReqToCallback: true,
       secretOrKey:
         configService.get<string>("JWT_REFRESH_SECRET") ||
         "default-refresh-secret",
     });
   }
 
-  async validate(payload: any) {
+  async validate(req: Request, payload: any) {
     try {
-      const user = await this.usersService.findById(payload.sub);
-      if (!user) {
-        throw new UnauthorizedException("User not found");
+      const user = await this.usersService.findByIdWithRefreshToken(payload.sub);
+      if (!user || !user.isActive) {
+        throw new UnauthorizedException("User not found or account is deactivated");
       }
+
+      // Extract incoming token from cookies, headers, or body
+      const incomingToken =
+        req?.cookies?.refreshToken ||
+        (req?.headers?.["x-refresh-token"] as string) ||
+        (req?.body as any)?.refreshToken ||
+        req?.headers?.authorization?.replace(/^Bearer\s+/i, "");
+
+      // Security: Validate that the presented token strictly matches the active DB session
+      if (!user.refreshToken || (incomingToken && user.refreshToken !== incomingToken)) {
+        throw new UnauthorizedException(
+          "Session token has been revoked, rotated, or logged out. Please sign in again.",
+        );
+      }
+
       return user;
-    } catch {
-      throw new UnauthorizedException("Invalid refresh token");
+    } catch (err: any) {
+      throw new UnauthorizedException(err?.message || "Invalid refresh token");
     }
   }
 }

@@ -34,6 +34,9 @@ import { SocialLoginDto } from "./dto/auth.dto";
 
 import { v4 as uuidv4 } from "uuid";
 
+// Pre-computed constant-time bcrypt hash to neutralize user enumeration & timing attacks
+const DUMMY_BCRYPT_HASH = "$2b$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012";
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -320,7 +323,9 @@ export class AuthService {
   async login(loginDto: LoginDto) {
     const user = await this.usersService.findByEmail(loginDto.email, true);
 
+    // Defense against Credential Stuffing & User Enumeration (Timing Attack Mitigation)
     if (!user) {
+      await comparePassword(loginDto.password, DUMMY_BCRYPT_HASH);
       throw new UnauthorizedException("Invalid email or password");
     }
 
@@ -328,12 +333,29 @@ export class AuthService {
       throw new UnauthorizedException("Account is deactivated");
     }
 
-    // Verification disabled temporarily for seamless auth
-    // if (user.role === Role.AGENT && user.agentStatus !== AgentStatus.APPROVED) {
-    //   throw new UnauthorizedException(
-    //     "Your agent account is currently under review or rejected. We will notify you once it is approved.",
-    //   );
-    // }
+    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
+    const isSuperAdmin = userRole === 'super_admin' || user.email === 'abahmarquis@gmail.com';
+
+    // Defense against Brute Force & Password Spraying: Lockout Check BEFORE password comparison
+    if (user.lockUntil && user.lockUntil > new Date() && !isSuperAdmin) {
+      const remaining = Math.ceil(
+        (user.lockUntil.getTime() - Date.now()) / 60000,
+      );
+      this.logger.warn(
+        `[SECURITY] Login rejected on locked account: ${user.email} from IP: ${loginDto.ipAddress || 'unknown'}`,
+      );
+      throw new UnauthorizedException(
+        `Account is temporarily locked due to excessive failed attempts. Please try again in ${remaining} minute${remaining > 1 ? 's' : ''}.`,
+      );
+    }
+
+    // If previous lockout expired, reset lockout counter
+    if (user.lockUntil && user.lockUntil <= new Date()) {
+      await (this.usersService as any).userModel.findByIdAndUpdate(user._id, {
+        failedLoginAttempts: 0,
+        lockUntil: null,
+      });
+    }
 
     const isPasswordValid = await comparePassword(
       loginDto.password,
@@ -341,20 +363,19 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      // 5 Failed Attempts Lockout Logic - EXEMPT Super Admin
-      const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-      const isSuperAdmin = userRole === 'super_admin' || user.email === 'abahmarquis@gmail.com';
-
       if (!isSuperAdmin) {
         const failedAttempts = (user.failedLoginAttempts || 0) + 1;
         const updateData: any = { failedLoginAttempts: failedAttempts };
 
         if (failedAttempts >= 5) {
-          const lockoutTime = new Date();
-          lockoutTime.setMinutes(lockoutTime.getMinutes() + 30); // 30 min lockout
+          const lockoutTime = new Date(Date.now() + 30 * 60 * 1000); // 30 min lockout
           updateData.lockUntil = lockoutTime;
+          this.logger.error(
+            `[SECURITY ALERT] Account locked for 30 minutes after 5 failed login attempts: ${user.email} from IP: ${loginDto.ipAddress || 'unknown'}`,
+          );
+        } else {
           this.logger.warn(
-            `Account locked due to multiple failed attempts: ${user.email}`,
+            `[SECURITY] Failed password attempt ${failedAttempts}/5 for: ${user.email} from IP: ${loginDto.ipAddress || 'unknown'}`,
           );
         }
 
@@ -364,19 +385,6 @@ export class AuthService {
         );
       }
       throw new UnauthorizedException("Invalid email or password");
-    }
-
-    // Check if account is currently locked - EXEMPT Super Admin
-    const userRole = typeof user.role === 'string' ? user.role : (user.role as any)?.name;
-    const isSuperAdmin = userRole === 'super_admin' || user.email === 'abahmarquis@gmail.com';
-
-    if (user.lockUntil && user.lockUntil > new Date() && !isSuperAdmin) {
-      const remaining = Math.ceil(
-        (user.lockUntil.getTime() - Date.now()) / 60000,
-      );
-      throw new UnauthorizedException(
-        `Account is locked. Please try again in ${remaining} minutes.`,
-      );
     }
 
     // Reset failed attempts on successful password check

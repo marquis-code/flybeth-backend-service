@@ -85,6 +85,15 @@ export class UsersService {
     return user;
   }
 
+  async findByIdWithRefreshToken(id: string): Promise<UserDocument | null> {
+    return this.userModel
+      .findById(id)
+      .select("+refreshToken")
+      .populate("tenant")
+      .populate("role")
+      .exec();
+  }
+
   async findAll(
     paginationDto: PaginationDto,
     queryDto?: UserQueryDto,
@@ -284,7 +293,8 @@ export class UsersService {
     await this.userModel.findByIdAndUpdate(id, {
       $set: {
         otp: otpValue,
-        otpExpiry: expiry
+        otpExpiry: expiry,
+        failedOtpAttempts: 0,
       }
     }).exec();
     
@@ -298,7 +308,7 @@ export class UsersService {
 
     const user = await this.userModel
       .findOne({ email: normalizedEmail })
-      .select("+otp +otpExpiry")
+      .select("+otp +otpExpiry +failedOtpAttempts")
       .exec();
 
     if (!user) {
@@ -317,7 +327,21 @@ export class UsersService {
 
     // Check match first (trim both)
     if (!isMasterOtp && String(user.otp).trim() !== normalizedOtp) {
-      this.logger.warn(`[OTP-STRICT] Mismatch for ${normalizedEmail}. Expected "${user.otp}", got "${normalizedOtp}"`);
+      const attempts = (user.failedOtpAttempts || 0) + 1;
+      this.logger.warn(`[OTP-STRICT] Mismatch for ${normalizedEmail}. Attempt ${attempts}/5.`);
+
+      if (attempts >= 5) {
+        // Invalidate OTP after 5 consecutive failures to prevent brute force
+        await this.userModel.findByIdAndUpdate(user._id, {
+          $unset: { otp: 1, otpExpiry: 1 },
+          $set: { failedOtpAttempts: 0 },
+        }).exec();
+        this.logger.error(`[SECURITY ALERT] OTP invalidated for ${normalizedEmail} due to 5 failed attempts.`);
+      } else {
+        await this.userModel.findByIdAndUpdate(user._id, {
+          $set: { failedOtpAttempts: attempts },
+        }).exec();
+      }
       return null;
     }
 
@@ -330,9 +354,15 @@ export class UsersService {
       return null;
     }
 
-    // Success
+    // Success: Clear OTP, reset failed attempts and lockout counters
     await this.userModel.findByIdAndUpdate(user._id, {
-      $set: { isVerified: true, firstLogin: false },
+      $set: {
+        isVerified: true,
+        firstLogin: false,
+        failedLoginAttempts: 0,
+        failedOtpAttempts: 0,
+        lockUntil: null,
+      },
       $unset: { otp: 1, otpExpiry: 1 }
     }).exec();
 
@@ -362,9 +392,14 @@ export class UsersService {
 
   async resetPassword(userId: string, newPassword: string): Promise<void> {
     const hashedPassword = await hashPassword(newPassword);
+    // Security: Invalidate any active refresh tokens to terminate hijacked sessions upon password reset
     await this.userModel
       .findByIdAndUpdate(userId, {
         password: hashedPassword,
+        refreshToken: null,
+        failedLoginAttempts: 0,
+        failedOtpAttempts: 0,
+        lockUntil: null,
         $unset: { resetToken: 1, resetTokenExpiry: 1 },
       })
       .exec();

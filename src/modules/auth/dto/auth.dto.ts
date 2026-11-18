@@ -3,6 +3,7 @@ import {
   IsString,
   IsEmail,
   MinLength,
+  Matches,
   IsOptional,
   IsEnum,
   IsObject,
@@ -19,6 +20,9 @@ export class RegisterDto {
   @ApiProperty({ example: "StrongP@ss1" })
   @IsString()
   @MinLength(8)
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: "Password must contain at least one letter and one number",
+  })
   password: string;
 
   @ApiPropertyOptional({ example: "StrongP@ss1" })
@@ -177,6 +181,9 @@ export class ResetPasswordDto {
   @ApiProperty()
   @IsString()
   @MinLength(8)
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: "Password must contain at least one letter and one number",
+  })
   newPassword: string;
 }
 
@@ -229,6 +236,9 @@ export class AcceptInvitationDto {
   @ApiProperty({ example: "StrongP@ss1" })
   @IsString()
   @MinLength(8)
+  @Matches(/^(?=.*[a-zA-Z])(?=.*\d)/, {
+    message: "Password must contain at least one letter and one number",
+  })
   password: string;
 
   @ApiProperty({ example: "John" })
