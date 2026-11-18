@@ -18,6 +18,12 @@ async function bootstrap() {
     rawBody: true, // Required for Stripe webhooks
   });
 
+  // Enable Express trust proxy for accurate client IP detection behind Railway / Cloudflare / Nginx
+  const httpAdapter = app.getHttpAdapter();
+  if (httpAdapter && typeof (httpAdapter.getInstance() as any)?.set === "function") {
+    (httpAdapter.getInstance() as any).set("trust proxy", 1);
+  }
+
   const configService = app.get(ConfigService);
   const port = configService.get<number>("PORT", 3000);
   const apiPrefix = configService.get<string>("API_PREFIX", "api/v1");
@@ -101,7 +107,10 @@ async function bootstrap() {
       );
     }
 
-    res.setHeader("Access-Control-Expose-Headers", "set-cookie");
+    res.setHeader(
+      "Access-Control-Expose-Headers",
+      "set-cookie, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After",
+    );
     res.setHeader("Access-Control-Max-Age", "86400");
 
     if (req.method === "OPTIONS") {

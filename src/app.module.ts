@@ -8,7 +8,8 @@ import {
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MongooseModule } from "@nestjs/mongoose";
 import { CacheModule } from "@nestjs/cache-manager";
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { ThrottlerModule } from "@nestjs/throttler";
+import { AppThrottlerGuard } from "./common/guards/app-throttler.guard";
 import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
 import { I18nModule, AcceptLanguageResolver, QueryResolver, HeaderResolver } from 'nestjs-i18n';
 import * as path from 'path';
@@ -94,17 +95,60 @@ import { AppController } from "./app.controller";
       useFactory: cacheConfig,
     }),
 
-    // Rate Limiting
+    // Rate Limiting (Aggressive multi-tier protection)
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        throttlers: [
-          {
-            ttl: configService.get<number>("app.throttle.ttl", 60000),
-            limit: configService.get<number>("app.throttle.limit", 100),
-          },
-        ],
-      }),
+      useFactory: (configService: ConfigService) => {
+        const rawTtl = configService.get<number>("app.throttle.ttl", 60000);
+        const defaultTtl = rawTtl <= 1000 ? rawTtl * 1000 : rawTtl;
+        const defaultLimit = configService.get<number>("app.throttle.limit", 100);
+        const authLimit = configService.get<number>("app.throttle.authLimit", 10);
+        const searchLimit = configService.get<number>("app.throttle.searchLimit", 30);
+        const paymentLimit = configService.get<number>("app.throttle.paymentLimit", 15);
+
+        return {
+          throttlers: [
+            {
+              name: "default",
+              ttl: defaultTtl,
+              limit: defaultLimit,
+            },
+            {
+              name: "auth",
+              ttl: 60000,
+              limit: authLimit,
+              skipIf: (ctx) => {
+                const req = ctx.switchToHttp().getRequest();
+                const path = (req?.path || req?.url || "").toLowerCase();
+                return !path.includes("/auth/");
+              },
+            },
+            {
+              name: "search",
+              ttl: 60000,
+              limit: searchLimit,
+              skipIf: (ctx) => {
+                const req = ctx.switchToHttp().getRequest();
+                const path = (req?.path || req?.url || "").toLowerCase();
+                return !path.includes("/search");
+              },
+            },
+            {
+              name: "payment",
+              ttl: 60000,
+              limit: paymentLimit,
+              skipIf: (ctx) => {
+                const req = ctx.switchToHttp().getRequest();
+                const path = (req?.path || req?.url || "").toLowerCase();
+                if (path.includes("webhook")) return true;
+                return !path.includes("/payments/") && !path.includes("/bookings");
+              },
+            },
+          ],
+          errorMessage:
+            "Too many requests. For security reasons, please slow down and try again in a few moments.",
+        };
+      },
     }),
 
     // Feature Modules
@@ -166,8 +210,8 @@ import { AppController } from "./app.controller";
   providers: [
     // Global JWT guard (applies to all routes, @Public() decorator skips)
     { provide: APP_GUARD, useClass: JwtAuthGuard },
-    // Global rate limiting
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // Global rate limiting (Enterprise IP extraction + webhook safety)
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     // Global roles guard
     { provide: APP_GUARD, useClass: RolesGuard },
     // Global exception filter
