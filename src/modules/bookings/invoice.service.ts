@@ -480,7 +480,7 @@ export class InvoiceService {
       <div>
         <span class="eyebrow">Booking Confirmation</span>
         <div class="brand">
-          <img src="https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png" alt="Flybeth Logo" style="height:44px;" />
+          <img src="https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png" alt="Flybeth Logo" style="height:44px;" />
         </div>
       </div>
       <div class="pnr-block">

@@ -306,7 +306,7 @@ export interface EmailLayoutOptions {
 }
 
 const LOGO_URL =
-  'https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png';
+  'https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png';
 
 /**
  * Renders complete HTML email with the modern Flybeth design system.
@@ -356,16 +356,7 @@ export function renderEmail(opts: EmailLayoutOptions): string {
                 <tr>
                   <td align="left" valign="middle">
                     <a href="${esc(site)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">
-                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-                        <tr>
-                          <td valign="middle" style="padding-right:10px;">
-                            <img src="${LOGO_URL}" alt="Flybeth" height="30" style="height:30px;width:auto;display:block;border:0;" />
-                          </td>
-                          <td valign="middle">
-                            <span style="font-family:${SANS};font-size:22px;font-weight:900;letter-spacing:1px;color:${BRAND.white};text-transform:none;">fly<span style="color:#60A5FA;">beth</span></span>
-                          </td>
-                        </tr>
-                      </table>
+                      <img src="${LOGO_URL}" alt="Flybeth" height="34" style="height:34px;max-height:40px;width:auto;display:block;border:0;" />
                     </a>
                   </td>
                   <td align="right" valign="middle">

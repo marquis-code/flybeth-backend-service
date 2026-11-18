@@ -136,7 +136,7 @@ export class CampaignsService {
           <div class="wrapper">
             <div class="container">
               <div class="header">
-                <img src="https://flybeth.s3.us-east-2.amazonaws.com/flight-booking/general/logo.png" alt="Flybeth" class="logo" />
+                <img src="https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png" alt="Flybeth" class="logo" />
               </div>
               <div class="content">
                 ${userContent}

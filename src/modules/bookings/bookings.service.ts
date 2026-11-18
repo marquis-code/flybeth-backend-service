@@ -1788,7 +1788,7 @@ export class BookingsService {
     <div class="brand-row">
       <div>
         <span class="eyebrow">Booking Confirmation</span>
-        <img src="https://res.cloudinary.com/marquis/image/upload/v1780815566/logo_dovk4t.png" alt="Flybeth" style="height: 36px;" />
+        <img src="https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png" alt="Flybeth" style="height: 36px;" />
       </div>
       <div class="pnr-block">
         <span class="eyebrow">PNR</span>
