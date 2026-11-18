@@ -727,12 +727,30 @@ export class PaymentsService {
     }
     const upperCurrency = (dto.currency || 'USD').toUpperCase();
     const banks = await this.getBanks(upperCurrency);
-    const primaryBank = banks?.[0] || {
-      bankName: 'Wema Bank',
-      accountName: 'Flybeth LLC',
+    
+    // Ensure accurate primary defaults if not populated
+    const usBank = banks?.find((b: any) => b.bankName === 'Wells Fargo' || b.bankName === 'WellsFargo') || {
+      bankName: 'Wells Fargo',
+      accountName: 'FLYBETH LLC',
       accountNumber: '7288447936',
       routingNumber: '111900659',
-      currency: upperCurrency
+      domesticWireRouting: '121000248',
+      swiftCode: 'WFBIUS6S',
+      currency: 'USD'
+    };
+
+    const wemaNgn = banks?.find((b: any) => b.currency === 'NGN') || {
+      bankName: 'Wema Bank',
+      accountName: 'Flybeth Limited',
+      accountNumber: '0124034266',
+      currency: 'NGN'
+    };
+
+    const wemaUsd = banks?.find((b: any) => b.bankName === 'Wema Bank' && b.currency === 'USD') || {
+      bankName: 'Wema Bank',
+      accountName: 'Flybeth Limited',
+      accountNumber: '0620862082',
+      currency: 'USD'
     };
 
     const formattedAmount = dto.amount 
@@ -740,53 +758,124 @@ export class PaymentsService {
       : `${upperCurrency} Payment`;
 
     const html = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
         <div style="background: linear-gradient(135deg, #1A2ED4 0%, #0D1DAD 100%); padding: 28px 32px;">
           <img src="https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png" alt="Flybeth" height="34" style="height: 34px; max-height: 40px; display: block; border: 0;" />
-          <div style="color: #ffffff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 16px; opacity: 0.9;">Secure Settlement Memo</div>
-          <h2 style="color: #ffffff; font-size: 22px; font-weight: 900; margin: 4px 0 0 0;">Official Bank Transfer Instructions</h2>
+          <div style="color: #ffffff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 16px; opacity: 0.9;">Secure Settlement Credentials</div>
+          <h2 style="color: #ffffff; font-size: 22px; font-weight: 900; margin: 4px 0 0 0;">Official Payment & Bank Instructions</h2>
         </div>
         <div style="padding: 32px;">
           <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
             Hello,<br/><br/>
-            You requested official bank settlement instructions for your reservation ${dto.bookingRef ? `<strong>(${dto.bookingRef})</strong>` : ''}. For your protection against cyber fraud and email interception, please transfer the exact reservation amount only to our verified corporate bank account below:
+            You requested official bank settlement instructions for your reservation ${dto.bookingRef ? `<strong>(${dto.bookingRef})</strong>` : ''}. For your protection against cyber fraud and email interception, please transfer the exact reservation amount only to our verified corporate banking options below:
           </p>
 
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-            <div style="font-size: 11px; font-weight: 800; color: #0D1DAD; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Verified Settlement Account (${primaryBank.currency || upperCurrency})</div>
+          ${upperCurrency === 'USD' ? `
+          <!-- Wells Fargo (United States) -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 800; color: #0D1DAD; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+              <span>1. Wells Fargo Corporate Account (USA)</span>
+              <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 6px; font-size: 10px;">USD Transactions</span>
+            </div>
             <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Bank Name:</td>
-                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.bankName || 'Wema Bank'}</td>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Bank Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">Wells Fargo</td>
               </tr>
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Name:</td>
-                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.accountName || 'Flybeth LLC'}</td>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Company / Account Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">FLYBETH LLC</td>
               </tr>
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Number:</td>
-                <td style="padding: 8px 0; color: #0D1DAD; font-family: monospace; font-size: 16px; font-weight: 900; text-align: right;">${primaryBank.accountNumber}</td>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Account Number:</td>
+                <td style="padding: 6px 0; color: #0D1DAD; font-family: monospace; font-size: 16px; font-weight: 900; text-align: right;">7288447936</td>
               </tr>
-              ${primaryBank.routingNumber ? `
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Routing Number:</td>
-                <td style="padding: 8px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">${primaryBank.routingNumber}</td>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Direct Deposit & ACH Routing:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">111900659</td>
               </tr>
-              ` : ''}
-              ${primaryBank.swiftCode ? `
               <tr>
-                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">SWIFT / BIC:</td>
-                <td style="padding: 8px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">${primaryBank.swiftCode}</td>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Domestic Wire Routing:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">121000248</td>
               </tr>
-              ` : ''}
-              ${dto.amount ? `
-              <tr style="border-top: 1px solid #e2e8f0;">
-                <td style="padding: 12px 0 0 0; color: #0f172a; font-weight: 700;">Amount Due:</td>
-                <td style="padding: 12px 0 0 0; color: #0D1DAD; font-size: 16px; font-weight: 900; text-align: right;">${formattedAmount}</td>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">International Wire (SWIFT / BIC):</td>
+                <td style="padding: 6px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">WFBIUS6S</td>
               </tr>
-              ` : ''}
             </table>
           </div>
+
+          <!-- Zelle Payment -->
+          <div style="background: #faf5ff; border: 1px solid #d8b4fe; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 800; color: #7414CA; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
+              2. Pay with Zelle® (Instant Settlement)
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Business Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">FLYBETH LLC</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Zelle Recipient:</td>
+                <td style="padding: 6px 0; color: #7414CA; font-family: monospace; font-size: 15px; font-weight: 900; text-align: right;">flybeth</td>
+              </tr>
+              <tr>
+                <td colspan="2" style="padding: 10px 0 0 0; color: #6b21a8; font-size: 12px; line-height: 1.5;">
+                  Scan the Zelle QR code in your Wells Fargo, Chase, BofA, or mobile banking app to pay FLYBETH LLC instantly.
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Wema Bank USD (Nigeria Domiciliary) -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 800; color: #0D1DAD; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
+              3. Wema Bank USD Domiciliary Account (Nigeria)
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Bank Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">Wema Bank</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Account Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">Flybeth Limited</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Account Number:</td>
+                <td style="padding: 6px 0; color: #0D1DAD; font-family: monospace; font-size: 16px; font-weight: 900; text-align: right;">0620862082</td>
+              </tr>
+            </table>
+          </div>
+          ` : `
+          <!-- Wema Bank Naira (Nigeria) -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 12px; font-weight: 800; color: #0D1DAD; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
+              Wema Bank Naira Account (NGN)
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Bank Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">Wema Bank</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Account Name:</td>
+                <td style="padding: 6px 0; color: #0f172a; font-weight: 800; text-align: right;">Flybeth Limited</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Account Number:</td>
+                <td style="padding: 6px 0; color: #0D1DAD; font-family: monospace; font-size: 16px; font-weight: 900; text-align: right;">0124034266</td>
+              </tr>
+            </table>
+          </div>
+          `}
+
+          ${dto.amount ? `
+          <div style="background: #f1f5f9; border-radius: 10px; padding: 12px 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; font-weight: 700; color: #475569;">Total Amount Due:</span>
+            <span style="font-size: 18px; font-weight: 900; color: #0D1DAD;">${formattedAmount}</span>
+          </div>
+          ` : ''}
 
           <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px; font-size: 12px; color: #92400e; line-height: 1.5; margin-bottom: 24px;">
             <strong>Important:</strong> Please include your booking reference <strong>${dto.bookingRef || 'your name'}</strong> in the bank payment narration/memo. Once your transfer is approved by our finance desk, your e-tickets and verified tax receipt will be delivered instantly to your email.

@@ -77,25 +77,49 @@ export class SystemConfigService implements OnModuleInit {
 
     const defaultBankAccounts = [
       {
+        currency: 'USD',
+        label: 'Wells Fargo Corporate (Direct Deposit / ACH & Wire)',
+        accountName: 'FLYBETH LLC',
+        accountNumber: '7288447936',
+        bankName: 'Wells Fargo',
+        routingNumber: '111900659',
+        domesticWireRouting: '121000248',
+        swiftCode: 'WFBIUS6S',
+        instructions: 'Direct Deposit & Electronic Payments (ACH): 111900659 | Domestic Wire Transfer: 121000248 | International Wire Transfer (SWIFT): WFBIUS6S. Please include your Booking Reference in the transfer memo.',
+        isActive: true
+      },
+      {
         currency: 'NGN',
-        label: 'Local Settlement Account (NGN)',
+        label: 'Wema Bank Naira Account (Local Settlement)',
         accountName: 'Flybeth Limited',
         accountNumber: '0124034266',
         bankName: 'Wema Bank',
         routingNumber: '',
         swiftCode: '',
-        instructions: 'Please include your Booking Reference in the transfer memo.',
+        instructions: 'Wema Bank NGN Account. Please include your Booking Reference in the transfer memo.',
         isActive: true
       },
       {
         currency: 'USD',
-        label: 'Business Account for International Payments',
-        accountName: 'Flybeth LLC',
-        accountNumber: '7288447936',
+        label: 'Wema Bank USD Domiciliary Account',
+        accountName: 'Flybeth Limited',
+        accountNumber: '0620862082',
         bankName: 'Wema Bank',
-        routingNumber: '111900659',
+        routingNumber: '',
         swiftCode: '',
-        instructions: 'Business account for International payments. Please include your Booking Reference in the transfer memo.',
+        instructions: 'Wema Bank USD Domiciliary Account. Please include your Booking Reference in the transfer memo.',
+        isActive: true
+      },
+      {
+        currency: 'USD',
+        label: 'Zelle Instant Settlement (Scan & Pay)',
+        accountName: 'FLYBETH LLC',
+        accountNumber: 'flybeth',
+        bankName: 'Zelle',
+        routingNumber: '',
+        swiftCode: '',
+        instructions: 'Scan the Zelle QR code in your banking app or send to FLYBETH LLC via Zelle. Please include your Booking Reference in the memo.',
+        qrCodeUrl: '/zelle-qr.png',
         isActive: true
       }
     ];
@@ -178,7 +202,17 @@ export class SystemConfigService implements OnModuleInit {
         needsUpdate = true;
       }
 
-      if (config.bankAccounts && Array.isArray(config.bankAccounts)) {
+      // Ensure bank accounts reflect Wells Fargo (US), Wema Bank (NGN & USD), and Zelle
+      const hasOldWemaUSD = config.bankAccounts?.some((b: any) => b.bankName === 'Wema Bank' && b.accountNumber === '7288447936');
+      const hasWellsFargo = config.bankAccounts?.some((b: any) => b.bankName === 'Wells Fargo' || b.bankName === 'WellsFargo');
+      const hasWemaUSD = config.bankAccounts?.some((b: any) => b.bankName === 'Wema Bank' && b.accountNumber === '0620862082');
+      const hasZelle = config.bankAccounts?.some((b: any) => b.bankName === 'Zelle');
+
+      if (hasOldWemaUSD || !hasWellsFargo || !hasWemaUSD || !hasZelle || !config.bankAccounts || config.bankAccounts.length < 4) {
+        this.logger.log('Restoring verified banking credentials (Wells Fargo US, Wema Bank NGN/USD, Zelle)...');
+        config.bankAccounts = defaultBankAccounts;
+        needsUpdate = true;
+      } else {
         config.bankAccounts.forEach((acc: any) => {
           if (acc.accountName === 'Flybeth Global LLC' || acc.accountName === 'Flybeth Global' || acc.accountName === 'Flybeth Global Travels') {
             acc.accountName = 'Flybeth LLC';
