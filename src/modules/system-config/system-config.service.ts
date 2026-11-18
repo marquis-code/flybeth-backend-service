@@ -37,6 +37,12 @@ export class SystemConfigService implements OnModuleInit {
     ];
 
     const defaultAncillaryPrices = { bags: 25, seats: 15, insurance: 12, vipSupport: 15 };
+    const defaultAncillaryPricingTypes: SystemConfig['ancillaryPricingTypes'] = {
+      bags: 'fixed',
+      seats: 'fixed',
+      insurance: 'fixed',
+      vipSupport: 'fixed',
+    };
 
     const defaultFlightFees: SystemConfig['flightFees'] = {
       domestic: {
@@ -90,6 +96,7 @@ export class SystemConfigService implements OnModuleInit {
         ancillaryMargin: 15,
         exchangeRates: defaultExchangeRates,
         ancillaryPrices: defaultAncillaryPrices,
+        ancillaryPricingTypes: defaultAncillaryPricingTypes,
         bankAccounts: defaultBankAccounts,
         platformName: 'Flybeth Global'
       });
@@ -119,6 +126,17 @@ export class SystemConfigService implements OnModuleInit {
           seats: config.ancillaryPrices?.seats || defaultAncillaryPrices.seats,
           insurance: config.ancillaryPrices?.insurance || defaultAncillaryPrices.insurance,
           vipSupport: config.ancillaryPrices?.vipSupport || defaultAncillaryPrices.vipSupport,
+        };
+        needsUpdate = true;
+      }
+
+      if (!config.ancillaryPricingTypes || !config.ancillaryPricingTypes.bags) {
+        this.logger.warn('Broken or missing Ancillary Pricing Types detected. Initializing defaults...');
+        config.ancillaryPricingTypes = {
+          bags: config.ancillaryPricingTypes?.bags || defaultAncillaryPricingTypes.bags,
+          seats: config.ancillaryPricingTypes?.seats || defaultAncillaryPricingTypes.seats,
+          insurance: config.ancillaryPricingTypes?.insurance || defaultAncillaryPricingTypes.insurance,
+          vipSupport: config.ancillaryPricingTypes?.vipSupport || defaultAncillaryPricingTypes.vipSupport,
         };
         needsUpdate = true;
       }

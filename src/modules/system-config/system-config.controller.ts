@@ -20,6 +20,12 @@ export class SystemConfigController {
     return {
       platformName: config.platformName,
       ancillaryPrices: config.ancillaryPrices,
+      ancillaryPricingTypes: config.ancillaryPricingTypes || {
+        bags: 'fixed',
+        seats: 'fixed',
+        insurance: 'fixed',
+        vipSupport: 'fixed',
+      },
       exchangeRates: config.exchangeRates,
       bankAccounts: (config.bankAccounts || []).filter((b: any) => b.isActive !== false),
       // Benefits programme copy for the landing page. Disabled until an admin

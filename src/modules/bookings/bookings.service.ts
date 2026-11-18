@@ -465,17 +465,28 @@ export class BookingsService {
 
     // Ancillary values are recorded from configuration for reporting/ops. They
     // are not added on top of `clientFees`, which already covers the selection.
+    const pricingTypes = config.ancillaryPricingTypes || { bags: 'fixed', seats: 'fixed', insurance: 'fixed', vipSupport: 'fixed' };
+
+    const getAncillaryCost = (type: 'bags' | 'seats' | 'insurance' | 'vipSupport', defaultVal: number) => {
+      const val = config.ancillaryPrices?.[type] ?? defaultVal;
+      const isPercent = pricingTypes[type] === 'percentage';
+      return isPercent ? (totalBaseFare * (val / 100)) : val;
+    };
+
     const hasInsurance = createBookingDto.hasInsurance || false;
-    const insuranceAmount = hasInsurance ? (config.ancillaryPrices?.insurance || 25) * totalPassengers : 0;
+    const insuranceUnit = getAncillaryCost('insurance', 12);
+    const insuranceAmount = hasInsurance ? insuranceUnit * totalPassengers : 0;
 
     const hasVipSupport = createBookingDto.hasVipSupport || false;
-    const vipSupportAmount = hasVipSupport ? (config.ancillaryPrices?.vipSupport || 15) : 0;
+    const vipSupportAmount = hasVipSupport ? getAncillaryCost('vipSupport', 15) : 0;
 
     const extraBaggageCount = createBookingDto.extraBaggageCount || 0;
-    const baggageAmount = extraBaggageCount * (config.ancillaryPrices?.bags || 25);
+    const baggageUnit = getAncillaryCost('bags', 25);
+    const baggageAmount = extraBaggageCount * baggageUnit;
 
     const premiumSeatCount = createBookingDto.premiumSeatCount || 0;
-    const seatAmount = premiumSeatCount * (config.ancillaryPrices?.seats || 15);
+    const seatUnit = getAncillaryCost('seats', 15);
+    const seatAmount = premiumSeatCount * seatUnit;
 
     let totalAmount =
       totalBaseFare +

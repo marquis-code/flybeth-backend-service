@@ -218,6 +218,8 @@ export function renderBookingConfirmation(
   const needsTransfer =
     booking?.paymentMethod === 'manual' ||
     booking?.paymentMethod === 'transfer' ||
+    booking?.payment?.provider === 'manual' ||
+    booking?.paymentModel === 'on_hold' ||
     booking?.paymentStatus === 'pending'
 
   const manageUrl = `${opts.clientUrl ?? process.env.CLIENT_URL ?? 'https://flybeth.com'}/bookings/${pnr}`

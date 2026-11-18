@@ -72,6 +72,17 @@ export class SystemConfig {
   })
   ancillaryPrices: { bags: number; seats: number; insurance: number; vipSupport: number };
 
+  @Prop({
+    type: MongooseSchema.Types.Mixed,
+    default: { bags: 'fixed', seats: 'fixed', insurance: 'fixed', vipSupport: 'fixed' }
+  })
+  ancillaryPricingTypes: {
+    bags: 'percentage' | 'fixed';
+    seats: 'percentage' | 'fixed';
+    insurance: 'percentage' | 'fixed';
+    vipSupport: 'percentage' | 'fixed';
+  };
+
   @Prop({ type: MongooseSchema.Types.Mixed, default: [] })
   bankAccounts: { 
     currency: string; 
