@@ -149,6 +149,15 @@ export class PaymentsController {
   }
 
   @Public()
+  @Post("bank-accounts/send-email")
+  @ApiOperation({ summary: "Send bank settlement credentials to customer email" })
+  sendBankDetailsEmail(
+    @Body() dto: { email: string; currency?: string; amount?: number; bookingRef?: string }
+  ) {
+    return this.paymentsService.sendBankDetailsEmail(dto);
+  }
+
+  @Public()
   @Get("banks/paystack")
   @ApiOperation({ summary: "Get list of banks from Paystack" })
   getPaystackBanks() {

@@ -146,6 +146,13 @@ export class BookingsController {
     return this.bookingsService.payForHeldOrder(id, paymentDto);
   }
 
+  @Patch(":id/confirm")
+  @Roles(Role.SUPER_ADMIN, Role.TENANT_ADMIN, Role.STAFF, Role.AGENT)
+  @ApiOperation({ summary: "Confirm booking payment and dispatch ticket to customer" })
+  confirmBooking(@Param("id", MongoIdValidationPipe) id: string) {
+    return this.bookingsService.confirmBooking(id);
+  }
+
   @Public()
   @Get(":id")
   @ApiOperation({ summary: "Get booking by ID" })

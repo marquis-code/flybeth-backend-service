@@ -29,6 +29,7 @@ import { WalletService } from "../finance/wallet.service";
 import { BnplFactory } from "./bnpl/bnpl.factory";
 import { OrderFulfillmentService } from "../bookings/order-fulfillment.service";
 import { SystemConfigService } from "../system-config/system-config.service";
+import { ResendService } from "../notifications/resend.service";
 
 @Injectable()
 export class PaymentsService {
@@ -47,6 +48,7 @@ export class PaymentsService {
     private bnplFactory: BnplFactory,
     private orderFulfillmentService: OrderFulfillmentService,
     private systemConfigService: SystemConfigService,
+    private resendService: ResendService,
   ) {}
 
   /**
@@ -717,6 +719,102 @@ export class PaymentsService {
     const query: any = { isActive: true };
     if (currency) query.currency = currency.toUpperCase();
     return this.bankAccountModel.find(query).sort({ bankName: 1 }).exec();
+  }
+
+  async sendBankDetailsEmail(dto: { email: string; currency?: string; amount?: number; bookingRef?: string }): Promise<{ success: boolean; message: string }> {
+    if (!dto.email) {
+      throw new BadRequestException("Recipient email is required");
+    }
+    const upperCurrency = (dto.currency || 'USD').toUpperCase();
+    const banks = await this.getBanks(upperCurrency);
+    const primaryBank = banks?.[0] || {
+      bankName: 'Wema Bank',
+      accountName: 'Flybeth Global Travels',
+      accountNumber: '7288447936',
+      routingNumber: '111900659',
+      currency: upperCurrency
+    };
+
+    const formattedAmount = dto.amount 
+      ? new Intl.NumberFormat('en-US', { style: 'currency', currency: upperCurrency }).format(dto.amount)
+      : `${upperCurrency} Payment`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0;">
+        <div style="background: linear-gradient(135deg, #1A2ED4 0%, #0D1DAD 100%); padding: 28px 32px;">
+          <img src="https://res.cloudinary.com/dlnjbkoju/image/upload/v1794986834/logo_qeatej.png" alt="Flybeth" height="34" style="height: 34px; max-height: 40px; display: block; border: 0;" />
+          <div style="color: #ffffff; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin-top: 16px; opacity: 0.9;">Secure Settlement Memo</div>
+          <h2 style="color: #ffffff; font-size: 22px; font-weight: 900; margin: 4px 0 0 0;">Official Bank Transfer Instructions</h2>
+        </div>
+        <div style="padding: 32px;">
+          <p style="color: #334155; font-size: 14px; line-height: 1.6; margin: 0 0 20px 0;">
+            Hello,<br/><br/>
+            You requested official bank settlement instructions for your reservation ${dto.bookingRef ? `<strong>(${dto.bookingRef})</strong>` : ''}. For your protection against cyber fraud and email interception, please transfer the exact reservation amount only to our verified corporate bank account below:
+          </p>
+
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+            <div style="font-size: 11px; font-weight: 800; color: #0D1DAD; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">Verified Settlement Account (${primaryBank.currency || upperCurrency})</div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Bank Name:</td>
+                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.bankName || 'Wema Bank'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Name:</td>
+                <td style="padding: 8px 0; color: #0f172a; font-weight: 800; text-align: right;">${primaryBank.accountName || 'Flybeth Global Travels'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Account Number:</td>
+                <td style="padding: 8px 0; color: #0D1DAD; font-family: monospace; font-size: 16px; font-weight: 900; text-align: right;">${primaryBank.accountNumber}</td>
+              </tr>
+              ${primaryBank.routingNumber ? `
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">Routing Number:</td>
+                <td style="padding: 8px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">${primaryBank.routingNumber}</td>
+              </tr>
+              ` : ''}
+              ${primaryBank.swiftCode ? `
+              <tr>
+                <td style="padding: 8px 0; color: #64748b; font-weight: 600;">SWIFT / BIC:</td>
+                <td style="padding: 8px 0; color: #0f172a; font-family: monospace; font-weight: 800; text-align: right;">${primaryBank.swiftCode}</td>
+              </tr>
+              ` : ''}
+              ${dto.amount ? `
+              <tr style="border-top: 1px solid #e2e8f0;">
+                <td style="padding: 12px 0 0 0; color: #0f172a; font-weight: 700;">Amount Due:</td>
+                <td style="padding: 12px 0 0 0; color: #0D1DAD; font-size: 16px; font-weight: 900; text-align: right;">${formattedAmount}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px; font-size: 12px; color: #92400e; line-height: 1.5; margin-bottom: 24px;">
+            <strong>Important:</strong> Please include your booking reference <strong>${dto.bookingRef || 'your name'}</strong> in the bank payment narration/memo. Once your transfer is approved by our finance desk, your e-tickets and verified tax receipt will be delivered instantly to your email.
+          </div>
+
+          <p style="color: #64748b; font-size: 12px; margin: 0; line-height: 1.5;">
+            Need help? Contact our 24/7 Concierge at <strong>support@flybeth.com</strong> or call <strong>1-844-FLYBETH</strong>.
+          </p>
+        </div>
+        <div style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 16px 32px; text-align: center; font-size: 11px; color: #94a3b8;">
+          1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077 · Flybeth Inc.
+        </div>
+      </div>
+    `;
+
+    try {
+      if (this.resendService) {
+        await this.resendService.sendEmail({
+          to: dto.email,
+          subject: `Official Bank Settlement Credentials ${dto.bookingRef ? `[${dto.bookingRef}]` : ''} - Flybeth`,
+          html,
+        });
+      }
+    } catch (err: any) {
+      this.logger.error(`Failed to dispatch bank details email: ${err.message}`);
+    }
+
+    return { success: true, message: `Official settlement credentials dispatched to ${dto.email}` };
   }
 
   async getPaystackBanks() {

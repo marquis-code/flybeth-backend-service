@@ -869,11 +869,37 @@ export class BookingsService {
     if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException('Only pending/held bookings can be paid for');
     }
-    
-    if (!booking.remoteOrderId) {
-      throw new BadRequestException('Booking does not have a remote order ID');
-    }
 
+    // Check if this is a manual bank transfer / admin approval or if supplier payment is needed
+    const isManualTransfer = 
+      booking.payment?.provider === 'manual' || 
+      (booking as any).paymentMethod === 'manual' ||
+      paymentDto?.type === 'manual' ||
+      !booking.remoteOrderId;
+
+    if (isManualTransfer) {
+      const updated = await this.bookingModel.findByIdAndUpdate(bookingId, {
+        status: BookingStatus.CONFIRMED,
+        "payment.status": PaymentStatus.SUCCESS,
+        "payment.provider": "manual",
+        "payment.paidAt": new Date(),
+      }, { new: true })
+      .populate("user", "firstName lastName email phone")
+      .populate("tenant", "name slug")
+      .exec();
+
+      // Dispatch confirmed booking email with official e-tickets & receipt to customer
+      try {
+        const fullBooking = await this.findById(bookingId);
+        await this.sendBookingConfirmationEmail(fullBooking);
+      } catch (err: any) {
+        this.logger.error(`Failed to dispatch confirmation email after manual payment approval for ${booking.pnr}: ${err.message}`);
+      }
+
+      this.logger.log(`Manual booking payment approved and confirmed: ${booking.pnr}`);
+      return updated as BookingDocument;
+    }
+    
     try {
       // Typically the flight provider is the one we hold through (e.g. Duffel)
       const provider = booking.flights?.[0]?.provider || 'duffel';
@@ -901,6 +927,13 @@ export class BookingsService {
         "payment.paidAt": new Date(),
       }, { new: true }).exec();
       
+      try {
+        const fullBooking = await this.findById(bookingId);
+        await this.sendBookingConfirmationEmail(fullBooking);
+      } catch (err: any) {
+        this.logger.error(`Failed to dispatch confirmation email after ticketing for ${booking.pnr}: ${err.message}`);
+      }
+
       this.logger.log(`Held booking paid and ticketed: ${booking.pnr}`);
       return updated as BookingDocument;
       
@@ -999,6 +1032,8 @@ export class BookingsService {
         },
         { new: true },
       )
+      .populate("user", "firstName lastName email phone")
+      .populate("tenant", "name slug")
       .exec();
 
     if (!booking) throw new NotFoundException("Booking not found");
@@ -1009,6 +1044,13 @@ export class BookingsService {
         booking.tenant.toString(),
         booking.pricing.totalAmount,
       );
+    }
+
+    // Dispatch verified booking confirmation email & invoice to customer upon approval
+    try {
+      await this.sendBookingConfirmationEmail(booking);
+    } catch (err: any) {
+      this.logger.error(`Failed to dispatch confirmation email in confirmBooking for ${booking.pnr}: ${err.message}`);
     }
 
     this.logger.log(`Booking confirmed: ${booking.pnr}`);
