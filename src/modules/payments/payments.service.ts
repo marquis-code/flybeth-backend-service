@@ -700,6 +700,7 @@ export class PaymentsService {
   }
 
   async getBanks(currency?: string): Promise<any[]> {
+    let rawAccounts: any[] = [];
     if (this.systemConfigService) {
       try {
         const config = await this.systemConfigService.getConfig();
@@ -708,17 +709,32 @@ export class PaymentsService {
           if (currency) {
             const upper = currency.toUpperCase();
             const matched = accounts.filter((b: any) => b.currency?.toUpperCase() === upper);
-            if (matched.length > 0) return matched;
+            rawAccounts = matched.length > 0 ? matched : accounts;
+          } else {
+            rawAccounts = accounts;
           }
-          return accounts;
         }
       } catch (err: any) {
         this.logger.warn(`Failed to fetch bank accounts from SystemConfig: ${err?.message}`);
       }
     }
-    const query: any = { isActive: true };
-    if (currency) query.currency = currency.toUpperCase();
-    return this.bankAccountModel.find(query).sort({ bankName: 1 }).exec();
+    if (!rawAccounts.length) {
+      const query: any = { isActive: true };
+      if (currency) query.currency = currency.toUpperCase();
+      rawAccounts = await this.bankAccountModel.find(query).sort({ bankName: 1 }).lean().exec();
+    }
+
+    // Sanitize branding to FLYBETH LLC and strip instructions to protect sensitive credentials
+    return (rawAccounts || []).map((acc: any) => {
+      const plain = typeof acc?.toObject === 'function' ? acc.toObject() : { ...acc };
+      if (plain.accountName) {
+        plain.accountName = plain.accountName
+          .replace(/Flybeth Global LLC/gi, 'FLYBETH LLC')
+          .replace(/Flybeth Global/gi, 'FLYBETH LLC');
+      }
+      delete plain.instructions;
+      return plain;
+    });
   }
 
   async sendBankDetailsEmail(dto: { email: string; currency?: string; amount?: number; bookingRef?: string }): Promise<{ success: boolean; message: string }> {
