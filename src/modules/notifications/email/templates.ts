@@ -358,6 +358,90 @@ export function renderBookingConfirmation(
   })
 }
 
+export function renderBookingCancellation(
+  booking: any,
+  opts: { reason?: string; refundAmount?: number; clientUrl?: string } = {},
+): string {
+  const pnr = booking?.pnr ?? '—'
+  const firstName =
+    booking?.user?.firstName ||
+    booking?.contactDetails?.name?.split(' ')[0] ||
+    'Traveller'
+
+  const currency = booking?.pricing?.currency || 'USD'
+  const refundAmount = opts.refundAmount !== undefined ? opts.refundAmount : Number(booking?.cancellation?.refundAmount || 0)
+  const reason = opts.reason || booking?.cancellation?.reason || 'Customer requested cancellation'
+  const cancelledDate = fmtDate(booking?.cancellation?.cancelledAt || new Date())
+
+  const slices = extractSlices(booking)
+  const manageUrl = `${opts.clientUrl ?? process.env.CLIENT_URL ?? 'https://flybeth.com'}/bookings?pnr=${pnr}`
+
+  const body: string[] = []
+
+  // Status strip
+  body.push(
+    statStrip([
+      { label: 'Booking ref', value: pnr },
+      { label: 'Status', value: 'Cancelled' },
+      { label: 'Cancelled date', value: cancelledDate },
+    ]),
+  )
+
+  // Callout alert
+  body.push(
+    callout({
+      tone: 'warning',
+      icon: '&#9888;',
+      title: 'Booking Cancelled',
+      body: `Your booking with reference <strong>${esc(pnr)}</strong> has been cancelled.${
+        refundAmount > 0
+          ? ` A refund of <strong>${esc(money(refundAmount, currency))}</strong> is being processed to your original payment method.`
+          : ' According to the fare terms, this booking is non-refundable.'
+      }`,
+    }),
+  )
+
+  // Details
+  body.push(
+    card(
+      detailRows([
+        ['Booking reference', pnr],
+        ['Cancellation reason', reason],
+        ['Cancellation date', cancelledDate],
+        ['Refund amount', money(refundAmount, currency)],
+        ['Refund status', refundAmount > 0 ? 'Pending processing (3-5 business days)' : 'N/A'],
+      ]),
+      { title: 'Cancellation summary', tint: 'cream' },
+    ),
+  )
+
+  // Itinerary
+  if (slices.length) {
+    body.push(
+      `<p style="margin:16px 0 12px;font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:${BRAND.muted};">Cancelled trip details</p>`,
+    )
+    body.push(slices.map(sliceCard).join(''))
+  }
+
+  body.push(
+    callout({
+      tone: 'info',
+      body: `If you have questions regarding this cancellation or need assistance rebooking, our support team is available 24/7 at <a href="mailto:support@flybeth.com" style="color:${BRAND.navy};font-weight:700;">support@flybeth.com</a>.`,
+    }),
+  )
+
+  return renderEmail({
+    preheader: `Booking ${pnr} has been cancelled`,
+    eyebrow: 'Cancellation Notice',
+    heading: `Booking ${pnr} is cancelled`,
+    intro: `Hi ${esc(firstName)}, your booking has been cancelled. Below is a summary of the cancellation and any applicable refund.`,
+    body: body.join('\n'),
+    cta: { label: 'Go to Flybeth', url: opts.clientUrl ?? process.env.CLIENT_URL ?? 'https://flybeth.com' },
+    ctaNote: `Booking reference ${pnr}`,
+    footerNote: `If you did not request this cancellation, please contact us immediately at support@flybeth.com.`,
+  })
+}
+
 /* ────────────────────────────────────────────────────────────────────────────
  * Account
  * ──────────────────────────────────────────────────────────────────────────── */

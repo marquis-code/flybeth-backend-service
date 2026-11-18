@@ -14,8 +14,19 @@ export class EmailProcessor {
     this.logger.log(`Processing email job: ${job.id}`);
     const { to, subject, html, variables, attachments } = job.data;
 
+    // Safely reconstruct Buffer instances if attachments were serialized across Redis/JSON
+    const processedAttachments = attachments?.map((att: any) => {
+      if (att?.content && typeof att.content === 'object' && att.content.type === 'Buffer' && Array.isArray(att.content.data)) {
+        return {
+          ...att,
+          content: Buffer.from(att.content.data),
+        };
+      }
+      return att;
+    });
+
     try {
-      await this.resendService.sendEmail({ to, subject, html, variables, attachments });
+      await this.resendService.sendEmail({ to, subject, html, variables, attachments: processedAttachments });
       this.logger.log(`Email job ${job.id} completed successfully`);
     } catch (error) {
       this.logger.error(`Email job ${job.id} failed: ${error.message}`);

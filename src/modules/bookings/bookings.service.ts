@@ -671,7 +671,30 @@ export class BookingsService {
 
     const populated = await this.findById(saved._id.toString());
 
-    // Send admin notification only (customer email is sent after payment succeeds)
+    // Send customer booking confirmation / payment instructions email if booking is held, pending, or manual payment
+    const needsCustomerHoldEmail =
+      saved.paymentModel === 'on_hold' ||
+      (saved as any).paymentMethod === 'manual' ||
+      (saved as any).paymentMethod === 'transfer' ||
+      saved.payment?.provider === 'manual' ||
+      saved.status === BookingStatus.PENDING;
+
+    if (needsCustomerHoldEmail) {
+      const custEmail =
+        populated.contactDetails?.email ||
+        (typeof populated.user === 'object' ? (populated.user as any)?.email : null);
+
+      if (custEmail) {
+        this.notificationsService.sendBookingConfirmation({
+          email: custEmail,
+          booking: populated,
+        }).catch(err => {
+          this.logger.error(`Failed to send booking hold/instructions email for ${populated.pnr}: ${err.message}`);
+        });
+      }
+    }
+
+    // Send admin notification
     this.sendAdminBookingAlert(populated).catch(err => {
         this.logger.error(`Failed to send admin booking alert for ${populated.pnr}: ${err.message}`);
     });
@@ -892,11 +915,39 @@ export class BookingsService {
           break;
 
         case 'order_cancellation.confirmed':
-          await this.bookingModel.findOneAndUpdate(
+          const cancelledBooking = await this.bookingModel.findOneAndUpdate(
             { remoteOrderId: orderId },
-            { status: BookingStatus.CANCELLED }
+            {
+              status: BookingStatus.CANCELLED,
+              cancellation: {
+                reason: 'Airline or Duffel confirmed cancellation',
+                cancelledAt: new Date(),
+                refundStatus: 'processed',
+              },
+            },
+            { new: true }
           );
           this.logger.log(`Webhook: Order cancelled for ${orderId}.`);
+
+          if (cancelledBooking) {
+            try {
+              const populatedCancelled = await this.findById(cancelledBooking._id.toString());
+              const custEmail =
+                populatedCancelled.contactDetails?.email ||
+                (typeof populatedCancelled.user === 'object' ? (populatedCancelled.user as any)?.email : null);
+              if (custEmail) {
+                this.notificationsService.sendBookingCancellation({
+                  email: custEmail,
+                  booking: populatedCancelled,
+                  reason: 'Airline confirmed flight cancellation',
+                }).catch(err => {
+                  this.logger.error(`Failed to send webhook cancellation email for ${cancelledBooking.pnr}: ${err.message}`);
+                });
+              }
+            } catch (notifyErr: any) {
+              this.logger.warn(`Could not dispatch cancellation email for ${orderId}: ${notifyErr.message}`);
+            }
+          }
           break;
 
         case 'order.airline_initiated_change_detected':
@@ -1028,6 +1079,29 @@ export class BookingsService {
       .exec();
 
     this.logger.log(`Booking cancelled: ${booking.pnr}`);
+
+    // Send cancellation email to customer and admin
+    try {
+      const populated = await this.findById(booking._id.toString());
+      const customerEmail =
+        populated.contactDetails?.email ||
+        (typeof populated.user === 'object' ? (populated.user as any)?.email : null) ||
+        booking.contactDetails?.email;
+
+      if (customerEmail) {
+        this.notificationsService.sendBookingCancellation({
+          email: customerEmail,
+          booking: populated,
+          reason: cancelDto.reason,
+          refundAmount,
+        }).catch(err => {
+          this.logger.error(`Failed to send cancellation email for ${booking.pnr}: ${err.message}`);
+        });
+      }
+    } catch (notifyErr: any) {
+      this.logger.warn(`Could not dispatch cancellation notification for ${booking.pnr}: ${notifyErr.message}`);
+    }
+
     return updated as BookingDocument;
   }
 
@@ -1164,17 +1238,35 @@ export class BookingsService {
    */
   async sendBookingConfirmationEmail(booking: BookingDocument) {
     const adminEmail = this.nestConfigService.get("ADMIN_EMAIL") || "flybethweb@gmail.com";
-    const agentEmail = booking.user ? (booking.user as any).email : booking.contactDetails.email;
-    const agentName = booking.user ? (booking.user as any).firstName : (booking.contactDetails.name || 'Guest');
+    const agentEmail =
+      booking.contactDetails?.email ||
+      (typeof booking.user === 'object' ? (booking.user as any)?.email : null);
+    const agentName =
+      (typeof booking.user === 'object' ? (booking.user as any)?.firstName : null) ||
+      booking.contactDetails?.name ||
+      'Traveller';
 
-    // Generate PDF Invoice
-    const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking);
+    if (!agentEmail) {
+      this.logger.warn(`No valid email found to send confirmation for booking ${booking.pnr}`);
+      return;
+    }
+
+    // Generate PDF Invoice safely (if PDF generation fails, still deliver the confirmation email)
+    let attachments: any[] | undefined = undefined;
+    try {
+      const pdfBuffer = await this.invoiceService.generateInvoicePdf(booking);
+      if (pdfBuffer) {
+        attachments = [{ filename: `Invoice_${booking.pnr}.pdf`, content: pdfBuffer }];
+      }
+    } catch (pdfErr: any) {
+      this.logger.warn(`Could not generate PDF invoice for ${booking.pnr} (${pdfErr.message}), sending email without attachment`);
+    }
 
     // 1. Send customer confirmation email with well-designed template
     await this.notificationsService.sendBookingConfirmation({
       email: agentEmail,
       booking: booking,
-      attachments: [{ filename: `Invoice_${booking.pnr}.pdf`, content: pdfBuffer }],
+      attachments,
     });
 
     // 2. Notify admin about the confirmed payment
@@ -1184,7 +1276,7 @@ export class BookingsService {
             <h2>Payment Confirmed ✅</h2>
             <p><strong>Customer:</strong> ${agentName} (${agentEmail})</p>
             <p><strong>PNR:</strong> ${booking.pnr}</p>
-            <p><strong>Total Amount:</strong> ${booking.pricing.currency} ${booking.pricing.totalAmount.toLocaleString()}</p>
+            <p><strong>Total Amount:</strong> ${booking.pricing?.currency || 'USD'} ${(booking.pricing?.totalAmount || 0).toLocaleString()}</p>
             <p><strong>Payment Status:</strong> Paid</p>
             <hr />
             <p>Confirmation email with invoice has been sent to the customer.</p>

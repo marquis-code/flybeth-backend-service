@@ -25,6 +25,7 @@ import {
   renderAgentSignupUnderReview,
   renderAgentWelcome,
   renderBookingConfirmation,
+  renderBookingCancellation,
   renderInvitationReminder,
   renderKycApproval,
   renderKycRejection,
@@ -132,13 +133,37 @@ export class NotificationsService implements OnModuleInit {
     variables?: Record<string, any>,
     attachments?: Array<{ filename: string; content: Buffer }>,
   ): Promise<void> {
-    let queued = false;
+    if (!to || typeof to !== 'string' || !to.includes('@')) {
+      this.logger.warn(`Cannot send email: invalid or missing recipient "${to}". Subject: "${subject}"`);
+      return;
+    }
+
+    const trimmedTo = to.trim();
+
+    // 1. Direct delivery via Resend first for instant sub-second delivery
+    try {
+      await this.resendService.sendEmail({
+        to: trimmedTo,
+        subject,
+        html,
+        variables,
+        attachments,
+      });
+      this.logger.log(`Email delivered directly via Resend to: ${trimmedTo} (Subject: "${subject}")`);
+      return;
+    } catch (directErr: any) {
+      this.logger.warn(
+        `Direct Resend delivery attempt failed for ${trimmedTo} (${directErr?.message}). Falling back to Bull queue...`,
+      );
+    }
+
+    // 2. Resilient fallback to background Bull queue if direct send fails
     try {
       if (this.emailQueue) {
         await this.emailQueue.add(
           "send-email",
           {
-            to,
+            to: trimmedTo,
             subject,
             html,
             variables,
@@ -153,28 +178,49 @@ export class NotificationsService implements OnModuleInit {
             removeOnComplete: true,
           },
         );
-        queued = true;
-        this.logger.log(`Email job added to queue for: ${to}`);
+        this.logger.log(`Email job queued for retry for: ${trimmedTo}`);
       }
-    } catch (error) {
-      this.logger.warn(`Failed to add email to queue (${error.message}). Falling back to direct Resend delivery for ${to}`);
+    } catch (queueErr: any) {
+      this.logger.error(`Failed to enqueue email for ${trimmedTo}: ${queueErr?.message}`);
     }
+  }
 
-    // Resilient direct delivery if queue is down or failed
-    if (!queued) {
-      try {
-        await this.resendService.sendEmail({
-          to,
-          subject,
-          html,
-          variables,
-          attachments,
-        });
-        this.logger.log(`Email sent directly via Resend to: ${to}`);
-      } catch (directErr) {
-        this.logger.error(`Direct Resend email delivery failed for ${to}: ${directErr.message}`);
-      }
-    }
+  async sendBookingCancellation(params: {
+    email: string;
+    booking: any;
+    reason?: string;
+    refundAmount?: number;
+  }): Promise<void> {
+    const { booking, reason, refundAmount } = params;
+    const clientUrl = this.configService.get('CLIENT_URL') || 'https://flybeth.com';
+
+    const html = renderBookingCancellation(booking, {
+      reason,
+      refundAmount,
+      clientUrl,
+    });
+
+    const subject = `Booking ${booking?.pnr || 'Reservation'} has been cancelled`;
+
+    await this.sendEmail(
+      params.email,
+      subject,
+      html,
+    );
+
+    // Notify admin
+    const adminEmail = this.configService.get('ADMIN_EMAIL') || 'flybethweb@gmail.com';
+    const adminSubject = `Booking Cancelled: ${booking?.pnr || 'N/A'}`;
+    const adminHtml = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Booking Cancelled ⚠️</h2>
+        <p><strong>PNR:</strong> ${booking?.pnr || 'N/A'}</p>
+        <p><strong>Customer Email:</strong> ${params.email}</p>
+        <p><strong>Reason:</strong> ${reason || 'N/A'}</p>
+        <p><strong>Refund Amount:</strong> ${booking?.pricing?.currency || 'USD'} ${(refundAmount || 0).toLocaleString()}</p>
+      </div>
+    `;
+    await this.sendEmail(adminEmail, adminSubject, adminHtml);
   }
 
   async sendBookingConfirmation(params: {
