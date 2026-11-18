@@ -700,12 +700,15 @@ export class PaymentsService {
   }
 
   async getBanks(currency?: string): Promise<any[]> {
+    // Purge any lingering Chase accounts from DB to ensure no stale data remains
+    this.bankAccountModel.deleteMany({ bankName: { $regex: /chase/i } }).catch(() => {});
+
     let rawAccounts: any[] = [];
     if (this.systemConfigService) {
       try {
         const config = await this.systemConfigService.getConfig();
         if (config?.bankAccounts && config.bankAccounts.length > 0) {
-          const accounts = config.bankAccounts.filter((b: any) => b.isActive !== false);
+          const accounts = config.bankAccounts.filter((b: any) => b.isActive !== false && !/chase/i.test(b.bankName || '') && !/chase/i.test(b.label || ''));
           if (currency) {
             const upper = currency.toUpperCase();
             const matched = accounts.filter((b: any) => b.currency?.toUpperCase() === upper);
@@ -719,22 +722,24 @@ export class PaymentsService {
       }
     }
     if (!rawAccounts.length) {
-      const query: any = { isActive: true };
+      const query: any = { isActive: true, bankName: { $not: { $regex: /chase/i } } };
       if (currency) query.currency = currency.toUpperCase();
       rawAccounts = await this.bankAccountModel.find(query).sort({ bankName: 1 }).lean().exec();
     }
 
-    // Sanitize branding to FLYBETH LLC and strip instructions to protect sensitive credentials
-    return (rawAccounts || []).map((acc: any) => {
-      const plain = typeof acc?.toObject === 'function' ? acc.toObject() : { ...acc };
-      if (plain.accountName) {
-        plain.accountName = plain.accountName
-          .replace(/Flybeth Global LLC/gi, 'FLYBETH LLC')
-          .replace(/Flybeth Global/gi, 'FLYBETH LLC');
-      }
-      delete plain.instructions;
-      return plain;
-    });
+    // Filter out Chase completely, sanitize branding to FLYBETH LLC and strip instructions to protect sensitive credentials
+    return (rawAccounts || [])
+      .filter((acc: any) => !/chase/i.test(acc?.bankName || '') && !/chase/i.test(acc?.label || ''))
+      .map((acc: any) => {
+        const plain = typeof acc?.toObject === 'function' ? acc.toObject() : { ...acc };
+        if (plain.accountName) {
+          plain.accountName = plain.accountName
+            .replace(/Flybeth Global LLC/gi, 'FLYBETH LLC')
+            .replace(/Flybeth Global/gi, 'FLYBETH LLC');
+        }
+        delete plain.instructions;
+        return plain;
+      });
   }
 
   async sendBankDetailsEmail(dto: { email: string; currency?: string; amount?: number; bookingRef?: string }): Promise<{ success: boolean; message: string }> {
@@ -837,7 +842,7 @@ export class PaymentsService {
               </tr>
               <tr>
                 <td colspan="2" style="padding: 10px 0 0 0; color: #6b21a8; font-size: 12px; line-height: 1.5;">
-                  Scan the Zelle QR code in your Wells Fargo, Chase, BofA, or mobile banking app to pay FLYBETH LLC instantly.
+                  Scan the Zelle QR code in your Wells Fargo, Bank of America, or mobile banking app to pay FLYBETH LLC instantly.
                 </td>
               </tr>
             </table>

@@ -528,13 +528,13 @@ export class SeedService implements OnModuleInit {
         logo: "https://upload.wikimedia.org/wikipedia/en/2/2a/Wema_Bank_Logo.png",
       },
       {
-        bankName: "Chase Bank",
-        accountNumber: "8810000001",
-        accountName: "FLYBETH LLC USD",
+        bankName: "Wells Fargo",
+        accountNumber: "7288447936",
+        accountName: "FLYBETH LLC",
         beneficiaryName: "Flybeth LLC",
         currency: "USD",
         isActive: true,
-        logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/JPMorgan_Chase_Logo_2008.svg/2560px-JPMorgan_Chase_Logo_2008.svg.png",
+        logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Wells_Fargo_Bank.svg/1200px-Wells_Fargo_Bank.svg.png",
       },
     ];
 
