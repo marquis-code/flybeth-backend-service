@@ -77,9 +77,9 @@ export class SystemConfigService implements OnModuleInit {
       {
         currency: 'USD',
         accountName: 'Flybeth Ltd',
-        accountNumber: '0620862082',
+        accountNumber: '7288447936',
         bankName: 'Wema Bank',
-        routingNumber: '',
+        routingNumber: '111900659',
         swiftCode: '',
         instructions: 'Zelle: payments@flybeth.com. Please include your Booking Reference in the transfer memo.',
         isActive: true

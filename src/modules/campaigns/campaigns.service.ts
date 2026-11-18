@@ -144,7 +144,7 @@ export class CampaignsService {
               <div class="footer">
                 <div class="footer-brand">Flybeth Global</div>
                 &copy; ${new Date().getFullYear()} Flybeth Travel. All rights reserved.<br>
-                1880 S Dairy Ashford Rd, Suite 207, Houston, TX 77077
+                1500 S Dairy Ashford Road, Suite 207 # 703, Houston, TX 77077
               </div>
             </div>
           </div>
