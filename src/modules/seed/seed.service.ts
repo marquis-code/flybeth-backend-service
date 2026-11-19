@@ -37,6 +37,13 @@ export class SeedService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    // Ops scripts (e.g. refreshing email templates) bootstrap the app context,
+    // which would otherwise re-run every seed — including resetting the
+    // super-admin password. SKIP_SEED lets those scripts run safely.
+    if (String(process.env.SKIP_SEED).toLowerCase() === 'true') {
+      this.logger.warn('SKIP_SEED=true — automatic seeding skipped');
+      return;
+    }
     await this.seedPermissions();
     await this.seedRoles();
     await this.seedAirports();

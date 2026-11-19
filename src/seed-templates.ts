@@ -1,3 +1,7 @@
+// Refreshing templates must never re-run the platform seeds (they reset the
+// super-admin password). Block them before the app context boots.
+process.env.SKIP_SEED = 'true';
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NotificationsService } from './modules/notifications/notifications.service';

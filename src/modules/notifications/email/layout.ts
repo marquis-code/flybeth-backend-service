@@ -333,6 +333,7 @@ export function renderEmail(opts: EmailLayoutOptions): string {
       .fb-pad { padding: 26px 20px !important; }
       .fb-h1 { font-size: 24px !important; line-height: 1.25 !important; }
       .fb-stack { display: block !important; width: 100% !important; padding: 0 0 8px 0 !important; }
+      .fb-hide-sm { display: none !important; }
     }
     a { text-decoration: none; }
     [data-ogsc] .fb-card, [data-ogsb] .fb-card { background:#ffffff !important; }
@@ -349,19 +350,23 @@ export function renderEmail(opts: EmailLayoutOptions): string {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" class="fb-card"
                style="width:100%;max-width:600px;background-color:${BRAND.white};border-radius:20px;overflow:hidden;border:1px solid ${BRAND.line};box-shadow:0 12px 36px rgba(15,23,42,0.06);">
 
-          <!-- Premium Brand Header -->
+          <!-- ── Brand header ──────────────────────────────────────────────
+               White band so the full-colour wordmark keeps its contrast: the
+               logo PNG is green on transparent, which disappeared against the
+               old blue slab. Tagline right, accent rule beneath.            -->
           <tr>
-            <td bgcolor="${BRAND.primary}" style="padding:28px 32px;background:linear-gradient(135deg, ${BRAND.primaryLight} 0%, ${BRAND.primary} 100%);">
+            <td bgcolor="${BRAND.white}" style="background-color:${BRAND.white};padding:22px 32px;border-bottom:1px solid ${BRAND.line};">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="left" valign="middle">
                     <a href="${esc(site)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block;">
-                      <img src="${LOGO_URL}" alt="Flybeth" height="34" style="height:34px;max-height:40px;width:auto;display:block;border:0;" />
+                      <img src="${LOGO_URL}" alt="Flybeth" height="30"
+                           style="height:30px;max-height:34px;width:auto;display:block;border:0;outline:none;text-decoration:none;" />
                     </a>
                   </td>
-                  <td align="right" valign="middle">
-                    <span style="display:inline-block;padding:5px 12px;background:rgba(255,255,255,0.14);border:1px solid rgba(255,255,255,0.25);border-radius:999px;font-family:${SANS};font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:${BRAND.white};">
-                      Verified Travel
+                  <td align="right" valign="middle" class="fb-hide-sm">
+                    <span style="display:inline-block;padding:6px 12px;background-color:${BRAND.successSoft};border:1px solid ${BRAND.successLine};border-radius:999px;font-family:${SANS};font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:${BRAND.success};white-space:nowrap;">
+                      &#10003;&nbsp; IATA-accredited agency
                     </span>
                   </td>
                 </tr>
@@ -369,9 +374,10 @@ export function renderEmail(opts: EmailLayoutOptions): string {
             </td>
           </tr>
 
-          <!-- Subtle Top Accent Ribbon -->
+          <!-- Brand rule -->
           <tr>
-            <td style="height:3px;line-height:3px;font-size:0;background:linear-gradient(90deg, ${BRAND.accent} 0%, #F59E0B 50%, ${BRAND.primaryLight} 100%);">&nbsp;</td>
+            <td height="4" bgcolor="${BRAND.primary}"
+                style="height:4px;line-height:4px;font-size:0;background:linear-gradient(90deg, ${BRAND.primary} 0%, ${BRAND.primaryLight} 46%, ${BRAND.accent} 100%);">&nbsp;</td>
           </tr>
 
           <!-- Content Body -->
